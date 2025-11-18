@@ -1,73 +1,160 @@
-# Welcome to your Lovable project
+# Maxi IA - Dashboard Administrativo
 
-## Project info
+Sistema completo de automação WhatsApp para clínicas com dashboard administrativo.
 
-**URL**: https://lovable.dev/projects/f4ec2428-8ff8-4049-b22b-33cd24f9f98c
+## 🚀 Tecnologias
 
-## How can I edit this code?
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Shadcn/ui
+- React Router DOM
+- Axios
+- React Query (TanStack Query)
+- Lucide React
+- Recharts
 
-There are several ways of editing your application.
+## 📋 Funcionalidades
 
-**Use Lovable**
+### Autenticação
+- Login com email e senha
+- Proteção de rotas privadas
+- Logout automático em caso de token inválido
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f4ec2428-8ff8-4049-b22b-33cd24f9f98c) and start prompting.
+### Dashboard
+- Cards de estatísticas (Leads, Agendamentos, Conversas, Taxa de Conversão)
+- Lista de próximos agendamentos
+- Gráfico de leads por origem
 
-Changes made via Lovable will be committed automatically to this repo.
+### Gestão de Leads
+- Listagem completa com filtros e busca
+- Status coloridos (Novo, Qualificado, Convertido)
+- Modal de detalhes do lead
+- Conversão para cliente
 
-**Use your preferred IDE**
+### Agendamentos
+- Visualização em lista e calendário
+- Cards informativos com status
+- Opções de reagendar e cancelar
+- Filtros por profissional e status
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Conversas
+- Interface de chat split (lista + mensagens)
+- Histórico completo de conversas
+- Indicadores de mensagens não lidas
+- Envio de mensagens
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Profissionais
+- Grid de profissionais
+- Especialidades e status
+- Visualização de disponibilidade
+- Contador de agendamentos
 
-Follow these steps:
+### Produtos e Serviços
+- Tabela completa de produtos
+- Categorias e tipos
+- Preços e durações
+- Status ativo/inativo
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🎨 Design System
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Cores Principais
+- **Primary**: Azul escuro (#1e293b) - Sidebar e elementos principais
+- **Background**: Cinza claro (#f8fafc)
+- **Cards**: Branco com shadow
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Status Colors
+- Novo: Azul
+- Qualificado: Amarelo
+- Convertido: Verde
+- Agendado: Azul
+- Confirmado: Verde
+- Cancelado: Vermelho
+- Concluído: Cinza
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## 🔧 Configuração da API
+
+Base URL: `http://localhost:3000/api/v1`
+
+### Endpoints Principais
+
+```typescript
+GET    /leads                    - Lista todos os leads
+POST   /leads                    - Cria novo lead
+PUT    /leads/:id                - Atualiza lead
+GET    /agendamentos             - Lista agendamentos
+POST   /agendamentos             - Cria agendamento
+PUT    /agendamentos/:id         - Atualiza agendamento
+GET    /conversas                - Lista conversas ativas
+GET    /conversas/:id/historico  - Histórico de mensagens
+GET    /profissionais            - Lista profissionais
+GET    /produtos                 - Lista produtos/serviços
+```
+
+## 🚀 Como usar
+
+### Desenvolvimento
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Build
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm run build
+```
 
-**Use GitHub Codespaces**
+### Deploy
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Use o botão "Publish" no Lovable para fazer deploy da aplicação.
 
-## What technologies are used for this project?
+## 📦 Estrutura do Projeto
 
-This project is built with:
+```
+src/
+├── components/
+│   ├── layout/          # Componentes de layout (Sidebar, TopBar, etc)
+│   ├── ui/              # Componentes UI (Shadcn)
+│   ├── StatCard.tsx     # Card de estatísticas
+│   ├── StatusBadge.tsx  # Badge de status customizado
+│   ├── LoadingSpinner.tsx
+│   └── EmptyState.tsx
+├── hooks/
+│   ├── useLeads.ts      # Hook para leads
+│   ├── useAgendamentos.ts
+│   └── useConversas.ts
+├── lib/
+│   ├── api.ts           # Configuração do Axios
+│   └── utils.ts
+├── pages/
+│   ├── Login.tsx
+│   ├── Dashboard.tsx
+│   ├── Leads.tsx
+│   ├── Agendamentos.tsx
+│   ├── Conversas.tsx
+│   ├── Profissionais.tsx
+│   └── Produtos.tsx
+└── App.tsx              # Rotas e configuração
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🔐 Autenticação
 
-## How can I deploy this project?
+O sistema usa token JWT armazenado no localStorage. Para fazer login no ambiente de desenvolvimento, use qualquer email e senha. O token será armazenado automaticamente.
 
-Simply open [Lovable](https://lovable.dev/projects/f4ec2428-8ff8-4049-b22b-33cd24f9f98c) and click on Share -> Publish.
+## 📱 Responsividade
 
-## Can I connect a custom domain to my Lovable project?
+O sistema é totalmente responsivo com design mobile-first, adaptando-se a diferentes tamanhos de tela.
 
-Yes, you can!
+## 🎯 Próximos Passos
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- Implementar calendário interativo nos agendamentos
+- Adicionar notificações em tempo real
+- Criar dashboard de relatórios
+- Implementar upload de arquivos
+- Adicionar busca avançada
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📄 Licença
+
+Este projeto foi desenvolvido com Lovable.
