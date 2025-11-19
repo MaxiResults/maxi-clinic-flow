@@ -218,3 +218,14 @@ export default function Leads() {
                 <div>
                   <h4 className="text-sm font-medium mb-2">Observações</h4>
                   <p className="text-sm text-muted-foreground">
+                    {selectedLead.observacoes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </DashboardLayout>
+  );
+}
