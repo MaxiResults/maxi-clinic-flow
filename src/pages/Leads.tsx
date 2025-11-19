@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,52 +25,70 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Plus, Phone, Mail, Calendar } from "lucide-react";
+import { Search, Plus, Phone, Mail, Calendar, Loader2 } from "lucide-react";
+import api from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
-const mockLeads = [
-  {
-    id: 1,
-    name: "Maria Silva",
-    phone: "(11) 98765-4321",
-    email: "maria.silva@email.com",
-    status: "novo" as const,
-    channel: "WhatsApp",
-    date: "2024-01-15",
-    notes: "Interessada em limpeza de pele",
-  },
-  {
-    id: 2,
-    name: "João Santos",
-    phone: "(11) 98765-4322",
-    email: "joao.santos@email.com",
-    status: "qualificado" as const,
-    channel: "Instagram",
-    date: "2024-01-14",
-    notes: "Quer agendar massagem",
-  },
-  {
-    id: 3,
-    name: "Ana Costa",
-    phone: "(11) 98765-4323",
-    email: "ana.costa@email.com",
-    status: "convertido" as const,
-    channel: "Facebook",
-    date: "2024-01-13",
-    notes: "Cliente agendado",
-  },
-];
+interface Lead {
+  id: string;
+  nome: string;
+  telefone: string;
+  email: string | null;
+  status: "novo" | "qualificado" | "convertido";
+  canal_origem: string;
+  created_at: string;
+  observacoes: string | null;
+}
 
 export default function Leads() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedLead, setSelectedLead] = useState<typeof mockLeads[0] | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const { toast } = useToast();
 
-  const filteredLeads = mockLeads.filter((lead) => {
-    const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone.includes(searchTerm);
+  // Buscar leads da API
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/leads');
+      console.log('✅ Leads carregados:', response.data);
+      setLeads(response.data || []);
+    } catch (error: any) {
+      console.error('❌ Erro ao carregar leads:', error);
+      toast({
+        title: "Erro ao carregar leads",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredLeads = leads.filter((lead) => {
+    const matchesSearch = 
+      lead.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.telefone?.includes(searchTerm);
     const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Leads">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Carregando leads...</span>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Leads">
@@ -105,37 +123,55 @@ export default function Leads() {
           </Button>
         </div>
 
+        {/* Empty State */}
+        {filteredLeads.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <p className="text-lg font-medium text-muted-foreground">
+              Nenhum lead encontrado
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {searchTerm || statusFilter !== "all" 
+                ? "Tente ajustar os filtros" 
+                : "Clique em 'Novo Lead' para começar"}
+            </p>
+          </div>
+        )}
+
         {/* Table */}
-        <div className="rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Canal</TableHead>
-                <TableHead>Data</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLeads.map((lead) => (
-                <TableRow
-                  key={lead.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => setSelectedLead(lead)}
-                >
-                  <TableCell className="font-medium">{lead.name}</TableCell>
-                  <TableCell>{lead.phone}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={lead.status} />
-                  </TableCell>
-                  <TableCell>{lead.channel}</TableCell>
-                  <TableCell>{new Date(lead.date).toLocaleDateString('pt-BR')}</TableCell>
+        {filteredLeads.length > 0 && (
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Canal</TableHead>
+                  <TableHead>Data</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredLeads.map((lead) => (
+                  <TableRow
+                    key={lead.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedLead(lead)}
+                  >
+                    <TableCell className="font-medium">{lead.nome || 'Sem nome'}</TableCell>
+                    <TableCell>{lead.telefone}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={lead.status} />
+                    </TableCell>
+                    <TableCell>{lead.canal_origem || 'N/A'}</TableCell>
+                    <TableCell>
+                      {new Date(lead.created_at).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
       {/* Lead Details Dialog */}
@@ -148,43 +184,37 @@ export default function Leads() {
           {selectedLead && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">{selectedLead.name}</h3>
+                <h3 className="text-lg font-semibold">{selectedLead.nome}</h3>
                 <StatusBadge status={selectedLead.status} />
               </div>
               
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{selectedLead.phone}</span>
+                  <span>{selectedLead.telefone}</span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{selectedLead.email}</span>
-                </div>
+                {selectedLead.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedLead.email}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{new Date(selectedLead.date).toLocaleDateString('pt-BR')}</span>
+                  <span>
+                    {new Date(selectedLead.created_at).toLocaleDateString('pt-BR')}
+                  </span>
                 </div>
               </div>
 
               <div>
                 <h4 className="text-sm font-medium mb-2">Canal de Origem</h4>
-                <p className="text-sm text-muted-foreground">{selectedLead.channel}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedLead.canal_origem || 'Não informado'}
+                </p>
               </div>
 
-              <div>
-                <h4 className="text-sm font-medium mb-2">Observações</h4>
-                <p className="text-sm text-muted-foreground">{selectedLead.notes}</p>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button className="flex-1">Converter em Cliente</Button>
-                <Button variant="outline">Editar</Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </DashboardLayout>
-  );
-}
+              {selectedLead.observacoes && (
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Observações</h4>
+                  <p className="text-sm text-muted-foreground">
