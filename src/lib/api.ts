@@ -25,7 +25,6 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     // Backend retorna { success, data, total }
-    // Extrair só o "data" para facilitar uso
     if (response.data && response.data.success !== undefined) {
       return {
         ...response,
