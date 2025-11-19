@@ -21,9 +21,20 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor - ATUALIZADO! ✅
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Backend retorna { success, data, total }
+    // Extrair só o "data" para facilitar uso
+    if (response.data && response.data.success !== undefined) {
+      return {
+        ...response,
+        data: response.data.data || response.data,
+        total: response.data.total
+      };
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
