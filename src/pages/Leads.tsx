@@ -53,42 +53,49 @@ export default function Leads() {
     fetchLeads();
   }, []);
 
-const fetchLeads = async () => {
-  try {
-    setLoading(true);
-    const response = await api.get('/leads');
-    
-    console.log('📦 Response completa:', response);
-    console.log('📋 Response.data:', response.data);
-    console.log('🔍 Tipo:', typeof response.data);
-    console.log('📊 É array?', Array.isArray(response.data));
-    
-    // GARANTIR QUE É UM ARRAY
-    const leadsData = Array.isArray(response.data) ? response.data : [];
-    
-    console.log('✅ Leads finais:', leadsData);
-    setLeads(leadsData);
-    
-  } catch (error: any) {
-    console.error('❌ Erro ao carregar leads:', error);
-    toast({
-      title: "Erro ao carregar leads",
-      description: error.message || "Tente novamente mais tarde",
-      variant: "destructive",
-    });
-    setLeads([]); // Garantir array vazio em caso de erro
-  } finally {
-    setLoading(false);
-  }
-};
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/leads');
+      
+      console.log('📦 Response completa:', response);
+      console.log('📋 Response.data:', response.data);
+      console.log('🔍 Tipo:', typeof response.data);
+      console.log('📊 É array?', Array.isArray(response.data));
+      
+      // GARANTIR QUE É UM ARRAY
+      const leadsData = Array.isArray(response.data) ? response.data : [];
+      
+      console.log('✅ Leads finais:', leadsData);
+      setLeads(leadsData);
+      
+      if (leadsData.length === 0) {
+        toast({
+          title: "Nenhum lead encontrado",
+          description: "A lista de leads está vazia",
+        });
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao carregar leads:', error);
+      toast({
+        title: "Erro ao carregar leads",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+      setLeads([]); // Garantir array vazio em caso de erro
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredLeads = leads.filter((lead) => {
+  const filteredLeads = Array.isArray(leads) ? leads.filter((lead) => {
     const matchesSearch = 
       lead.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.telefone?.includes(searchTerm);
     const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
 
   if (loading) {
     return (
@@ -104,6 +111,11 @@ const fetchLeads = async () => {
   return (
     <DashboardLayout title="Leads">
       <div className="space-y-4">
+        {/* Debug info */}
+        <div className="text-xs text-muted-foreground">
+          Total de leads: {leads.length} | Filtrados: {filteredLeads.length}
+        </div>
+
         {/* Filters and Actions */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 gap-2">
@@ -128,9 +140,9 @@ const fetchLeads = async () => {
               </SelectContent>
             </Select>
           </div>
-          <Button>
+          <Button onClick={fetchLeads}>
             <Plus className="mr-2 h-4 w-4" />
-            Novo Lead
+            Recarregar
           </Button>
         </div>
 
@@ -143,7 +155,7 @@ const fetchLeads = async () => {
             <p className="text-sm text-muted-foreground mt-2">
               {searchTerm || statusFilter !== "all" 
                 ? "Tente ajustar os filtros" 
-                : "Clique em 'Novo Lead' para começar"}
+                : "Clique em 'Recarregar' para tentar novamente"}
             </p>
           </div>
         )}
