@@ -21,21 +21,45 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - EXTRAI O DATA.DATA AUTOMATICAMENTE
+// Response interceptor - VERSÃO CORRIGIDA
 api.interceptors.response.use(
   (response) => {
-    console.log('📡 Response original:', response.data);
-    
-    // Se backend retorna { success, data, total }
-    if (response.data && response.data.success !== undefined && response.data.data) {
-      console.log('✅ Extraindo data.data:', response.data.data);
+    console.log('📡 API Response:', {
+      url: response.config.url,
+      data: response.data,
+      type: typeof response.data,
+      isArray: Array.isArray(response.data)
+    });
+
+    // Se backend retorna { success: true, data: [...] }
+    if (
+      response.data && 
+      typeof response.data === 'object' && 
+      'success' in response.data && 
+      'data' in response.data
+    ) {
+      console.log('✅ Extraindo response.data.data');
+      
+      // Garantir que data.data é um array
+      const extractedData = response.data.data;
+      const finalData = Array.isArray(extractedData) ? extractedData : [];
+      
+      console.log('📦 Dados finais:', finalData);
+      
       return {
         ...response,
-        data: response.data.data,
-        total: response.data.total
+        data: finalData
       };
     }
-    
+
+    // Se já vier como array direto, retorna
+    if (Array.isArray(response.data)) {
+      console.log('✅ Já é array, retornando direto');
+      return response;
+    }
+
+    // Caso contrário, retorna response original
+    console.log('⚠️ Retornando response original');
     return response;
   },
   (error) => {
