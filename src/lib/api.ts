@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1',
+  baseURL: 'https://viewlessly-unadjoining-lashanda.ngrok-free.dev',
   headers: {
     'Content-Type': 'application/json',
   },
