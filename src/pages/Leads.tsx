@@ -53,23 +53,34 @@ export default function Leads() {
     fetchLeads();
   }, []);
 
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/leads');
-      console.log('✅ Leads carregados:', response.data);
-      setLeads(response.data || []);
-    } catch (error: any) {
-      console.error('❌ Erro ao carregar leads:', error);
-      toast({
-        title: "Erro ao carregar leads",
-        description: error.message || "Tente novamente mais tarde",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchLeads = async () => {
+  try {
+    setLoading(true);
+    const response = await api.get('/leads');
+    
+    console.log('📦 Response completa:', response);
+    console.log('📋 Response.data:', response.data);
+    console.log('🔍 Tipo:', typeof response.data);
+    console.log('📊 É array?', Array.isArray(response.data));
+    
+    // GARANTIR QUE É UM ARRAY
+    const leadsData = Array.isArray(response.data) ? response.data : [];
+    
+    console.log('✅ Leads finais:', leadsData);
+    setLeads(leadsData);
+    
+  } catch (error: any) {
+    console.error('❌ Erro ao carregar leads:', error);
+    toast({
+      title: "Erro ao carregar leads",
+      description: error.message || "Tente novamente mais tarde",
+      variant: "destructive",
+    });
+    setLeads([]); // Garantir array vazio em caso de erro
+  } finally {
+    setLoading(false);
+  }
+};
 
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch = 
