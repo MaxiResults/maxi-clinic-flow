@@ -255,25 +255,6 @@ const cleanPhone = (phone: string): string => {
   }
 };
 
-      toast({
-        title: "✅ Sucesso!",
-        description: "Lead criado com sucesso!",
-      });
-
-      setIsNewLeadOpen(false);
-      form.reset();
-      fetchLeads();
-    } catch (err: any) {
-      toast({
-        title: "❌ Erro",
-        description: err.message || "Erro ao criar lead. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const handleUpdate = async (data: LeadFormData) => {
     if (!selectedLead) return;
 
