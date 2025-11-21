@@ -10,6 +10,7 @@ import Agendamentos from "./pages/Agendamentos";
 import Conversas from "./pages/Conversas";
 import Profissionais from "./pages/Profissionais";
 import Produtos from "./pages/Produtos";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,14 @@ const App = () => (
             element={
               <PrivateRoute>
                 <Produtos />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <Settings />
               </PrivateRoute>
             }
           />
