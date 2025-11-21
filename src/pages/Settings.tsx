@@ -219,6 +219,7 @@ export default function Settings() {
         : `${API_BASE_URL}/grupos`;
       const response = await fetch(url, {
         headers: {
+          "Content-Type": "application/json",
           "ngrok-skip-browser-warning": "true",
           "User-Agent": "LovableApp",
         },
@@ -533,7 +534,11 @@ export default function Settings() {
   };
 
   // Agrupar grupos por categoria
-  const gruposPorCategoria = grupos.reduce((acc, grupo) => {
+  const gruposFiltrados = filtroCategoria && filtroCategoria !== 'all'
+    ? grupos.filter(g => g.categoria_id === filtroCategoria)
+    : grupos;
+
+  const gruposPorCategoria = gruposFiltrados.reduce((acc, grupo) => {
     const catId = grupo.categoria_id;
     if (!acc[catId]) {
       acc[catId] = [];
@@ -661,7 +666,7 @@ export default function Settings() {
                 <SelectValue placeholder="Todas categorias" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas categorias</SelectItem>
+                <SelectItem value="all">Todas categorias</SelectItem>
                 {categorias.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.nome}
