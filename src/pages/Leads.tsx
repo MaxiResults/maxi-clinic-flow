@@ -155,9 +155,17 @@ export default function Leads() {
     return cpf;
   };
 
-  const cleanPhone = (phone: string) => {
-    return '+55' + phone.replace(/\D/g, '');
-  };
+const cleanPhone = (phone: string): string => {
+  // Remove tudo exceto números
+  const digits = phone.replace(/\D/g, '');
+  
+  // Adiciona +55 se não tiver
+  if (digits.startsWith('55')) {
+    return '+' + digits;
+  }
+  
+  return '+55' + digits;
+};
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -192,28 +200,60 @@ export default function Leads() {
   };
 
   const handleCreate = async (data: LeadFormData) => {
-    try {
-      setActionLoading(true);
-      
-      const payload = {
-        ...data,
-        telefone: cleanPhone(data.telefone),
-        cpf: data.cpf ? data.cpf.replace(/\D/g, '') : undefined,
-        email: data.email || undefined,
-      };
-
-      const response = await fetch(`${API_BASE_URL}/leads`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao criar lead');
-      }
+  try {
+    setActionLoading(true);
+    
+    console.log('📤 DADOS ORIGINAIS:', data);
+    
+    const payload = {
+      ...data,
+      telefone: cleanPhone(data.telefone),
+      cpf: data.cpf ? data.cpf.replace(/\D/g, '') : undefined,
+      email: data.email || undefined,
+    };
+    
+    console.log('📦 PAYLOAD FINAL:', payload);
+    
+    const response = await fetch(`${API_BASE_URL}/leads`, {  // ← CORRIGIDO!
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    console.log('📡 RESPONSE STATUS:', response.status);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ ERROR DATA:', errorData);
+      throw new Error(errorData.error || 'Erro ao criar lead');
+    }
+    
+    const result = await response.json();
+    console.log('✅ RESULTADO:', result);
+    
+    toast({
+      title: "✅ Sucesso!",
+      description: "Lead criado com sucesso!",
+    });
+    
+    setIsNewLeadOpen(false);
+    form.reset();
+    fetchLeads();
+    
+  } catch (err: any) {
+    console.error('❌ ERRO COMPLETO:', err);
+    toast({
+      title: "❌ Erro",
+      description: err.message || "Erro ao criar lead. Tente novamente.",
+      variant: "destructive",
+    });
+  } finally {
+    setActionLoading(false);
+  }
+};
 
       toast({
         title: "✅ Sucesso!",
