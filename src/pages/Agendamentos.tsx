@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, User, Package, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 interface Agendamento {
@@ -184,25 +185,33 @@ export default function Agendamentos() {
           </div>
         </div>
 
-        {/* Filtros */}
-        <div className="mb-6 flex flex-wrap gap-2">
-          {['todos', 'agendado', 'confirmado', 'cancelado', 'concluido'].map(status => (
-            <button
-              key={status}
-              onClick={() => setFiltroStatus(status)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
-                filtroStatus === status
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
-        </div>
+        {/* Tabs */}
+        <Tabs defaultValue="lista" className="w-full">
+          <TabsList>
+            <TabsTrigger value="lista">Lista</TabsTrigger>
+            <TabsTrigger value="calendario">Calendário</TabsTrigger>
+          </TabsList>
 
-        {/* Lista */}
-        {agendamentosFiltrados.length === 0 ? (
+          <TabsContent value="lista" className="space-y-4">
+            {/* Filtros */}
+            <div className="flex flex-wrap gap-2">
+              {['todos', 'agendado', 'confirmado', 'cancelado', 'concluido'].map(status => (
+                <button
+                  key={status}
+                  onClick={() => setFiltroStatus(status)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                    filtroStatus === status
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
+
+            {/* Lista */}
+            {agendamentosFiltrados.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 text-lg">Nenhum agendamento encontrado</p>
@@ -328,9 +337,21 @@ export default function Agendamentos() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+          </TabsContent>
+
+          <TabsContent value="calendario">
+            <div className="text-center py-12 bg-muted/50 rounded-lg">
+              <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-lg font-medium">Calendário em desenvolvimento</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Visualização de calendário será implementada em breve
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
