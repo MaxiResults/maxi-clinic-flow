@@ -1,120 +1,258 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Send } from "lucide-react";
+import { Loader2, MessageSquare } from "lucide-react";
 
-const mockConversas = [
-  {
-    id: 1,
-    leadName: "Maria Silva",
-    lastMessage: "Gostaria de agendar para amanhã",
-    timestamp: "10:30",
-    unread: 2,
-  },
-  {
-    id: 2,
-    leadName: "João Santos",
-    lastMessage: "Qual o valor da massagem?",
-    timestamp: "09:15",
-    unread: 0,
-  },
-  {
-    id: 3,
-    leadName: "Ana Costa",
-    lastMessage: "Obrigada pelo atendimento!",
-    timestamp: "Ontem",
-    unread: 0,
-  },
-];
+interface Sessao {
+  id: string;
+  Lead?: {
+    id: string;
+    nome: string;
+    telefone: string;
+  };
+  ultima_mensagem_em?: string;
+  status: string;
+}
 
-const mockMessages = [
-  {
-    id: 1,
-    sender: "lead",
-    text: "Olá! Gostaria de saber mais sobre os tratamentos",
-    timestamp: "10:25",
-  },
-  {
-    id: 2,
-    sender: "system",
-    text: "Olá Maria! Temos diversos tratamentos disponíveis. Qual seria do seu interesse?",
-    timestamp: "10:26",
-  },
-  {
-    id: 3,
-    sender: "lead",
-    text: "Estou interessada em limpeza de pele",
-    timestamp: "10:28",
-  },
-  {
-    id: 4,
-    sender: "system",
-    text: "Ótimo! A limpeza de pele é um dos nossos tratamentos mais procurados. Gostaria de agendar uma avaliação?",
-    timestamp: "10:29",
-  },
-  {
-    id: 5,
-    sender: "lead",
-    text: "Gostaria de agendar para amanhã",
-    timestamp: "10:30",
-  },
-];
+interface Mensagem {
+  id: string;
+  remetente: string;
+  mensagem: string;
+  data_envio: string;
+  tipo_mensagem: string;
+}
 
 export default function Conversas() {
-  const [selectedConversa, setSelectedConversa] = useState(mockConversas[0]);
-  const [messageText, setMessageText] = useState("");
+  const [sessoes, setSessoes] = useState<Sessao[]>([]);
+  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  const [selectedSessao, setSelectedSessao] = useState<Sessao | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMensagens, setLoadingMensagens] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSendMessage = () => {
-    if (messageText.trim()) {
-      // Here you would send the message to the API
-      console.log("Sending message:", messageText);
-      setMessageText("");
+  useEffect(() => {
+    fetchSessoes();
+  }, []);
+
+  const fetchSessoes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('🔍 Buscando sessões...');
+
+      // Por enquanto, vamos buscar os leads como "sessões"
+      const response = await fetch(
+        'https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1/leads?t=' + Date.now(),
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true',
+            'User-Agent': 'MaxiResults/1.0'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const text = await response.text();
+      
+      if (!text.startsWith('{')) {
+        throw new Error('Abra a URL no navegador e clique em "Visit Site"');
+      }
+
+      const data = JSON.parse(text);
+      console.log('📦 Leads:', data);
+
+      // Transformar leads em sessões
+      const leadsArray = data.success && data.data 
+        ? (Array.isArray(data.data) ? data.data : [])
+        : [];
+
+      const sessoesArray = leadsArray.map((lead: any) => ({
+        id: lead.id,
+        Lead: {
+          id: lead.id,
+          nome: lead.nome,
+          telefone: lead.telefone
+        },
+        ultima_mensagem_em: lead.primeira_mensagem_at || lead.created_at,
+        status: 'ativa'
+      }));
+
+      console.log('✅ Total de conversas:', sessoesArray.length);
+      setSessoes(sessoesArray);
+
+      // Selecionar primeira conversa automaticamente
+      if (sessoesArray.length > 0 && !selectedSessao) {
+        setSelectedSessao(sessoesArray[0]);
+        fetchMensagens(sessoesArray[0].Lead?.id);
+      }
+
+    } catch (err: any) {
+      console.error('❌ Erro:', err);
+      setError(err.message);
+      setSessoes([]);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const fetchMensagens = async (leadId?: string) => {
+    if (!leadId) return;
+
+    try {
+      setLoadingMensagens(true);
+
+      console.log('🔍 Buscando mensagens do lead:', leadId);
+
+      const response = await fetch(
+        `https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1/conversas/${leadId}/historico?t=${Date.now()}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true',
+            'User-Agent': 'MaxiResults/1.0'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const text = await response.text();
+      
+      if (!text.startsWith('{')) {
+        throw new Error('Erro ao carregar mensagens');
+      }
+
+      const data = JSON.parse(text);
+      console.log('📦 Histórico:', data);
+
+      const mensagensArray = data.success && data.data && data.data.mensagens
+        ? (Array.isArray(data.data.mensagens) ? data.data.mensagens : [])
+        : [];
+
+      console.log('✅ Total de mensagens:', mensagensArray.length);
+      setMensagens(mensagensArray);
+
+    } catch (err: any) {
+      console.error('❌ Erro ao buscar mensagens:', err);
+      setMensagens([]);
+    } finally {
+      setLoadingMensagens(false);
+    }
+  };
+
+  const handleSelectSessao = (sessao: Sessao) => {
+    setSelectedSessao(sessao);
+    fetchMensagens(sessao.Lead?.id);
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Ontem';
+    } else if (diffDays < 7) {
+      return `${diffDays} dias`;
+    } else {
+      return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Conversas">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Carregando conversas...</span>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout title="Conversas">
+        <div className="p-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h3 className="text-red-800 font-bold mb-3">❌ Erro ao carregar</h3>
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={fetchSessoes} variant="destructive">
+              🔄 Tentar novamente
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (sessoes.length === 0) {
+    return (
+      <DashboardLayout title="Conversas">
+        <div className="text-center py-12">
+          <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <p className="text-lg font-medium">Nenhuma conversa ativa</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            As conversas aparecerão aqui quando os leads entrarem em contato
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout title="Conversas">
-      <div className="grid h-[calc(100vh-160px)] grid-cols-3 gap-4">
-        {/* Conversation List */}
+      <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Lista de Conversas */}
         <Card className="col-span-1 overflow-hidden">
           <div className="flex h-full flex-col">
             <div className="border-b p-4">
-              <h3 className="font-semibold">Conversas Ativas</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Conversas Ativas ({sessoes.length})</h3>
+                <Button onClick={fetchSessoes} variant="ghost" size="sm">
+                  🔄
+                </Button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {mockConversas.map((conversa) => (
+              {sessoes.map((sessao) => (
                 <div
-                  key={conversa.id}
+                  key={sessao.id}
                   className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
-                    selectedConversa.id === conversa.id ? "bg-muted" : ""
+                    selectedSessao?.id === sessao.id ? "bg-muted" : ""
                   }`}
-                  onClick={() => setSelectedConversa(conversa)}
+                  onClick={() => handleSelectSessao(sessao)}
                 >
                   <div className="flex items-start gap-3">
                     <Avatar>
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        {conversa.leadName.substring(0, 2).toUpperCase()}
+                        {sessao.Lead?.nome ? sessao.Lead.nome.substring(0, 2).toUpperCase() : '??'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium">{conversa.leadName}</p>
+                        <p className="font-medium">{sessao.Lead?.nome || 'Sem nome'}</p>
                         <span className="text-xs text-muted-foreground">
-                          {conversa.timestamp}
+                          {sessao.ultima_mensagem_em ? formatTime(sessao.ultima_mensagem_em) : '-'}
                         </span>
                       </div>
                       <p className="truncate text-sm text-muted-foreground">
-                        {conversa.lastMessage}
+                        📱 {sessao.Lead?.telefone || 'Sem telefone'}
                       </p>
                     </div>
-                    {conversa.unread > 0 && (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-status-new text-xs text-white">
-                        {conversa.unread}
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
@@ -122,74 +260,87 @@ export default function Conversas() {
           </div>
         </Card>
 
-        {/* Messages Area */}
-        <Card className="col-span-2 overflow-hidden">
+        {/* Área de Mensagens */}
+        <Card className="col-span-1 md:col-span-2 overflow-hidden">
           <div className="flex h-full flex-col">
-            {/* Header */}
-            <div className="border-b p-4">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {selectedConversa.leadName.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold">{selectedConversa.leadName}</h3>
-                  <p className="text-sm text-muted-foreground">Online</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 space-y-4 overflow-y-auto p-4">
-              {mockMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender === "system" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                      message.sender === "system"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted"
-                    }`}
-                  >
-                    <p className="text-sm">{message.text}</p>
-                    <p
-                      className={`mt-1 text-xs ${
-                        message.sender === "system"
-                          ? "text-primary-foreground/70"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {message.timestamp}
-                    </p>
+            {selectedSessao ? (
+              <>
+                {/* Header */}
+                <div className="border-b p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {selectedSessao.Lead?.nome ? selectedSessao.Lead.nome.substring(0, 2).toUpperCase() : '??'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold">{selectedSessao.Lead?.nome || 'Sem nome'}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedSessao.Lead?.telefone || 'Sem telefone'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Input */}
-            <div className="border-t p-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Digite sua mensagem..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                />
-                <Button onClick={handleSendMessage}>
-                  <Send className="h-4 w-4" />
-                </Button>
+                {/* Mensagens */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {loadingMensagens ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span className="ml-2 text-sm text-muted-foreground">Carregando mensagens...</span>
+                    </div>
+                  ) : mensagens.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {mensagens.map((mensagem) => (
+                        <div
+                          key={mensagem.id}
+                          className={`flex ${
+                            mensagem.remetente === "lead" ? "justify-start" : "justify-end"
+                          }`}
+                        >
+                          <div
+                            className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                              mensagem.remetente === "lead"
+                                ? "bg-muted"
+                                : "bg-primary text-primary-foreground"
+                            }`}
+                          >
+                            <p className="text-sm">{mensagem.mensagem}</p>
+                            <p
+                              className={`mt-1 text-xs ${
+                                mensagem.remetente === "lead"
+                                  ? "text-muted-foreground"
+                                  : "text-primary-foreground/70"
+                              }`}
+                            >
+                              {new Date(mensagem.data_envio).toLocaleTimeString('pt-BR', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Input (desabilitado por enquanto) */}
+                <div className="border-t p-4">
+                  <p className="text-sm text-center text-muted-foreground">
+                    💬 Visualização apenas. Envio de mensagens em breve.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-muted-foreground">Selecione uma conversa para ver as mensagens</p>
               </div>
-            </div>
+            )}
           </div>
         </Card>
       </div>
