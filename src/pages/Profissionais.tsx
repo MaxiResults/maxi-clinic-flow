@@ -140,6 +140,15 @@ export default function Profissionais() {
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string>("");
 
+  // Função para formatar telefone
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/(-)?$/, '');
+    }
+    return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/(-)?$/, '');
+  };
+
   const [horarios, setHorarios] = useState({
     seg: { ...horarioPadrao },
     ter: { ...horarioPadrao },
@@ -567,7 +576,15 @@ export default function Profissionais() {
                     <FormItem>
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="(00) 00000-0000" />
+                        <Input
+                          placeholder="(00) 00000-0000"
+                          value={field.value || ''}
+                          onChange={(e) => {
+                            const formatted = formatPhone(e.target.value);
+                            field.onChange(formatted);
+                          }}
+                          maxLength={15}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -581,7 +598,15 @@ export default function Profissionais() {
                     <FormItem>
                       <FormLabel>WhatsApp</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="(00) 00000-0000" />
+                        <Input
+                          placeholder="(00) 00000-0000"
+                          value={field.value || ''}
+                          onChange={(e) => {
+                            const formatted = formatPhone(e.target.value);
+                            field.onChange(formatted);
+                          }}
+                          maxLength={15}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
