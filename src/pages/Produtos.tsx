@@ -276,6 +276,9 @@ export default function Produtos() {
 
   // Adicionar imagem à galeria
   const adicionarImagemGaleria = async (file: File) => {
+    console.log('adicionarImagemGaleria chamado', file);
+    console.log('galeriaImagens.length:', galeriaImagens.length);
+    
     if (galeriaImagens.length >= 6) {
       toast({
         title: "⚠️ Limite atingido",
@@ -287,13 +290,16 @@ export default function Produtos() {
     
     try {
       setUploadingGaleria(true);
+      console.log('Iniciando upload...');
       const url = await uploadImagem(file);
+      console.log('Upload concluído, URL:', url);
       setGaleriaImagens([...galeriaImagens, url]);
       toast({
         title: "✅ Imagem adicionada!",
         description: "Imagem adicionada à galeria.",
       });
     } catch (error: any) {
+      console.error('Erro no upload:', error);
       toast({
         title: "❌ Erro no upload",
         description: error.message,
@@ -990,29 +996,30 @@ export default function Produtos() {
                   ))}
                   
                   {galeriaImagens.length < 6 && (
-                    <div className="relative aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors">
-                      <Input
+                    <label className="relative aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors cursor-pointer flex flex-col items-center justify-center text-muted-foreground">
+                      <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={(e) => {
+                        className="hidden"
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (file) adicionarImagemGaleria(file);
-                          e.target.value = '';
+                          if (file) {
+                            console.log('Arquivo selecionado:', file.name);
+                            await adicionarImagemGaleria(file);
+                            e.target.value = '';
+                          }
                         }}
                         disabled={uploadingGaleria}
                       />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                        {uploadingGaleria ? (
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        ) : (
-                          <>
-                            <Plus className="h-6 w-6" />
-                            <span className="text-xs mt-1">Adicionar</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                      {uploadingGaleria ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="h-6 w-6" />
+                          <span className="text-xs mt-1">Adicionar</span>
+                        </>
+                      )}
+                    </label>
                   )}
                 </div>
                 
@@ -1579,29 +1586,30 @@ export default function Produtos() {
                   ))}
                   
                   {galeriaImagens.length < 6 && (
-                    <div className="relative aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors">
-                      <Input
+                    <label className="relative aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors cursor-pointer flex flex-col items-center justify-center text-muted-foreground">
+                      <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        onChange={(e) => {
+                        className="hidden"
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
-                          if (file) adicionarImagemGaleria(file);
-                          e.target.value = '';
+                          if (file) {
+                            console.log('Arquivo selecionado:', file.name);
+                            await adicionarImagemGaleria(file);
+                            e.target.value = '';
+                          }
                         }}
                         disabled={uploadingGaleria}
                       />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                        {uploadingGaleria ? (
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                        ) : (
-                          <>
-                            <Plus className="h-6 w-6" />
-                            <span className="text-xs mt-1">Adicionar</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                      {uploadingGaleria ? (
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="h-6 w-6" />
+                          <span className="text-xs mt-1">Adicionar</span>
+                        </>
+                      )}
+                    </label>
                   )}
                 </div>
                 
