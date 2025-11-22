@@ -149,6 +149,12 @@ export default function Profissionais() {
     return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/(-)?$/, '');
   };
 
+  // Função para formatar CPF
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4').replace(/(-)?$/, '');
+  };
+
   const [horarios, setHorarios] = useState({
     seg: { ...horarioPadrao },
     ter: { ...horarioPadrao },
@@ -371,7 +377,11 @@ export default function Profissionais() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error("Erro ao criar profissional");
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erro do backend:', errorData);
+        throw new Error(errorData.error || errorData.message || "Erro ao criar profissional");
+      }
 
       toast({
         title: "Profissional criado",
@@ -429,7 +439,11 @@ export default function Profissionais() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error("Erro ao atualizar profissional");
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Erro do backend:', errorData);
+        throw new Error(errorData.error || errorData.message || "Erro ao atualizar profissional");
+      }
 
       toast({
         title: "Profissional atualizado",
@@ -622,7 +636,15 @@ export default function Profissionais() {
                     <FormItem>
                       <FormLabel>CPF</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="000.000.000-00" />
+                        <Input
+                          placeholder="000.000.000-00"
+                          value={field.value || ''}
+                          onChange={(e) => {
+                            const formatted = formatCPF(e.target.value);
+                            field.onChange(formatted);
+                          }}
+                          maxLength={14}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
