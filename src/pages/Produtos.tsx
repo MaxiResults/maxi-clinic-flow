@@ -653,41 +653,63 @@ export default function Produtos() {
               return (
           <Card key={produto.id} className="hover:shadow-lg transition-shadow overflow-hidden">
             {/* Carousel de imagens ou imagem única */}
-            {(produto as any).imagem_galeria?.galeria && (produto as any).imagem_galeria.galeria.length > 0 ? (
-              <div className="relative aspect-square bg-muted">
-                <Carousel className="w-full h-full">
-                  <CarouselContent>
-                    {(produto as any).imagem_galeria.galeria.map((url: string, index: number) => (
-                      <CarouselItem key={index}>
-                        <img 
-                          src={url} 
-                          alt={`${produto.nome} - ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious className="left-2" />
-                  <CarouselNext className="right-2" />
-                </Carousel>
-                
-                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                  {(produto as any).imagem_galeria.galeria.length} fotos
+            {(() => {
+              // Combinar imagem principal + galeria
+              const todasImagens: string[] = [];
+              if (produto.imagem_principal) {
+                todasImagens.push(produto.imagem_principal);
+              }
+              if ((produto as any).imagem_galeria?.galeria) {
+                todasImagens.push(...(produto as any).imagem_galeria.galeria);
+              }
+              
+              // Se tem mais de uma imagem, mostrar carousel
+              if (todasImagens.length > 1) {
+                return (
+                  <div className="relative aspect-square bg-muted">
+                    <Carousel className="w-full h-full">
+                      <CarouselContent>
+                        {todasImagens.map((url: string, index: number) => (
+                          <CarouselItem key={index}>
+                            <img 
+                              src={url} 
+                              alt={`${produto.nome} - ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious className="left-2" />
+                      <CarouselNext className="right-2" />
+                    </Carousel>
+                    
+                    <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      {todasImagens.length} fotos
+                    </div>
+                  </div>
+                );
+              }
+              
+              // Se tem apenas uma imagem
+              if (todasImagens.length === 1) {
+                return (
+                  <div className="aspect-square bg-muted overflow-hidden">
+                    <img 
+                      src={todasImagens[0]} 
+                      alt={produto.nome}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                );
+              }
+              
+              // Se não tem imagem
+              return (
+                <div className="aspect-square bg-muted flex items-center justify-center">
+                  <Package className="h-16 w-16 text-muted-foreground/30" />
                 </div>
-              </div>
-            ) : produto.imagem_principal ? (
-              <div className="aspect-square bg-muted overflow-hidden">
-                <img 
-                  src={produto.imagem_principal} 
-                  alt={produto.nome}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="aspect-square bg-muted flex items-center justify-center">
-                <Package className="h-16 w-16 text-muted-foreground/30" />
-              </div>
-            )}
+              );
+            })()}
 
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base line-clamp-2 min-h-[3rem]">{produto.nome}</CardTitle>
