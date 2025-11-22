@@ -31,7 +31,7 @@ const menuItems = [
   { title: "Conversas", url: "/conversas", icon: MessageSquare },
   { title: "Profissionais", url: "/profissionais", icon: UserCheck },
   { title: "Produtos", url: "/produtos", icon: Package },
-  { title: "Configurações", url: "/settings", icon: Settings },
+  { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
 export function AppSidebar() {
