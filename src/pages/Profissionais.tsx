@@ -561,7 +561,7 @@ export default function Profissionais() {
                   <FormItem>
                     <FormLabel>Nome Completo *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Nome do profissional" />
+                      <Input {...field} placeholder="Nome do profissional" tabIndex={1} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -575,7 +575,7 @@ export default function Profissionais() {
                   <FormItem>
                     <FormLabel>E-mail</FormLabel>
                     <FormControl>
-                      <Input {...field} type="email" placeholder="email@exemplo.com" />
+                      <Input {...field} type="email" placeholder="email@exemplo.com" tabIndex={2} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -591,13 +591,14 @@ export default function Profissionais() {
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
                         <Input
+                          {...field}
                           placeholder="(00) 00000-0000"
-                          value={field.value || ''}
                           onChange={(e) => {
                             const formatted = formatPhone(e.target.value);
                             field.onChange(formatted);
                           }}
                           maxLength={15}
+                          tabIndex={3}
                         />
                       </FormControl>
                       <FormMessage />
@@ -613,13 +614,14 @@ export default function Profissionais() {
                       <FormLabel>WhatsApp</FormLabel>
                       <FormControl>
                         <Input
+                          {...field}
                           placeholder="(00) 00000-0000"
-                          value={field.value || ''}
                           onChange={(e) => {
                             const formatted = formatPhone(e.target.value);
                             field.onChange(formatted);
                           }}
                           maxLength={15}
+                          tabIndex={4}
                         />
                       </FormControl>
                       <FormMessage />
@@ -637,13 +639,14 @@ export default function Profissionais() {
                       <FormLabel>CPF</FormLabel>
                       <FormControl>
                         <Input
+                          {...field}
                           placeholder="000.000.000-00"
-                          value={field.value || ''}
                           onChange={(e) => {
                             const formatted = formatCPF(e.target.value);
                             field.onChange(formatted);
                           }}
                           maxLength={14}
+                          tabIndex={5}
                         />
                       </FormControl>
                       <FormMessage />
@@ -658,7 +661,7 @@ export default function Profissionais() {
                     <FormItem>
                       <FormLabel>Registro Profissional</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Ex: CRM 12345" />
+                        <Input {...field} placeholder="Ex: CRM 12345" tabIndex={6} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -677,6 +680,7 @@ export default function Profissionais() {
                         {...field}
                         placeholder="Breve descrição do profissional..."
                         rows={3}
+                        tabIndex={7}
                       />
                     </FormControl>
                     <FormMessage />
@@ -866,7 +870,7 @@ export default function Profissionais() {
                   <FormItem>
                     <FormLabel>Duração Padrão de Atendimento (minutos)</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" min={15} step={15} />
+                      <Input {...field} type="number" min={15} step={15} tabIndex={8} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -898,7 +902,7 @@ export default function Profissionais() {
                   <FormItem>
                     <FormLabel>Comissão (%)</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" min={0} max={100} step={0.1} />
+                      <Input {...field} type="number" min={0} max={100} step={0.1} tabIndex={9} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -912,7 +916,7 @@ export default function Profissionais() {
                   <FormItem>
                     <FormLabel>Data de Admissão</FormLabel>
                     <FormControl>
-                      <Input {...field} type="date" />
+                      <Input {...field} type="date" tabIndex={10} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -926,7 +930,7 @@ export default function Profissionais() {
                   <FormItem>
                     <FormLabel>Observações</FormLabel>
                     <FormControl>
-                      <Textarea {...field} rows={3} />
+                      <Textarea {...field} rows={3} tabIndex={11} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
