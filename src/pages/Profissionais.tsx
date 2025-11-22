@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -125,7 +125,7 @@ const horarioInativo: HorarioDia = {
 };
 
 // Componente HorarioItem - FORA do componente principal para evitar re-render
-const HorarioItem = ({ dia, horario, onChange }: { 
+const HorarioItem = memo(({ dia, horario, onChange }: { 
   dia: string; 
   horario: HorarioDia; 
   onChange: (horario: HorarioDia) => void 
@@ -185,7 +185,7 @@ const HorarioItem = ({ dia, horario, onChange }: {
       <span className="text-sm text-muted-foreground">Não trabalha</span>
     )}
   </div>
-);
+));
 
 export default function Profissionais() {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
@@ -444,7 +444,12 @@ export default function Profissionais() {
         registro_profissional: data.registro_profissional || null,
         biografia: data.biografia || null,
         horario_trabalho: horarios,
-        duracao_padrao_consulta: `00:${String(data.duracao_padrao_consulta).padStart(2, "0")}:00`,
+        duracao_padrao_consulta: (() => {
+          const totalMinutos = data.duracao_padrao_consulta;
+          const horas = Math.floor(totalMinutos / 60);
+          const minutos = totalMinutos % 60;
+          return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00`;
+        })(),
         permite_agendamento_online: data.permite_agendamento_online,
         comissao_percentual: data.comissao_percentual || null,
         data_admissao: data.data_admissao || null,
@@ -507,7 +512,12 @@ export default function Profissionais() {
         registro_profissional: data.registro_profissional || null,
         biografia: data.biografia || null,
         horario_trabalho: horarios,
-        duracao_padrao_consulta: `00:${String(data.duracao_padrao_consulta).padStart(2, "0")}:00`,
+        duracao_padrao_consulta: (() => {
+          const totalMinutos = data.duracao_padrao_consulta;
+          const horas = Math.floor(totalMinutos / 60);
+          const minutos = totalMinutos % 60;
+          return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00`;
+        })(),
         permite_agendamento_online: data.permite_agendamento_online,
         comissao_percentual: data.comissao_percentual || null,
         data_admissao: data.data_admissao || null,
