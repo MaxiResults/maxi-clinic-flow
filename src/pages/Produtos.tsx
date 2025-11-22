@@ -15,6 +15,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Plus, Loader2, Package, Eye, Edit, Trash2, Search, X } from "lucide-react";
 import * as Icons from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -67,6 +74,7 @@ interface Variacao {
   duracao_minutos?: number;
   quantidade_estoque: number;
   estoque_minimo: number;
+  imagem_url?: string;
   ativo: boolean;
   ordem: number;
 }
@@ -125,6 +133,8 @@ export default function Produtos() {
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadingGaleria, setUploadingGaleria] = useState(false);
+  const [galeriaImagens, setGaleriaImagens] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof produtoSchema>>({
     resolver: zodResolver(produtoSchema),
@@ -234,37 +244,69 @@ export default function Produtos() {
   };
 
   const uploadImagem = async (file: File): Promise<string> => {
-    // Validar tamanho (2 MB máximo)
     if (file.size > 2 * 1024 * 1024) {
-      throw new Error("Imagem deve ter no máximo 2 MB");
+      throw new Error('Imagem deve ter no máximo 2 MB');
     }
-
-    // Validar formato
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-      throw new Error("Formato deve ser JPG, PNG ou WEBP");
+      throw new Error('Formato deve ser JPG, PNG ou WEBP');
     }
-
-    // Gerar nome do arquivo
+    
     const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-
-    // Path no bucket
+    const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     const clienteId = 2;
     const empresaId = 2;
     const filePath = `${clienteId}/${empresaId}/${fileName}`;
-
-    // Upload para Supabase Storage
-    const { data, error } = await supabase.storage.from("produtos").upload(filePath, file);
-
+    
+    const { data, error } = await supabase.storage
+      .from('produtos')
+      .upload(filePath, file);
+    
     if (error) {
       throw new Error(`Erro no upload: ${error.message}`);
     }
-
-    // Gerar URL pública
-    const { data: urlData } = supabase.storage.from("produtos").getPublicUrl(filePath);
-
+    
+    const { data: urlData } = supabase.storage
+      .from('produtos')
+      .getPublicUrl(filePath);
+    
     return urlData.publicUrl;
+  };
+
+  // Adicionar imagem à galeria
+  const adicionarImagemGaleria = async (file: File) => {
+    if (galeriaImagens.length >= 6) {
+      toast({
+        title: "⚠️ Limite atingido",
+        description: "Máximo de 6 imagens na galeria",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setUploadingGaleria(true);
+      const url = await uploadImagem(file);
+      setGaleriaImagens([...galeriaImagens, url]);
+      toast({
+        title: "✅ Imagem adicionada!",
+        description: "Imagem adicionada à galeria.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "❌ Erro no upload",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingGaleria(false);
+    }
+  };
+
+  // Remover imagem da galeria
+  const removerImagemGaleria = (index: number) => {
+    setGaleriaImagens(galeriaImagens.filter((_, i) => i !== index));
   };
 
   const adicionarVariacao = () => {
@@ -305,13 +347,21 @@ export default function Produtos() {
         preco_promocional: data.preco_promocional,
         sku: data.sku,
         imagem_principal: data.imagem_principal,
+        imagem_galeria: galeriaImagens.length > 0 ? {
+          principal: data.imagem_principal || galeriaImagens[0],
+          galeria: galeriaImagens
+        } : null,
         controla_estoque: data.controla_estoque ? 'sim' : 'nao',
         quantidade_estoque: data.quantidade_estoque,
         estoque_minimo: data.estoque_minimo,
         tem_variacoes: data.tem_variacoes,
         destaque: data.destaque,
         principal_destaque: data.destaque,
-        variacoes: data.tem_variacoes ? variacoes : [],
+        variacoes: data.tem_variacoes ? variacoes.map((v, i) => ({
+          ...v,
+          ordem: i,
+          imagem_url: v.imagem_url || null
+        })) : [],
       };
 
       const response = await fetch(`${API_BASE_URL}/produtos`, {
@@ -335,6 +385,7 @@ export default function Produtos() {
       setIsNewOpen(false);
       form.reset();
       setVariacoes([]);
+      setGaleriaImagens([]);
       fetchProdutos();
     } catch (error: any) {
       toast({
@@ -361,13 +412,21 @@ export default function Produtos() {
         preco_promocional: data.preco_promocional,
         sku: data.sku,
         imagem_principal: data.imagem_principal,
+        imagem_galeria: galeriaImagens.length > 0 ? {
+          principal: data.imagem_principal || galeriaImagens[0],
+          galeria: galeriaImagens
+        } : null,
         controla_estoque: data.controla_estoque ? 'sim' : 'nao',
         quantidade_estoque: data.quantidade_estoque,
         estoque_minimo: data.estoque_minimo,
         tem_variacoes: data.tem_variacoes,
         destaque: data.destaque,
         principal_destaque: data.destaque,
-        variacoes: data.tem_variacoes ? variacoes : [],
+        variacoes: data.tem_variacoes ? variacoes.map((v, i) => ({
+          ...v,
+          ordem: i,
+          imagem_url: v.imagem_url || null
+        })) : [],
       };
 
       const response = await fetch(`${API_BASE_URL}/produtos/${selectedProduto.id}`, {
@@ -389,6 +448,7 @@ export default function Produtos() {
       setIsEditOpen(false);
       form.reset();
       setVariacoes([]);
+      setGaleriaImagens([]);
       setSelectedProduto(null);
       fetchProdutos();
     } catch (error: any) {
@@ -433,6 +493,7 @@ export default function Produtos() {
   const openNovo = () => {
     form.reset();
     setVariacoes([]);
+    setGaleriaImagens([]);
     setIsNewOpen(true);
   };
 
@@ -457,6 +518,9 @@ export default function Produtos() {
       destaque: produto.destaque || false,
     });
     setVariacoes(produto.variacoes || []);
+    setGaleriaImagens(
+      (produto as any).imagem_galeria?.galeria || []
+    );
     setIsEditOpen(true);
   };
 
@@ -581,21 +645,43 @@ export default function Produtos() {
               const IconComponent = categoria ? (Icons as any)[categoria.icone] || Icons.Package : Icons.Package;
 
               return (
-                <Card key={produto.id} className="hover:shadow-lg transition-shadow overflow-hidden">
-                  {/* Imagem */}
-                  <div className="aspect-square bg-muted overflow-hidden">
-                    {produto.imagem_principal ? (
-                      <img
-                        src={produto.imagem_principal}
-                        alt={produto.nome}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-16 w-16 text-muted-foreground/30" />
-                      </div>
-                    )}
-                  </div>
+          <Card key={produto.id} className="hover:shadow-lg transition-shadow overflow-hidden">
+            {/* Carousel de imagens ou imagem única */}
+            {(produto as any).imagem_galeria?.galeria && (produto as any).imagem_galeria.galeria.length > 0 ? (
+              <div className="relative aspect-square bg-muted">
+                <Carousel className="w-full h-full">
+                  <CarouselContent>
+                    {(produto as any).imagem_galeria.galeria.map((url: string, index: number) => (
+                      <CarouselItem key={index}>
+                        <img 
+                          src={url} 
+                          alt={`${produto.nome} - ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious className="left-2" />
+                  <CarouselNext className="right-2" />
+                </Carousel>
+                
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                  {(produto as any).imagem_galeria.galeria.length} fotos
+                </div>
+              </div>
+            ) : produto.imagem_principal ? (
+              <div className="aspect-square bg-muted overflow-hidden">
+                <img 
+                  src={produto.imagem_principal} 
+                  alt={produto.nome}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="aspect-square bg-muted flex items-center justify-center">
+                <Package className="h-16 w-16 text-muted-foreground/30" />
+              </div>
+            )}
 
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base line-clamp-2 min-h-[3rem]">{produto.nome}</CardTitle>
@@ -874,6 +960,67 @@ export default function Produtos() {
                 />
               </div>
 
+              {/* Galeria de Imagens */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Galeria de Imagens (até 6)</h3>
+                
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                  {galeriaImagens.map((url, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg border overflow-hidden group">
+                      <img 
+                        src={url} 
+                        alt={`Galeria ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => removerImagemGaleria(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {galeriaImagens.length < 6 && (
+                    <div className="relative aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors">
+                      <Input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) adicionarImagemGaleria(file);
+                          e.target.value = '';
+                        }}
+                        disabled={uploadingGaleria}
+                      />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                        {uploadingGaleria ? (
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        ) : (
+                          <>
+                            <Plus className="h-6 w-6" />
+                            <span className="text-xs mt-1">Adicionar</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <p className="text-xs text-muted-foreground">
+                  Primeira imagem será a principal no card. Máximo: 6 imagens.
+                </p>
+              </div>
+
               {/* Preço e Estoque */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-sm">Preço e Estoque</h3>
@@ -1019,6 +1166,57 @@ export default function Produtos() {
                               placeholder="45"
                             />
                           </div>
+                        </div>
+
+                        {/* Imagem da Variação */}
+                        <div>
+                          <Label>Imagem desta Variação (opcional)</Label>
+                          {(variacao as any).imagem_url ? (
+                            <div className="relative w-full h-32 rounded-lg border overflow-hidden mt-2">
+                              <img 
+                                src={(variacao as any).imagem_url} 
+                                alt={variacao.nome}
+                                className="w-full h-full object-cover"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2 h-8 w-8"
+                                onClick={() => atualizarVariacao(variacao.id!, 'imagem_url', '')}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="mt-2">
+                              <Input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    try {
+                                      const url = await uploadImagem(file);
+                                      atualizarVariacao(variacao.id!, 'imagem_url', url);
+                                      toast({
+                                        title: "✅ Imagem da variação enviada!",
+                                      });
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "❌ Erro",
+                                        description: error.message,
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Foto específica desta variação
+                          </p>
                         </div>
 
                         {tipoEstoque === "produto" && (
@@ -1351,6 +1549,67 @@ export default function Produtos() {
                 />
               </div>
 
+              {/* Galeria de Imagens */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm">Galeria de Imagens (até 6)</h3>
+                
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                  {galeriaImagens.map((url, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg border overflow-hidden group">
+                      <img 
+                        src={url} 
+                        alt={`Galeria ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => removerImagemGaleria(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {galeriaImagens.length < 6 && (
+                    <div className="relative aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors">
+                      <Input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) adicionarImagemGaleria(file);
+                          e.target.value = '';
+                        }}
+                        disabled={uploadingGaleria}
+                      />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                        {uploadingGaleria ? (
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                        ) : (
+                          <>
+                            <Plus className="h-6 w-6" />
+                            <span className="text-xs mt-1">Adicionar</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <p className="text-xs text-muted-foreground">
+                  Primeira imagem será a principal no card. Máximo: 6 imagens.
+                </p>
+              </div>
+
               <div className="space-y-4">
                 <h3 className="font-semibold text-sm">Preço e Estoque</h3>
 
@@ -1494,6 +1753,57 @@ export default function Produtos() {
                               placeholder="45"
                             />
                           </div>
+                        </div>
+
+                        {/* Imagem da Variação */}
+                        <div>
+                          <Label>Imagem desta Variação (opcional)</Label>
+                          {(variacao as any).imagem_url ? (
+                            <div className="relative w-full h-32 rounded-lg border overflow-hidden mt-2">
+                              <img 
+                                src={(variacao as any).imagem_url} 
+                                alt={variacao.nome}
+                                className="w-full h-full object-cover"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                className="absolute top-2 right-2 h-8 w-8"
+                                onClick={() => atualizarVariacao(variacao.id!, 'imagem_url', '')}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="mt-2">
+                              <Input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    try {
+                                      const url = await uploadImagem(file);
+                                      atualizarVariacao(variacao.id!, 'imagem_url', url);
+                                      toast({
+                                        title: "✅ Imagem da variação enviada!",
+                                      });
+                                    } catch (error: any) {
+                                      toast({
+                                        title: "❌ Erro",
+                                        description: error.message,
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Foto específica desta variação
+                          </p>
                         </div>
 
                         {tipoEstoque === "produto" && (
