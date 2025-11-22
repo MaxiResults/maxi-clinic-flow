@@ -399,9 +399,10 @@ export default function Profissionais() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro do backend:', errorData);
-        throw new Error(errorData.error || errorData.message || "Erro ao criar profissional");
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Erro do backend:', errorData);
+        const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+        throw new Error(errorMessage);
       }
 
       toast({
@@ -461,9 +462,10 @@ export default function Profissionais() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro do backend:', errorData);
-        throw new Error(errorData.error || errorData.message || "Erro ao atualizar profissional");
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Erro do backend:', errorData);
+        const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+        throw new Error(errorMessage);
       }
 
       toast({
@@ -526,6 +528,65 @@ export default function Profissionais() {
     }
     return diasAtivos.join(", ");
   };
+
+  // Componente separado para evitar re-render e perda de foco
+  const HorarioItem = ({ dia, horario, onChange }: any) => (
+    <div className="flex items-center gap-3 p-3 border rounded-lg flex-wrap">
+      <Checkbox
+        checked={horario.ativo}
+        onCheckedChange={(checked) => {
+          onChange({
+            ...horario,
+            ativo: !!checked,
+          });
+        }}
+      />
+      
+      <span className="w-20 font-medium">{dia}</span>
+      
+      {horario.ativo ? (
+        <>
+          <Input
+            type="time"
+            value={horario.inicio || ''}
+            onChange={(e) => {
+              onChange({ ...horario, inicio: e.target.value });
+            }}
+            className="w-24"
+          />
+          <span>-</span>
+          <Input
+            type="time"
+            value={horario.fim || ''}
+            onChange={(e) => {
+              onChange({ ...horario, fim: e.target.value });
+            }}
+            className="w-24"
+          />
+          <span className="text-sm text-muted-foreground">Almoço:</span>
+          <Input
+            type="time"
+            value={horario.intervalo_inicio || ''}
+            onChange={(e) => {
+              onChange({ ...horario, intervalo_inicio: e.target.value });
+            }}
+            className="w-24"
+          />
+          <span>-</span>
+          <Input
+            type="time"
+            value={horario.intervalo_fim || ''}
+            onChange={(e) => {
+              onChange({ ...horario, intervalo_fim: e.target.value });
+            }}
+            className="w-24"
+          />
+        </>
+      ) : (
+        <span className="text-sm text-muted-foreground">Não trabalha</span>
+      )}
+    </div>
+  );
 
   const ProfissionalForm = () => (
     <Form {...form}>
@@ -717,8 +778,11 @@ export default function Profissionais() {
             <AccordionContent className="space-y-4 pt-4">
               <div className="space-y-3">
                 <FormLabel>Selecione as especialidades *</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  Selecione as especialidades do profissional
+                </p>
                 <div className="border rounded-lg p-4 space-y-2 max-h-64 overflow-y-auto">
-                  {especialidades.map((esp, index) => {
+                  {especialidades.map((esp) => {
                     const Icon = (Icons as any)[esp.icone] || Icons.Star;
                     const isSelected = especialidadesSelecionadas.includes(esp.id);
                     const isPrimeira = especialidadesSelecionadas[0] === esp.id;
@@ -778,95 +842,19 @@ export default function Profissionais() {
               <div className="space-y-3">
                 <FormLabel>Configure os horários semanais</FormLabel>
 
-                {diasSemana.map(({ key, label }) => {
-                  const horario = horarios[key as keyof typeof horarios];
-
-                  return (
-                    <div
-                      key={key}
-                      className="flex items-center gap-3 p-3 border rounded-lg flex-wrap"
-                    >
-                      <Checkbox
-                        checked={horario.ativo}
-                        onCheckedChange={(checked) => {
-                          setHorarios({
-                            ...horarios,
-                            [key]: {
-                              ...horario,
-                              ativo: !!checked,
-                            },
-                          });
-                        }}
-                      />
-
-                      <span className="w-20 font-medium">{label}</span>
-
-                      {horario.ativo ? (
-                        <>
-                          <Input
-                            type="time"
-                            value={horario.inicio || ""}
-                            onChange={(e) => {
-                              setHorarios({
-                                ...horarios,
-                                [key]: { ...horario, inicio: e.target.value },
-                              });
-                            }}
-                            className="w-24"
-                          />
-                          <span>-</span>
-                          <Input
-                            type="time"
-                            value={horario.fim || ""}
-                            onChange={(e) => {
-                              setHorarios({
-                                ...horarios,
-                                [key]: { ...horario, fim: e.target.value },
-                              });
-                            }}
-                            className="w-24"
-                          />
-                          <span className="text-sm text-muted-foreground">
-                            Almoço:
-                          </span>
-                          <Input
-                            type="time"
-                            value={horario.intervalo_inicio || ""}
-                            onChange={(e) => {
-                              setHorarios({
-                                ...horarios,
-                                [key]: {
-                                  ...horario,
-                                  intervalo_inicio: e.target.value,
-                                },
-                              });
-                            }}
-                            className="w-24"
-                          />
-                          <span>-</span>
-                          <Input
-                            type="time"
-                            value={horario.intervalo_fim || ""}
-                            onChange={(e) => {
-                              setHorarios({
-                                ...horarios,
-                                [key]: {
-                                  ...horario,
-                                  intervalo_fim: e.target.value,
-                                },
-                              });
-                            }}
-                            className="w-24"
-                          />
-                        </>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          Não trabalha
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                {diasSemana.map(({ key, label }) => (
+                  <HorarioItem
+                    key={key}
+                    dia={label}
+                    horario={horarios[key as keyof typeof horarios]}
+                    onChange={(novoHorario: any) => {
+                      setHorarios({
+                        ...horarios,
+                        [key]: novoHorario
+                      });
+                    }}
+                  />
+                ))}
 
                 <Button
                   type="button"
