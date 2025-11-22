@@ -11,6 +11,8 @@ import Conversas from "./pages/Conversas";
 import Profissionais from "./pages/Profissionais";
 import Produtos from "./pages/Produtos";
 import Settings from "./pages/Settings";
+import Categorias from "./pages/Categorias";
+import Especialidades from "./pages/Especialidades";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,10 +80,26 @@ const App = () => (
             }
           />
           <Route
-            path="/settings"
+            path="/configuracoes"
             element={
               <PrivateRoute>
                 <Settings />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/categorias"
+            element={
+              <PrivateRoute>
+                <Categorias />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/especialidades"
+            element={
+              <PrivateRoute>
+                <Especialidades />
               </PrivateRoute>
             }
           />

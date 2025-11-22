@@ -1,1325 +1,179 @@
-import { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import * as Icons from "lucide-react";
-import {
-  Package,
-  Plus,
-  Edit,
-  Trash2,
-  Loader2,
-  Eye,
-  Folder,
-} from "lucide-react";
+import { useNavigate } from 'react-router-dom';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+  UserCog, 
+  Package, 
+  FolderTree, 
+  Star, 
+  ArrowRight,
+  Building2,
+  Users,
+  Settings as SettingsIcon
+} from 'lucide-react';
 
-const API_BASE_URL = "https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1";
-
-interface Categoria {
-  id: string;
-  cliente_id: number;
-  empresa_id: number;
-  nome: string;
-  descricao?: string;
-  icone?: string;
-  cor?: string;
-  slug: string;
-  ordem: number;
-  ativo: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Grupo {
-  id: string;
-  categoria_id: string;
-  cliente_id: number;
-  empresa_id: number;
-  nome: string;
-  descricao?: string;
-  slug: string;
-  ordem: number;
-  ativo: boolean;
-  created_at: string;
-  updated_at: string;
-  categoria?: {
-    id: string;
-    nome: string;
-    icone: string;
-    cor: string;
-  };
-}
-
-const categoriaSchema = z.object({
-  nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
-  descricao: z.string().optional(),
-  icone: z.string().optional(),
-  cor: z.string().optional(),
-  slug: z.string().min(1, "Slug é obrigatório"),
-  ordem: z.coerce.number().default(0),
-});
-
-const grupoSchema = z.object({
-  categoria_id: z.string().min(1, "Selecione uma categoria"),
-  nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
-  descricao: z.string().optional(),
-  slug: z.string().min(1, "Slug é obrigatório"),
-  ordem: z.coerce.number().default(0),
-});
-
-const iconOptions = [
-  { value: "Sparkles", label: "Sparkles ✨" },
-  { value: "Heart", label: "Heart ❤️" },
-  { value: "Scissors", label: "Scissors ✂️" },
-  { value: "Hand", label: "Hand ✋" },
-  { value: "Waves", label: "Waves 🌊" },
-  { value: "Smile", label: "Smile 😊" },
-  { value: "Sun", label: "Sun ☀️" },
-  { value: "Droplet", label: "Droplet 💧" },
-  { value: "Shield", label: "Shield 🛡️" },
-  { value: "Activity", label: "Activity 📊" },
-  { value: "Stethoscope", label: "Stethoscope 🩺" },
-  { value: "FileText", label: "FileText 📄" },
+const configSections = [
+  {
+    id: 'profissionais',
+    title: 'Profissionais',
+    description: 'Gerencie profissionais, especialidades e horários',
+    icon: UserCog,
+    route: '/profissionais',
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/10',
+    count: null, // Será buscado da API depois
+  },
+  {
+    id: 'produtos',
+    title: 'Produtos e Serviços',
+    description: 'Cadastre produtos, serviços e variações',
+    icon: Package,
+    route: '/produtos',
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-500/10',
+    count: null,
+  },
+  {
+    id: 'categorias',
+    title: 'Categorias de Produtos',
+    description: 'Organize produtos em categorias e grupos',
+    icon: FolderTree,
+    route: '/categorias',
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-500/10',
+    count: null,
+  },
+  {
+    id: 'especialidades',
+    title: 'Especialidades',
+    description: 'Defina especialidades dos profissionais',
+    icon: Star,
+    route: '/especialidades',
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-500/10',
+    count: null,
+  },
 ];
-
-const colorOptions = [
-  { value: "#ec4899", label: "Rosa" },
-  { value: "#f97316", label: "Laranja" },
-  { value: "#8b5cf6", label: "Roxo" },
-  { value: "#10b981", label: "Verde" },
-  { value: "#3b82f6", label: "Azul" },
-  { value: "#f59e0b", label: "Amarelo" },
-  { value: "#06b6d4", label: "Ciano" },
-  { value: "#6366f1", label: "Índigo" },
-];
-
-const gerarSlug = (nome: string): string => {
-  return nome
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-");
-};
 
 export default function Settings() {
-  const { toast } = useToast();
-
-  // Estados Categorias
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [isNewCategoriaOpen, setIsNewCategoriaOpen] = useState(false);
-  const [isEditCategoriaOpen, setIsEditCategoriaOpen] = useState(false);
-  const [isDeleteCategoriaOpen, setIsDeleteCategoriaOpen] = useState(false);
-  const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
-  const [loadingCategorias, setLoadingCategorias] = useState(true);
-
-  // Estados Grupos
-  const [grupos, setGrupos] = useState<Grupo[]>([]);
-  const [isNewGrupoOpen, setIsNewGrupoOpen] = useState(false);
-  const [isEditGrupoOpen, setIsEditGrupoOpen] = useState(false);
-  const [isDeleteGrupoOpen, setIsDeleteGrupoOpen] = useState(false);
-  const [selectedGrupo, setSelectedGrupo] = useState<Grupo | null>(null);
-  const [loadingGrupos, setLoadingGrupos] = useState(true);
-  const [filtroCategoria, setFiltroCategoria] = useState<string>("");
-
-  const categoriaForm = useForm<z.infer<typeof categoriaSchema>>({
-    resolver: zodResolver(categoriaSchema),
-    defaultValues: {
-      nome: "",
-      descricao: "",
-      icone: "Package",
-      cor: "#ec4899",
-      slug: "",
-      ordem: 0,
-    },
-  });
-
-  const grupoForm = useForm<z.infer<typeof grupoSchema>>({
-    resolver: zodResolver(grupoSchema),
-    defaultValues: {
-      categoria_id: "",
-      nome: "",
-      descricao: "",
-      slug: "",
-      ordem: 0,
-    },
-  });
-
-  // Fetch Categorias
-  const fetchCategorias = async () => {
-    try {
-      setLoadingCategorias(true);
-      const response = await fetch(`${API_BASE_URL}/categorias`, {
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setCategorias(result.data);
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao carregar categorias",
-        description: "Não foi possível carregar as categorias.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingCategorias(false);
-    }
-  };
-
-  // Fetch Grupos
-  const fetchGrupos = async () => {
-    try {
-      setLoadingGrupos(true);
-      const url = filtroCategoria
-        ? `${API_BASE_URL}/grupos?categoria_id=${filtroCategoria}`
-        : `${API_BASE_URL}/grupos`;
-      const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setGrupos(result.data);
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao carregar grupos",
-        description: "Não foi possível carregar os grupos.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingGrupos(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategorias();
-    fetchGrupos();
-  }, []);
-
-  useEffect(() => {
-    fetchGrupos();
-  }, [filtroCategoria]);
-
-  // Auto-gerar slug ao digitar nome (Categoria)
-  const watchNomeCategoria = categoriaForm.watch("nome");
-  useEffect(() => {
-    if (watchNomeCategoria && !isEditCategoriaOpen) {
-      categoriaForm.setValue("slug", gerarSlug(watchNomeCategoria));
-    }
-  }, [watchNomeCategoria, isEditCategoriaOpen]);
-
-  // Auto-gerar slug ao digitar nome (Grupo)
-  const watchNomeGrupo = grupoForm.watch("nome");
-  useEffect(() => {
-    if (watchNomeGrupo && !isEditGrupoOpen) {
-      grupoForm.setValue("slug", gerarSlug(watchNomeGrupo));
-    }
-  }, [watchNomeGrupo, isEditGrupoOpen]);
-
-  // Handlers Categorias
-  const handleCreateCategoria = async (data: z.infer<typeof categoriaSchema>) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/categorias`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-        body: JSON.stringify({
-          nome: data.nome,
-          descricao: data.descricao || "",
-          icone: data.icone || "Package",
-          cor: data.cor || "#ec4899",
-          slug: data.slug,
-          ordem: data.ordem || 0,
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Categoria criada!",
-          description: "A categoria foi criada com sucesso.",
-        });
-        setIsNewCategoriaOpen(false);
-        categoriaForm.reset();
-        fetchCategorias();
-      } else {
-        toast({
-          title: "Erro ao criar categoria",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao criar categoria",
-        description: "Não foi possível criar a categoria.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateCategoria = async (data: z.infer<typeof categoriaSchema>) => {
-    if (!selectedCategoria) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/categorias/${selectedCategoria.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Categoria atualizada!",
-          description: "A categoria foi atualizada com sucesso.",
-        });
-        setIsEditCategoriaOpen(false);
-        setSelectedCategoria(null);
-        categoriaForm.reset();
-        fetchCategorias();
-      } else {
-        toast({
-          title: "Erro ao atualizar categoria",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao atualizar categoria",
-        description: "Não foi possível atualizar a categoria.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteCategoria = async () => {
-    if (!selectedCategoria) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/categorias/${selectedCategoria.id}`, {
-        method: "DELETE",
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Categoria excluída!",
-          description: "A categoria foi excluída com sucesso.",
-        });
-        setIsDeleteCategoriaOpen(false);
-        setSelectedCategoria(null);
-        fetchCategorias();
-        fetchGrupos(); // Recarregar grupos também
-      } else {
-        toast({
-          title: "Erro ao excluir categoria",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao excluir categoria",
-        description: "Não foi possível excluir a categoria.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Handlers Grupos
-  const handleCreateGrupo = async (data: z.infer<typeof grupoSchema>) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/grupos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-        body: JSON.stringify({
-          categoria_id: data.categoria_id,
-          nome: data.nome,
-          descricao: data.descricao || "",
-          slug: data.slug,
-          ordem: data.ordem || 0,
-        }),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Grupo criado!",
-          description: "O grupo foi criado com sucesso.",
-        });
-        setIsNewGrupoOpen(false);
-        grupoForm.reset();
-        fetchGrupos();
-      } else {
-        toast({
-          title: "Erro ao criar grupo",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao criar grupo",
-        description: "Não foi possível criar o grupo.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateGrupo = async (data: z.infer<typeof grupoSchema>) => {
-    if (!selectedGrupo) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/grupos/${selectedGrupo.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Grupo atualizado!",
-          description: "O grupo foi atualizado com sucesso.",
-        });
-        setIsEditGrupoOpen(false);
-        setSelectedGrupo(null);
-        grupoForm.reset();
-        fetchGrupos();
-      } else {
-        toast({
-          title: "Erro ao atualizar grupo",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao atualizar grupo",
-        description: "Não foi possível atualizar o grupo.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteGrupo = async () => {
-    if (!selectedGrupo) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/grupos/${selectedGrupo.id}`, {
-        method: "DELETE",
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Grupo excluído!",
-          description: "O grupo foi excluído com sucesso.",
-        });
-        setIsDeleteGrupoOpen(false);
-        setSelectedGrupo(null);
-        fetchGrupos();
-      } else {
-        toast({
-          title: "Erro ao excluir grupo",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao excluir grupo",
-        description: "Não foi possível excluir o grupo.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const openEditCategoria = (categoria: Categoria) => {
-    setSelectedCategoria(categoria);
-    categoriaForm.reset({
-      nome: categoria.nome,
-      descricao: categoria.descricao || "",
-      icone: categoria.icone || "Package",
-      cor: categoria.cor || "#ec4899",
-      slug: categoria.slug,
-      ordem: categoria.ordem,
-    });
-    setIsEditCategoriaOpen(true);
-  };
-
-  const openEditGrupo = (grupo: Grupo) => {
-    setSelectedGrupo(grupo);
-    grupoForm.reset({
-      categoria_id: grupo.categoria_id,
-      nome: grupo.nome,
-      descricao: grupo.descricao || "",
-      slug: grupo.slug,
-      ordem: grupo.ordem,
-    });
-    setIsEditGrupoOpen(true);
-  };
-
-  // Agrupar grupos por categoria
-  const gruposFiltrados = filtroCategoria && filtroCategoria !== 'all'
-    ? grupos.filter(g => g.categoria_id === filtroCategoria)
-    : grupos;
-
-  const gruposPorCategoria = gruposFiltrados.reduce((acc, grupo) => {
-    const catId = grupo.categoria_id;
-    if (!acc[catId]) {
-      acc[catId] = [];
-    }
-    acc[catId].push(grupo);
-    return acc;
-  }, {} as Record<string, Grupo[]>);
+  const navigate = useNavigate();
 
   return (
     <DashboardLayout title="Configurações">
-      <Tabs defaultValue="categorias" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="categorias">
-            <Package className="h-4 w-4 mr-2" />
-            Categorias
-          </TabsTrigger>
-          <TabsTrigger value="grupos">
-            <Folder className="h-4 w-4 mr-2" />
-            Grupos
-          </TabsTrigger>
-        </TabsList>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">⚙️ Configurações</h1>
+          <p className="text-muted-foreground mt-2">
+            Gerencie cadastros e configurações do seu sistema
+          </p>
+        </div>
 
-        {/* ABA CATEGORIAS */}
-        <TabsContent value="categorias" className="space-y-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-2xl font-bold">📦 Categorias de Produtos</h2>
-              <p className="text-muted-foreground">
-                Organize seus produtos em categorias personalizadas
-              </p>
-            </div>
-            <Button onClick={() => setIsNewCategoriaOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Categoria
-            </Button>
+        {/* Seção: Cadastros */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <SettingsIcon className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold">Cadastros</h2>
           </div>
 
-          {loadingCategorias ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : categorias.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg text-muted-foreground">
-                Nenhuma categoria cadastrada
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Crie sua primeira categoria para organizar seus produtos
-              </p>
-              <Button onClick={() => setIsNewCategoriaOpen(true)} className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Categoria
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {categorias.map((categoria) => {
-                const IconComponent = (Icons as any)[categoria.icone || "Package"] || Icons.Package;
-                return (
-                  <Card key={categoria.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="p-2 rounded-lg"
-                            style={{ backgroundColor: `${categoria.cor}20` }}
-                          >
-                            <IconComponent
-                              className="h-6 w-6"
-                              style={{ color: categoria.cor }}
-                            />
-                          </div>
-                          <div>
-                            <CardTitle>{categoria.nome}</CardTitle>
-                            <CardDescription>{categoria.descricao}</CardDescription>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditCategoria(categoria)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedCategoria(categoria);
-                              setIsDeleteCategoriaOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {configSections.map((section) => {
+              const Icon = section.icon;
+              
+              return (
+                <Card
+                  key={section.id}
+                  className="hover:shadow-lg transition-all cursor-pointer group border-2 hover:border-primary/50"
+                  onClick={() => navigate(section.route)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className={`p-3 rounded-lg ${section.bgColor}`}>
+                        <Icon className={`h-6 w-6 ${section.color}`} />
                       </div>
-                    </CardHeader>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* ABA GRUPOS */}
-        <TabsContent value="grupos" className="space-y-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-2xl font-bold">📁 Grupos de Produtos</h2>
-              <p className="text-muted-foreground">
-                Organize produtos em grupos dentro das categorias
-              </p>
-            </div>
-            <Button onClick={() => setIsNewGrupoOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Grupo
-            </Button>
-          </div>
-
-          <div className="flex gap-4">
-            <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Todas categorias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas categorias</SelectItem>
-                {categorias.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {loadingGrupos ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : grupos.length === 0 ? (
-            <div className="text-center py-12">
-              <Folder className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg text-muted-foreground">
-                Nenhum grupo cadastrado
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Crie seu primeiro grupo para organizar melhor seus produtos
-              </p>
-              <Button onClick={() => setIsNewGrupoOpen(true)} className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Grupo
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {Object.entries(gruposPorCategoria).map(([catId, gruposCategoria]) => {
-                const categoria = categorias.find((c) => c.id === catId);
-                if (!categoria) return null;
-
-                const IconComponent = (Icons as any)[categoria.icone || "Package"] || Icons.Package;
-
-                return (
-                  <div key={catId} className="space-y-3">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div
-                        className="p-2 rounded-lg"
-                        style={{ backgroundColor: `${categoria.cor}20` }}
-                      >
-                        <IconComponent
-                          className="h-5 w-5"
-                          style={{ color: categoria.cor }}
-                        />
+                      <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                    </div>
+                    <CardTitle className="text-lg mt-4">{section.title}</CardTitle>
+                    <CardDescription>{section.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {section.count !== null && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">
+                          {section.count} {section.count === 1 ? 'item' : 'itens'}
+                        </Badge>
                       </div>
-                      <h3 className="text-lg font-semibold">{categoria.nome}</h3>
-                    </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
 
-                    <div className="grid gap-3 ml-12">
-                      {gruposCategoria.map((grupo) => (
-                        <Card key={grupo.id} className="hover:shadow-md transition-shadow">
-                          <CardHeader className="py-3">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <CardTitle className="text-base">{grupo.nome}</CardTitle>
-                                {grupo.descricao && (
-                                  <CardDescription className="text-sm">
-                                    {grupo.descricao}
-                                  </CardDescription>
-                                )}
-                              </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEditGrupo(grupo)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    setSelectedGrupo(grupo);
-                                    setIsDeleteGrupoOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardHeader>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        {/* Seção: Integrações (futuro) */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Building2 className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold">Integrações</h2>
+          </div>
 
-      {/* MODAL NOVA CATEGORIA */}
-      <Dialog open={isNewCategoriaOpen} onOpenChange={setIsNewCategoriaOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Nova Categoria</DialogTitle>
-            <DialogDescription>
-              Crie uma nova categoria para organizar seus produtos
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...categoriaForm}>
-            <form onSubmit={categoriaForm.handleSubmit(handleCreateCategoria)} className="space-y-4">
-              <FormField
-                control={categoriaForm.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Facial" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={categoriaForm.control}
-                name="descricao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Descreva a categoria..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={categoriaForm.control}
-                  name="icone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ícone</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um ícone" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {iconOptions.map((icon) => (
-                            <SelectItem key={icon.value} value={icon.value}>
-                              {icon.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={categoriaForm.control}
-                  name="cor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cor</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma cor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {colorOptions.map((color) => (
-                            <SelectItem key={color.value} value={color.value}>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-4 h-4 rounded"
-                                  style={{ backgroundColor: color.value }}
-                                />
-                                {color.label}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={categoriaForm.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Slug *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="facial" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={categoriaForm.control}
-                  name="ordem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ordem</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsNewCategoriaOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={categoriaForm.formState.isSubmitting}>
-                  {categoriaForm.formState.isSubmitting && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  Criar Categoria
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="opacity-50">
+              <CardHeader>
+                <CardTitle className="text-lg">💬 WhatsApp</CardTitle>
+                <CardDescription>Em breve</CardDescription>
+              </CardHeader>
+            </Card>
 
-      {/* MODAL EDITAR CATEGORIA */}
-      <Dialog open={isEditCategoriaOpen} onOpenChange={setIsEditCategoriaOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Editar Categoria</DialogTitle>
-            <DialogDescription>
-              Atualize as informações da categoria
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...categoriaForm}>
-            <form onSubmit={categoriaForm.handleSubmit(handleUpdateCategoria)} className="space-y-4">
-              <FormField
-                control={categoriaForm.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Facial" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={categoriaForm.control}
-                name="descricao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Descreva a categoria..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={categoriaForm.control}
-                  name="icone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ícone</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione um ícone" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {iconOptions.map((icon) => (
-                            <SelectItem key={icon.value} value={icon.value}>
-                              {icon.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={categoriaForm.control}
-                  name="cor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cor</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma cor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {colorOptions.map((color) => (
-                            <SelectItem key={color.value} value={color.value}>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-4 h-4 rounded"
-                                  style={{ backgroundColor: color.value }}
-                                />
-                                {color.label}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={categoriaForm.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Slug *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="facial" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={categoriaForm.control}
-                  name="ordem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ordem</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditCategoriaOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={categoriaForm.formState.isSubmitting}>
-                  {categoriaForm.formState.isSubmitting && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  Salvar
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            <Card className="opacity-50">
+              <CardHeader>
+                <CardTitle className="text-lg">💳 Pagamentos</CardTitle>
+                <CardDescription>Em breve</CardDescription>
+              </CardHeader>
+            </Card>
 
-      {/* ALERT DIALOG EXCLUIR CATEGORIA */}
-      <AlertDialog open={isDeleteCategoriaOpen} onOpenChange={setIsDeleteCategoriaOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>⚠️ Excluir Categoria?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir a categoria "{selectedCategoria?.nome}"?
-              <br />
-              Esta ação não pode ser desfeita. Todos os grupos e produtos associados
-              ficarão sem categoria.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteCategoria}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <Card className="opacity-50">
+              <CardHeader>
+                <CardTitle className="text-lg">📧 E-mail</CardTitle>
+                <CardDescription>Em breve</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
 
-      {/* MODAL NOVO GRUPO */}
-      <Dialog open={isNewGrupoOpen} onOpenChange={setIsNewGrupoOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Novo Grupo</DialogTitle>
-            <DialogDescription>
-              Crie um novo grupo dentro de uma categoria
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...grupoForm}>
-            <form onSubmit={grupoForm.handleSubmit(handleCreateGrupo)} className="space-y-4">
-              <FormField
-                control={grupoForm.control}
-                name="categoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categorias.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={grupoForm.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Limpeza de Pele" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={grupoForm.control}
-                name="descricao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Descreva o grupo..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={grupoForm.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Slug *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="limpeza-de-pele" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={grupoForm.control}
-                  name="ordem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ordem</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsNewGrupoOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={grupoForm.formState.isSubmitting}>
-                  {grupoForm.formState.isSubmitting && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  Criar Grupo
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+        {/* Seção: Sistema (futuro) */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold">Sistema</h2>
+          </div>
 
-      {/* MODAL EDITAR GRUPO */}
-      <Dialog open={isEditGrupoOpen} onOpenChange={setIsEditGrupoOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Editar Grupo</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do grupo
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...grupoForm}>
-            <form onSubmit={grupoForm.handleSubmit(handleUpdateGrupo)} className="space-y-4">
-              <FormField
-                control={grupoForm.control}
-                name="categoria_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoria *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione uma categoria" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categorias.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={grupoForm.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Limpeza de Pele" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={grupoForm.control}
-                name="descricao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Descreva o grupo..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={grupoForm.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Slug *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="limpeza-de-pele" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={grupoForm.control}
-                  name="ordem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ordem</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditGrupoOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={grupoForm.formState.isSubmitting}>
-                  {grupoForm.formState.isSubmitting && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  Salvar
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="opacity-50">
+              <CardHeader>
+                <CardTitle className="text-lg">👥 Usuários</CardTitle>
+                <CardDescription>Em breve</CardDescription>
+              </CardHeader>
+            </Card>
 
-      {/* ALERT DIALOG EXCLUIR GRUPO */}
-      <AlertDialog open={isDeleteGrupoOpen} onOpenChange={setIsDeleteGrupoOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>⚠️ Excluir Grupo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o grupo "{selectedGrupo?.nome}"?
-              <br />
-              Esta ação não pode ser desfeita. Produtos associados ficarão sem grupo.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteGrupo}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <Card className="opacity-50">
+              <CardHeader>
+                <CardTitle className="text-lg">🏢 Empresa</CardTitle>
+                <CardDescription>Em breve</CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="opacity-50">
+              <CardHeader>
+                <CardTitle className="text-lg">📊 Relatórios</CardTitle>
+                <CardDescription>Em breve</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </div>
     </DashboardLayout>
   );
 }
