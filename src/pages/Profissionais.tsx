@@ -124,6 +124,69 @@ const horarioInativo: HorarioDia = {
   intervalo_fim: null,
 };
 
+// Componente HorarioItem - FORA do componente principal para evitar re-render
+const HorarioItem = ({ dia, horario, onChange }: { 
+  dia: string; 
+  horario: HorarioDia; 
+  onChange: (horario: HorarioDia) => void 
+}) => (
+  <div className="flex items-center gap-3 p-3 border rounded-lg flex-wrap">
+    <Checkbox
+      checked={horario.ativo}
+      onCheckedChange={(checked) => {
+        onChange({
+          ...horario,
+          ativo: !!checked,
+        });
+      }}
+    />
+    
+    <span className="w-20 font-medium">{dia}</span>
+    
+    {horario.ativo ? (
+      <>
+        <Input
+          type="time"
+          value={horario.inicio || ''}
+          onChange={(e) => {
+            onChange({ ...horario, inicio: e.target.value });
+          }}
+          className="w-24"
+        />
+        <span>-</span>
+        <Input
+          type="time"
+          value={horario.fim || ''}
+          onChange={(e) => {
+            onChange({ ...horario, fim: e.target.value });
+          }}
+          className="w-24"
+        />
+        <span className="text-sm text-muted-foreground">Almoço:</span>
+        <Input
+          type="time"
+          value={horario.intervalo_inicio || ''}
+          onChange={(e) => {
+            onChange({ ...horario, intervalo_inicio: e.target.value });
+          }}
+          className="w-24"
+        />
+        <span>-</span>
+        <Input
+          type="time"
+          value={horario.intervalo_fim || ''}
+          onChange={(e) => {
+            onChange({ ...horario, intervalo_fim: e.target.value });
+          }}
+          className="w-24"
+        />
+      </>
+    ) : (
+      <span className="text-sm text-muted-foreground">Não trabalha</span>
+    )}
+  </div>
+);
+
 export default function Profissionais() {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
@@ -529,65 +592,6 @@ export default function Profissionais() {
     return diasAtivos.join(", ");
   };
 
-  // Componente separado para evitar re-render e perda de foco
-  const HorarioItem = ({ dia, horario, onChange }: any) => (
-    <div className="flex items-center gap-3 p-3 border rounded-lg flex-wrap">
-      <Checkbox
-        checked={horario.ativo}
-        onCheckedChange={(checked) => {
-          onChange({
-            ...horario,
-            ativo: !!checked,
-          });
-        }}
-      />
-      
-      <span className="w-20 font-medium">{dia}</span>
-      
-      {horario.ativo ? (
-        <>
-          <Input
-            type="time"
-            value={horario.inicio || ''}
-            onChange={(e) => {
-              onChange({ ...horario, inicio: e.target.value });
-            }}
-            className="w-24"
-          />
-          <span>-</span>
-          <Input
-            type="time"
-            value={horario.fim || ''}
-            onChange={(e) => {
-              onChange({ ...horario, fim: e.target.value });
-            }}
-            className="w-24"
-          />
-          <span className="text-sm text-muted-foreground">Almoço:</span>
-          <Input
-            type="time"
-            value={horario.intervalo_inicio || ''}
-            onChange={(e) => {
-              onChange({ ...horario, intervalo_inicio: e.target.value });
-            }}
-            className="w-24"
-          />
-          <span>-</span>
-          <Input
-            type="time"
-            value={horario.intervalo_fim || ''}
-            onChange={(e) => {
-              onChange({ ...horario, intervalo_fim: e.target.value });
-            }}
-            className="w-24"
-          />
-        </>
-      ) : (
-        <span className="text-sm text-muted-foreground">Não trabalha</span>
-      )}
-    </div>
-  );
-
   const ProfissionalForm = () => (
     <Form {...form}>
       <form className="space-y-4">
@@ -673,9 +677,9 @@ export default function Profissionais() {
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
                         <Input
-                          value={field.value || ''}
                           placeholder="(00) 00000-0000"
                           onChange={createFormattedInputHandler(formatPhone, field.onChange)}
+                          value={field.value}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -696,9 +700,9 @@ export default function Profissionais() {
                       <FormLabel>WhatsApp</FormLabel>
                       <FormControl>
                         <Input
-                          value={field.value || ''}
                           placeholder="(00) 00000-0000"
                           onChange={createFormattedInputHandler(formatPhone, field.onChange)}
+                          value={field.value}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
@@ -721,9 +725,9 @@ export default function Profissionais() {
                       <FormLabel>CPF</FormLabel>
                       <FormControl>
                         <Input
-                          value={field.value || ''}
                           placeholder="000.000.000-00"
                           onChange={createFormattedInputHandler(formatCPF, field.onChange)}
+                          value={field.value}
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
