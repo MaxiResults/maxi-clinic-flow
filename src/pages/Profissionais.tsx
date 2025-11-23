@@ -124,7 +124,7 @@ const horarioInativo: HorarioDia = {
   intervalo_fim: null,
 };
 
-// Componente HorarioItem - FORA do componente principal para evitar re-render
+// Componente HorarioItem
 const HorarioItem = memo(({ dia, horario, onChange }: { 
   dia: string; 
   horario: HorarioDia; 
@@ -189,6 +189,410 @@ const HorarioItem = memo(({ dia, horario, onChange }: {
 
 HorarioItem.displayName = 'HorarioItem';
 
+// Componente ProfissionalForm
+interface ProfissionalFormProps {
+  form: any;
+  especialidades: Especialidade[];
+  especialidadesSelecionadas: string[];
+  setEspecialidadesSelecionadas: (ids: string[]) => void;
+  horarios: any;
+  handleHorarioChange: (key: string, horario: HorarioDia) => void;
+  copiarHorarioParaTodos: () => void;
+  fotoPreview: string;
+  handleFotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveFoto: () => void;
+  formatPhone: (value: string) => string;
+  formatCPF: (value: string) => string;
+}
+
+const ProfissionalForm = memo(({ 
+  form, 
+  especialidades, 
+  especialidadesSelecionadas, 
+  setEspecialidadesSelecionadas,
+  horarios,
+  handleHorarioChange,
+  copiarHorarioParaTodos,
+  fotoPreview,
+  handleFotoChange,
+  handleRemoveFoto,
+  formatPhone,
+  formatCPF
+}: ProfissionalFormProps) => {
+  
+  // Handler para input com formatação e preservação de cursor
+  const createFormattedInputHandler = useCallback((formatFn: (val: string) => string, fieldOnChange: (val: string) => void) => {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const input = e.target;
+      const cursorPosition = input.selectionStart || 0;
+      const oldValue = input.value;
+      const newValue = formatFn(e.target.value);
+      
+      fieldOnChange(newValue);
+      
+      setTimeout(() => {
+        if (input && document.activeElement === input) {
+          const diff = newValue.length - oldValue.length;
+          const newPosition = cursorPosition + diff;
+          input.setSelectionRange(newPosition, newPosition);
+        }
+      }, 0);
+    };
+  }, []);
+
+  return (
+    <Form {...form}>
+      <form className="space-y-4">
+        <Accordion type="single" collapsible defaultValue="basico">
+          <AccordionItem value="basico">
+            <AccordionTrigger>📝 Informações Básicas</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
+              <div className="space-y-3">
+                <FormLabel>Foto do Profissional</FormLabel>
+                <div className="flex items-center gap-4">
+                  {fotoPreview ? (
+                    <div className="relative">
+                      <img
+                        src={fotoPreview}
+                        alt="Preview"
+                        className="w-32 h-32 rounded-full object-cover border-4 border-border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 rounded-full h-8 w-8"
+                        onClick={handleRemoveFoto}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center">
+                      <UserCog className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFotoChange}
+                      className="max-w-xs"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      JPG, PNG ou WEBP. Máximo 2 MB.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Completo *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Nome do profissional" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-mail</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="email" placeholder="email@exemplo.com" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="telefone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Telefone</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="(00) 00000-0000"
+                          onChange={createFormattedInputHandler(formatPhone, field.onChange)}
+                          value={field.value || ''}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                          maxLength={15}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="whatsapp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>WhatsApp</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="(00) 00000-0000"
+                          onChange={createFormattedInputHandler(formatPhone, field.onChange)}
+                          value={field.value || ''}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                          maxLength={15}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="cpf"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CPF</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="000.000.000-00"
+                          onChange={createFormattedInputHandler(formatCPF, field.onChange)}
+                          value={field.value || ''}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
+                          maxLength={14}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="registro_profissional"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Registro Profissional</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Ex: CRM 12345" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="biografia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Biografia</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Breve descrição do profissional..."
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="especialidades">
+            <AccordionTrigger>⭐ Especialidades</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
+              <div className="space-y-3">
+                <FormLabel>Selecione as especialidades *</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  Selecione as especialidades do profissional
+                </p>
+                <div className="border rounded-lg p-4 space-y-2 max-h-64 overflow-y-auto">
+                  {especialidades.map((esp) => {
+                    const Icon = (Icons as any)[esp.icone] || Icons.Star;
+                    const isSelected = especialidadesSelecionadas.includes(esp.id);
+                    const isPrimeira = especialidadesSelecionadas[0] === esp.id;
+
+                    return (
+                      <div
+                        key={esp.id}
+                        className="flex items-center space-x-3 p-2 hover:bg-muted rounded-md cursor-pointer"
+                        onClick={() => {
+                          if (isSelected) {
+                            setEspecialidadesSelecionadas(
+                              especialidadesSelecionadas.filter((id) => id !== esp.id)
+                            );
+                          } else {
+                            setEspecialidadesSelecionadas([
+                              ...especialidadesSelecionadas,
+                              esp.id,
+                            ]);
+                          }
+                        }}
+                      >
+                        <Checkbox checked={isSelected} />
+                        <div
+                          className="p-2 rounded"
+                          style={{
+                            backgroundColor: `${esp.cor}20`,
+                            color: esp.cor,
+                          }}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{esp.nome}</span>
+                            {isPrimeira && (
+                              <Badge variant="default" className="text-xs">
+                                ⭐ Principal
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A primeira especialidade selecionada será marcada como principal
+                </p>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="horarios">
+            <AccordionTrigger>⏰ Horários de Trabalho</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
+              <div className="space-y-3">
+                <FormLabel>Configure os horários semanais</FormLabel>
+
+                {diasSemana.map(({ key, label }) => (
+                  <HorarioItem
+                    key={key}
+                    dia={label}
+                    horario={horarios[key as keyof typeof horarios]}
+                    onChange={(novoHorario) => handleHorarioChange(key, novoHorario)}
+                  />
+                ))}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copiarHorarioParaTodos}
+                >
+                  Copiar horário para todos os dias ativos
+                </Button>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="config">
+            <AccordionTrigger>⚙️ Configurações Adicionais</AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-4">
+              <FormField
+                control={form.control}
+                name="duracao_padrao_consulta"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duração Padrão de Atendimento (minutos)</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" min={15} step={15} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="permite_agendamento_online"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">
+                      Permite agendamento online
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="comissao_percentual"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Comissão (%)</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" min={0} max={100} step={0.1} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="data_admissao"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Admissão</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="date" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="observacoes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </form>
+    </Form>
+  );
+});
+
+ProfissionalForm.displayName = 'ProfissionalForm';
+
 export default function Profissionais() {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
@@ -205,41 +609,19 @@ export default function Profissionais() {
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string>("");
 
-  // Função para formatar telefone
-  const formatPhone = (value: string) => {
+  // Funções de formatação estáveis com useCallback
+  const formatPhone = useCallback((value: string) => {
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 10) {
       return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/(-)?$/, '');
     }
     return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/(-)?$/, '');
-  };
+  }, []);
 
-  // Função para formatar CPF
-  const formatCPF = (value: string) => {
+  const formatCPF = useCallback((value: string) => {
     const numbers = value.replace(/\D/g, '');
     return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4').replace(/(-)?$/, '');
-  };
-
-  // Handler para input com formatação e preservação de cursor
-  const createFormattedInputHandler = (formatFn: (val: string) => string, fieldOnChange: (val: string) => void) => {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const input = e.target;
-      const cursorPosition = input.selectionStart || 0;
-      const oldValue = input.value;
-      const newValue = formatFn(e.target.value);
-      
-      fieldOnChange(newValue);
-      
-      // Ajustar posição do cursor após formatação
-      setTimeout(() => {
-        if (input && document.activeElement === input) {
-          const diff = newValue.length - oldValue.length;
-          const newPosition = cursorPosition + diff;
-          input.setSelectionRange(newPosition, newPosition);
-        }
-      }, 0);
-    };
-  };
+  }, []);
 
   const [horarios, setHorarios] = useState({
     seg: { ...horarioPadrao },
@@ -364,7 +746,7 @@ export default function Profissionais() {
     }));
   }, []);
 
-  const copiarHorarioParaTodos = () => {
+  const copiarHorarioParaTodos = useCallback(() => {
     const primeiroAtivo = Object.entries(horarios).find(([_, h]) => h.ativo);
     if (primeiroAtivo) {
       const [_, horarioBase] = primeiroAtivo;
@@ -380,7 +762,7 @@ export default function Profissionais() {
         description: "Horário copiado para todos os dias ativos",
       });
     }
-  };
+  }, [horarios]);
 
   const openNew = () => {
     form.reset();
@@ -612,365 +994,6 @@ export default function Profissionais() {
     return diasAtivos.join(", ");
   };
 
-  const ProfissionalForm = () => (
-    <Form {...form}>
-      <form className="space-y-4">
-        <Accordion type="single" collapsible defaultValue="basico">
-          {/* INFORMAÇÕES BÁSICAS */}
-          <AccordionItem value="basico">
-            <AccordionTrigger>📝 Informações Básicas</AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-4">
-              {/* Upload de Foto */}
-              <div className="space-y-3">
-                <FormLabel>Foto do Profissional</FormLabel>
-                <div className="flex items-center gap-4">
-                  {fotoPreview ? (
-                    <div className="relative">
-                      <img
-                        src={fotoPreview}
-                        alt="Preview"
-                        className="w-32 h-32 rounded-full object-cover border-4 border-border"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute -top-2 -right-2 rounded-full h-8 w-8"
-                        onClick={handleRemoveFoto}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center">
-                      <UserCog className="h-12 w-12 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFotoChange}
-                      className="max-w-xs"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      JPG, PNG ou WEBP. Máximo 2 MB.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <FormField
-                control={form.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Completo *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Nome do profissional" tabIndex={1} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>E-mail</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="email" placeholder="email@exemplo.com" tabIndex={2} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="telefone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefone</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="(00) 00000-0000"
-                          onChange={createFormattedInputHandler(formatPhone, field.onChange)}
-                          value={field.value}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                          maxLength={15}
-                          tabIndex={3}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="whatsapp"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>WhatsApp</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="(00) 00000-0000"
-                          onChange={createFormattedInputHandler(formatPhone, field.onChange)}
-                          value={field.value}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                          maxLength={15}
-                          tabIndex={4}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="cpf"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CPF</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="000.000.000-00"
-                          onChange={createFormattedInputHandler(formatCPF, field.onChange)}
-                          value={field.value}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                          maxLength={14}
-                          tabIndex={5}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="registro_profissional"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registro Profissional</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Ex: CRM 12345" tabIndex={6} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="biografia"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Biografia</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="Breve descrição do profissional..."
-                        rows={3}
-                        tabIndex={7}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* ESPECIALIDADES */}
-          <AccordionItem value="especialidades">
-            <AccordionTrigger>⭐ Especialidades</AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-4">
-              <div className="space-y-3">
-                <FormLabel>Selecione as especialidades *</FormLabel>
-                <p className="text-sm text-muted-foreground">
-                  Selecione as especialidades do profissional
-                </p>
-                <div className="border rounded-lg p-4 space-y-2 max-h-64 overflow-y-auto">
-                  {especialidades.map((esp) => {
-                    const Icon = (Icons as any)[esp.icone] || Icons.Star;
-                    const isSelected = especialidadesSelecionadas.includes(esp.id);
-                    const isPrimeira = especialidadesSelecionadas[0] === esp.id;
-
-                    return (
-                      <div
-                        key={esp.id}
-                        className="flex items-center space-x-3 p-2 hover:bg-muted rounded-md cursor-pointer"
-                        onClick={() => {
-                          if (isSelected) {
-                            setEspecialidadesSelecionadas(
-                              especialidadesSelecionadas.filter((id) => id !== esp.id)
-                            );
-                          } else {
-                            setEspecialidadesSelecionadas([
-                              ...especialidadesSelecionadas,
-                              esp.id,
-                            ]);
-                          }
-                        }}
-                      >
-                        <Checkbox checked={isSelected} />
-                        <div
-                          className="p-2 rounded"
-                          style={{
-                            backgroundColor: `${esp.cor}20`,
-                            color: esp.cor,
-                          }}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{esp.nome}</span>
-                            {isPrimeira && (
-                              <Badge variant="default" className="text-xs">
-                                ⭐ Principal
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  A primeira especialidade selecionada será marcada como principal
-                </p>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* HORÁRIOS */}
-          <AccordionItem value="horarios">
-            <AccordionTrigger>⏰ Horários de Trabalho</AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-4">
-              <div className="space-y-3">
-                <FormLabel>Configure os horários semanais</FormLabel>
-
-                {diasSemana.map(({ key, label }) => (
-                  <HorarioItem
-                    key={key}
-                    dia={label}
-                    horario={horarios[key as keyof typeof horarios]}
-                    onChange={(novoHorario) => handleHorarioChange(key, novoHorario)}
-                  />
-                ))}
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={copiarHorarioParaTodos}
-                >
-                  Copiar horário para todos os dias ativos
-                </Button>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* CONFIGURAÇÕES ADICIONAIS */}
-          <AccordionItem value="config">
-            <AccordionTrigger>⚙️ Configurações Adicionais</AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-4">
-              <FormField
-                control={form.control}
-                name="duracao_padrao_consulta"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duração Padrão de Atendimento (minutos)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="number" min={15} step={15} tabIndex={8} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="permite_agendamento_online"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="!mt-0">
-                      Permite agendamento online
-                    </FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="comissao_percentual"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Comissão (%)</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="number" min={0} max={100} step={0.1} tabIndex={9} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="data_admissao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Admissão</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="date" tabIndex={10} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="observacoes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observações</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} rows={3} tabIndex={11} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </form>
-    </Form>
-  );
-
   if (loading) {
     return (
       <DashboardLayout title="Profissionais">
@@ -1054,80 +1077,72 @@ export default function Profissionais() {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="space-y-3">
-                    {prof.telefone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        {prof.telefone}
-                      </div>
-                    )}
-                    {prof.email && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        {prof.email}
-                      </div>
-                    )}
-
+                  <CardContent className="space-y-4">
                     {prof.especialidades && prof.especialidades.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium mb-2">
-                          Especialidades:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {prof.especialidades.map((esp) => {
-                            const Icon =
-                              (Icons as any)[esp.especialidade.icone] ||
-                              Icons.Star;
-                            return (
-                              <Badge
-                                key={esp.id}
-                                variant={
-                                  esp.principal ? "default" : "secondary"
-                                }
-                                className="flex items-center gap-1"
-                              >
-                                <Icon className="h-3 w-3" />
-                                {esp.especialidade.nome}
-                                {esp.principal && " ⭐"}
-                              </Badge>
-                            );
-                          })}
-                        </div>
+                      <div className="flex flex-wrap gap-2">
+                        {prof.especialidades.map((esp) => {
+                          const Icon = (Icons as any)[esp.especialidade.icone] || Icons.Star;
+                          return (
+                            <Badge
+                              key={esp.id}
+                              variant={esp.principal ? "default" : "secondary"}
+                              className="flex items-center gap-1"
+                              style={
+                                esp.principal
+                                  ? {
+                                      backgroundColor: `${esp.especialidade.cor}20`,
+                                      color: esp.especialidade.cor,
+                                      borderColor: esp.especialidade.cor,
+                                    }
+                                  : {}
+                              }
+                            >
+                              <Icon className="h-3 w-3" />
+                              {esp.especialidade.nome}
+                              {esp.principal && " ⭐"}
+                            </Badge>
+                          );
+                        })}
                       </div>
                     )}
 
-                    <div className="text-sm">
-                      <p className="font-medium mb-1">Horário:</p>
-                      <p className="text-muted-foreground">
+                    <div className="space-y-2 text-sm">
+                      {prof.email && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                          {prof.email}
+                        </div>
+                      )}
+                      {prof.whatsapp && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Phone className="h-4 w-4" />
+                          {prof.whatsapp}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
                         {getHorarioResumo(prof.horario_trabalho)}
-                      </p>
+                      </div>
                     </div>
 
-                    <Badge
-                      variant={
-                        prof.status === "ativo" ? "default" : "secondary"
-                      }
-                      className="w-fit"
-                    >
-                      {prof.status === "ativo" ? "🟢 Ativo" : "🔴 Inativo"}
-                    </Badge>
-
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex gap-2 pt-4 border-t">
                       <Button
                         variant="outline"
                         size="sm"
                         className="flex-1"
                         onClick={() => openEdit(prof)}
                       >
-                        <Edit className="h-4 w-4 mr-1" />
+                        <Edit className="mr-2 h-4 w-4" />
                         Editar
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
+                        className="flex-1"
                         onClick={() => openDelete(prof)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Excluir
                       </Button>
                     </div>
                   </CardContent>
@@ -1144,7 +1159,20 @@ export default function Profissionais() {
           <DialogHeader>
             <DialogTitle>✏️ Novo Profissional</DialogTitle>
           </DialogHeader>
-          <ProfissionalForm />
+          <ProfissionalForm 
+            form={form}
+            especialidades={especialidades}
+            especialidadesSelecionadas={especialidadesSelecionadas}
+            setEspecialidadesSelecionadas={setEspecialidadesSelecionadas}
+            horarios={horarios}
+            handleHorarioChange={handleHorarioChange}
+            copiarHorarioParaTodos={copiarHorarioParaTodos}
+            fotoPreview={fotoPreview}
+            handleFotoChange={handleFotoChange}
+            handleRemoveFoto={handleRemoveFoto}
+            formatPhone={formatPhone}
+            formatCPF={formatCPF}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsNewOpen(false)}>
               Cancelar
@@ -1156,7 +1184,7 @@ export default function Profissionais() {
               {uploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
+                  Enviando foto...
                 </>
               ) : (
                 "Criar Profissional"
@@ -1172,7 +1200,20 @@ export default function Profissionais() {
           <DialogHeader>
             <DialogTitle>✏️ Editar Profissional</DialogTitle>
           </DialogHeader>
-          <ProfissionalForm />
+          <ProfissionalForm 
+            form={form}
+            especialidades={especialidades}
+            especialidadesSelecionadas={especialidadesSelecionadas}
+            setEspecialidadesSelecionadas={setEspecialidadesSelecionadas}
+            horarios={horarios}
+            handleHorarioChange={handleHorarioChange}
+            copiarHorarioParaTodos={copiarHorarioParaTodos}
+            fotoPreview={fotoPreview}
+            handleFotoChange={handleFotoChange}
+            handleRemoveFoto={handleRemoveFoto}
+            formatPhone={formatPhone}
+            formatCPF={formatCPF}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
               Cancelar
@@ -1184,7 +1225,7 @@ export default function Profissionais() {
               {uploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
+                  Enviando foto...
                 </>
               ) : (
                 "Salvar Alterações"
@@ -1194,11 +1235,11 @@ export default function Profissionais() {
         </DialogContent>
       </Dialog>
 
-      {/* MODAL EXCLUIR */}
+      {/* MODAL DELETE */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar exclusão</DialogTitle>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
             <DialogDescription>
               Tem certeza que deseja excluir o profissional{" "}
               <strong>{selectedProfissional?.nome}</strong>? Esta ação não pode
