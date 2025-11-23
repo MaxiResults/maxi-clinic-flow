@@ -747,22 +747,29 @@ export default function Profissionais() {
   }, []);
 
   const copiarHorarioParaTodos = useCallback(() => {
-    const primeiroAtivo = Object.entries(horarios).find(([_, h]) => h.ativo);
-    if (primeiroAtivo) {
+    setHorarios((prevHorarios) => {
+      const primeiroAtivo = Object.entries(prevHorarios).find(([_, h]) => h.ativo);
+      if (!primeiroAtivo) return prevHorarios;
+      
       const [_, horarioBase] = primeiroAtivo;
-      const novosHorarios: any = { ...horarios };
+      const novosHorarios: any = {};
+      
       diasSemana.forEach(({ key }) => {
-        if (horarios[key as keyof typeof horarios].ativo) {
+        if (prevHorarios[key as keyof typeof prevHorarios].ativo) {
           novosHorarios[key] = { ...horarioBase };
+        } else {
+          novosHorarios[key] = prevHorarios[key as keyof typeof prevHorarios];
         }
       });
-      setHorarios(novosHorarios);
+      
       toast({
         title: "Horários copiados",
         description: "Horário copiado para todos os dias ativos",
       });
-    }
-  }, [horarios]);
+      
+      return novosHorarios;
+    });
+  }, []);
 
   const openNew = () => {
     form.reset();
