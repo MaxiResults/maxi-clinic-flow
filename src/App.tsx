@@ -9,6 +9,7 @@ import Leads from "./pages/Leads";
 import Agendamentos from "./pages/Agendamentos";
 import Conversas from "./pages/Conversas";
 import Profissionais from "./pages/Profissionais";
+import ProfissionalForm from "./pages/ProfissionalForm";
 import Produtos from "./pages/Produtos";
 import Settings from "./pages/Settings";
 import Categorias from "./pages/Categorias";
@@ -68,6 +69,22 @@ const App = () => (
             element={
               <PrivateRoute>
                 <Profissionais />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profissionais/novo"
+            element={
+              <PrivateRoute>
+                <ProfissionalForm />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profissionais/:id/editar"
+            element={
+              <PrivateRoute>
+                <ProfissionalForm />
               </PrivateRoute>
             }
           />
