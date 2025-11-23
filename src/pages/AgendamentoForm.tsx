@@ -124,7 +124,12 @@ export default function AgendamentoForm() {
       const produtosData = await produtosRes.json();
 
       if (leadsData.success) setLeads(leadsData.data || []);
-      if (profissionaisData.success) setProfissionais(profissionaisData.data || []);
+      if (profissionaisData.success) {
+        setProfissionais(profissionaisData.data || []);
+        console.log('✅ Profissionais carregados:', profissionaisData.data);
+        console.log('🔍 Primeiro profissional:', profissionaisData.data?.[0]);
+        console.log('⏱️ Duração do primeiro:', profissionaisData.data?.[0]?.duracao_padrao_consulta);
+      }
       if (produtosData.success) setProdutos(produtosData.data || []);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -273,6 +278,17 @@ export default function AgendamentoForm() {
         duracao = horas * 60 + minutos;
       }
 
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('🔍 DEBUG COMPLETO:');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('1. Profissional ID:', profissionalId);
+      console.log('2. Profissional encontrado:', profissionalSelecionado);
+      console.log('3. Campo duracao_padrao_consulta:', profissionalSelecionado?.duracao_padrao_consulta);
+      console.log('4. Tipo:', typeof profissionalSelecionado?.duracao_padrao_consulta);
+      console.log('5. Duração FINAL calculada:', duracao);
+      console.log('6. Tipo da duração:', typeof duracao);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
       const dataFormatada = format(data, "yyyy-MM-dd");
       const dataHoraInicio = `${dataFormatada}T${horarioSelecionado}:00`;
       
@@ -297,6 +313,10 @@ export default function AgendamentoForm() {
         observacoes,
         observacoes_internas: observacoesInternas,
       };
+
+      console.log('📦 PAYLOAD SENDO ENVIADO:');
+      console.log(JSON.stringify(payload, null, 2));
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       const url = isEdit
         ? `${API_BASE_URL}/agendamentos/${id}`
