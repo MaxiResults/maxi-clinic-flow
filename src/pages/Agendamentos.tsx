@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, User, Package, CheckCircle, XCircle, AlertCircle } from "lucide-react";
@@ -23,6 +24,7 @@ interface Agendamento {
 }
 
 export default function Agendamentos() {
+  const navigate = useNavigate();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,8 +181,11 @@ export default function Agendamentos() {
             >
               🔄 Recarregar
             </button>
-            <button className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2 text-sm">
-              ➕ Novo
+            <button 
+              onClick={() => navigate("/agendamentos/novo")}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2 text-sm"
+            >
+              ➕ Novo Agendamento
             </button>
           </div>
         </div>
@@ -323,6 +328,12 @@ export default function Agendamentos() {
                   <div className="flex lg:flex-col gap-2">
                     <button className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex-1 lg:flex-none whitespace-nowrap">
                       Ver detalhes
+                    </button>
+                    <button 
+                      onClick={() => navigate(`/agendamentos/${agendamento.id}/editar`)}
+                      className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex-1 lg:flex-none whitespace-nowrap"
+                    >
+                      ✏️ Editar
                     </button>
                     {agendamento.status === 'agendado' && (
                       <>
