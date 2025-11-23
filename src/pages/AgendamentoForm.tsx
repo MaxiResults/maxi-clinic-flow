@@ -44,6 +44,7 @@ interface Profissional {
   id: string;
   nome: string;
   foto_url?: string;
+  duracao_padrao_consulta?: string;
 }
 
 interface Produto {
@@ -167,8 +168,17 @@ export default function AgendamentoForm() {
     try {
       setLoadingHorarios(true);
       const dataFormatada = format(data, "yyyy-MM-dd");
-      const produtoSelecionado = produtos.find(p => p.id === parseInt(produtoId));
-      const duracao = produtoSelecionado?.duracao_padrao_minutos || 60;
+      
+      // Buscar duração do profissional selecionado
+      const profissionalSelecionado = profissionais.find(p => p.id === profissionalId);
+      let duracao = 60;
+
+      if (profissionalSelecionado?.duracao_padrao_consulta) {
+        const partes = profissionalSelecionado.duracao_padrao_consulta.split(':');
+        const horas = parseInt(partes[0] || '0');
+        const minutos = parseInt(partes[1] || '0');
+        duracao = horas * 60 + minutos;
+      }
 
       const response = await fetch(
         `${API_BASE_URL}/agendamentos/horarios-disponiveis?profissional_id=${profissionalId}&data=${dataFormatada}&duracao_minutos=${duracao}`,
@@ -252,8 +262,16 @@ export default function AgendamentoForm() {
     try {
       setSubmitting(true);
 
-      const produtoSelecionado = produtos.find(p => p.id === parseInt(produtoId));
-      const duracao = produtoSelecionado?.duracao_padrao_minutos || 60;
+      // Buscar duração do profissional selecionado
+      const profissionalSelecionado = profissionais.find(p => p.id === profissionalId);
+      let duracao = 60;
+
+      if (profissionalSelecionado?.duracao_padrao_consulta) {
+        const partes = profissionalSelecionado.duracao_padrao_consulta.split(':');
+        const horas = parseInt(partes[0] || '0');
+        const minutos = parseInt(partes[1] || '0');
+        duracao = horas * 60 + minutos;
+      }
 
       const dataFormatada = format(data, "yyyy-MM-dd");
       const dataHoraInicio = `${dataFormatada}T${horarioSelecionado}:00`;
