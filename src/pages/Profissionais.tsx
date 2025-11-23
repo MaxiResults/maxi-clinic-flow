@@ -205,7 +205,7 @@ interface ProfissionalFormProps {
   formatCPF: (value: string) => string;
 }
 
-const ProfissionalForm = memo(({ 
+const ProfissionalForm = ({ 
   form, 
   especialidades, 
   especialidadesSelecionadas, 
@@ -589,7 +589,7 @@ const ProfissionalForm = memo(({
       </form>
     </Form>
   );
-});
+};
 
 ProfissionalForm.displayName = 'ProfissionalForm';
 
@@ -720,7 +720,7 @@ export default function Profissionais() {
     return urlData.publicUrl;
   };
 
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFotoFile(file);
@@ -730,13 +730,13 @@ export default function Profissionais() {
       };
       reader.readAsDataURL(file);
     }
-  };
+  }, []);
 
-  const handleRemoveFoto = () => {
+  const handleRemoveFoto = useCallback(() => {
     setFotoFile(null);
     setFotoPreview("");
     setFotoUrl("");
-  };
+  }, []);
 
   // useCallback para memorizar o handler e evitar re-renders
   const handleHorarioChange = useCallback((key: string, novoHorario: HorarioDia) => {
