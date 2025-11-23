@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Agendamentos from "./pages/Agendamentos";
+import AgendamentoForm from "./pages/AgendamentoForm";
 import Conversas from "./pages/Conversas";
 import Profissionais from "./pages/Profissionais";
 import ProfissionalForm from "./pages/ProfissionalForm";
@@ -53,6 +54,22 @@ const App = () => (
             element={
               <PrivateRoute>
                 <Agendamentos />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/agendamentos/novo"
+            element={
+              <PrivateRoute>
+                <AgendamentoForm />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/agendamentos/:id/editar"
+            element={
+              <PrivateRoute>
+                <AgendamentoForm />
               </PrivateRoute>
             }
           />
