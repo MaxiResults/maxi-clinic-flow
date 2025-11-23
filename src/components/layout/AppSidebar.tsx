@@ -29,8 +29,6 @@ const menuItems = [
   { title: "Leads", url: "/leads", icon: Users },
   { title: "Agendamentos", url: "/agendamentos", icon: Calendar },
   { title: "Conversas", url: "/conversas", icon: MessageSquare },
-  { title: "Profissionais", url: "/profissionais", icon: UserCheck },
-  { title: "Produtos", url: "/produtos", icon: Package },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 

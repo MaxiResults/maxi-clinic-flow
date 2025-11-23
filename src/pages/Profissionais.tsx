@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -187,6 +187,8 @@ const HorarioItem = memo(({ dia, horario, onChange }: {
   </div>
 ));
 
+HorarioItem.displayName = 'HorarioItem';
+
 export default function Profissionais() {
   const [profissionais, setProfissionais] = useState<Profissional[]>([]);
   const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
@@ -353,6 +355,14 @@ export default function Profissionais() {
     setFotoPreview("");
     setFotoUrl("");
   };
+
+  // useCallback para memorizar o handler e evitar re-renders
+  const handleHorarioChange = useCallback((key: string, novoHorario: HorarioDia) => {
+    setHorarios((prev) => ({
+      ...prev,
+      [key]: novoHorario
+    }));
+  }, []);
 
   const copiarHorarioParaTodos = () => {
     const primeiroAtivo = Object.entries(horarios).find(([_, h]) => h.ativo);
@@ -861,12 +871,7 @@ export default function Profissionais() {
                     key={key}
                     dia={label}
                     horario={horarios[key as keyof typeof horarios]}
-                    onChange={(novoHorario: any) => {
-                      setHorarios({
-                        ...horarios,
-                        [key]: novoHorario
-                      });
-                    }}
+                    onChange={(novoHorario) => handleHorarioChange(key, novoHorario)}
                   />
                 ))}
 
