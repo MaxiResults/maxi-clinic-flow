@@ -298,18 +298,19 @@ export default function AgendamentoForm() {
       const minutoFim = totalMinutos % 60;
       const dataHoraFim = `${dataFormatada}T${String(horaFim).padStart(2, "0")}:${String(minutoFim).padStart(2, "0")}:00`;
 
-      const valorFinal = valorServico - valorDesconto;
-
+      // Campos gerados automaticamente pelo banco (NÃO enviar):
+      // - duracao_minutos: calculado de (data_hora_fim - data_hora_inicio)
+      // - valor_final: calculado de (valor - valor_desconto)
       const payload = {
         lead_id: leadSelecionado.id,
         profissional_id: profissionalId,
         produto_id: parseInt(produtoId),
         data_hora_inicio: dataHoraInicio,
         data_hora_fim: dataHoraFim,
-        duracao_minutos: duracao,
+        // duracao_minutos: REMOVIDO - calculado pelo banco
         valor: valorServico,
         valor_desconto: valorDesconto,
-        valor_final: valorFinal,
+        // valor_final: REMOVIDO - calculado pelo banco
         observacoes,
         observacoes_internas: observacoesInternas,
       };
