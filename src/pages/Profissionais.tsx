@@ -220,26 +220,6 @@ const ProfissionalForm = ({
   formatCPF
 }: ProfissionalFormProps) => {
   
-  // Handler para input com formatação e preservação de cursor
-  const createFormattedInputHandler = useCallback((formatFn: (val: string) => string, fieldOnChange: (val: string) => void) => {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const input = e.target;
-      const cursorPosition = input.selectionStart || 0;
-      const oldValue = input.value;
-      const newValue = formatFn(e.target.value);
-      
-      fieldOnChange(newValue);
-      
-      setTimeout(() => {
-        if (input && document.activeElement === input) {
-          const diff = newValue.length - oldValue.length;
-          const newPosition = cursorPosition + diff;
-          input.setSelectionRange(newPosition, newPosition);
-        }
-      }, 0);
-    };
-  }, []);
-
   return (
     <Form {...form}>
       <form className="space-y-4">
@@ -323,12 +303,12 @@ const ProfissionalForm = ({
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
                         <Input
+                          {...field}
                           placeholder="(00) 00000-0000"
-                          onChange={createFormattedInputHandler(formatPhone, field.onChange)}
-                          value={field.value || ''}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
+                          onChange={(e) => {
+                            const formatted = formatPhone(e.target.value);
+                            field.onChange(formatted);
+                          }}
                           maxLength={15}
                         />
                       </FormControl>
@@ -345,12 +325,12 @@ const ProfissionalForm = ({
                       <FormLabel>WhatsApp</FormLabel>
                       <FormControl>
                         <Input
+                          {...field}
                           placeholder="(00) 00000-0000"
-                          onChange={createFormattedInputHandler(formatPhone, field.onChange)}
-                          value={field.value || ''}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
+                          onChange={(e) => {
+                            const formatted = formatPhone(e.target.value);
+                            field.onChange(formatted);
+                          }}
                           maxLength={15}
                         />
                       </FormControl>
@@ -369,12 +349,12 @@ const ProfissionalForm = ({
                       <FormLabel>CPF</FormLabel>
                       <FormControl>
                         <Input
+                          {...field}
                           placeholder="000.000.000-00"
-                          onChange={createFormattedInputHandler(formatCPF, field.onChange)}
-                          value={field.value || ''}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
+                          onChange={(e) => {
+                            const formatted = formatCPF(e.target.value);
+                            field.onChange(formatted);
+                          }}
                           maxLength={14}
                         />
                       </FormControl>
