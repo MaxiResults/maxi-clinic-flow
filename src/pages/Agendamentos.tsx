@@ -243,11 +243,23 @@ export default function Agendamentos() {
           </div>
         ) : (
           <div className="space-y-4">
-            {agendamentosFiltrados.map((agendamento) => (
-              <div 
-                key={agendamento.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow"
-              >
+            {agendamentosFiltrados.map((agendamento) => {
+              // DEBUG TIMEZONE
+              console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              console.log('🕐 DEBUG HORÁRIO:');
+              console.log('Raw data_hora_inicio:', agendamento.data_hora_inicio);
+              console.log('Raw data_hora_fim:', agendamento.data_hora_fim);
+              console.log('Date object inicio:', new Date(agendamento.data_hora_inicio));
+              console.log('Date object fim:', new Date(agendamento.data_hora_fim));
+              console.log('Formatted com helper:', formatarHoraBR(agendamento.data_hora_inicio));
+              console.log('Timezone do navegador:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+              console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+              
+              return (
+                <div 
+                  key={agendamento.id}
+                  className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:shadow-md transition-shadow"
+                >
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                   {/* Info Principal */}
                   <div className="flex-1">
@@ -357,7 +369,8 @@ export default function Agendamentos() {
                   </div>
                 </div>
               </div>
-              ))}
+              );
+            })}
             </div>
           )}
           </TabsContent>
