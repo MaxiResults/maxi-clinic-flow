@@ -4,6 +4,21 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, User, Package, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
+// Helper para formatar datas no timezone de São Paulo
+const formatarDataBR = (dataISO: string) => {
+  return new Date(dataISO).toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo'
+  });
+};
+
+const formatarHoraBR = (dataISO: string) => {
+  return new Date(dataISO).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo'
+  });
+};
+
 interface Agendamento {
   id: string;
   Lead?: {
@@ -252,18 +267,12 @@ export default function Agendamentos() {
                         <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
                           <p className="font-medium">
-                            {new Date(agendamento.data_hora_inicio).toLocaleDateString('pt-BR')}
+                            {formatarDataBR(agendamento.data_hora_inicio)}
                           </p>
                           <p className="text-xs">
-                            {new Date(agendamento.data_hora_inicio).toLocaleTimeString('pt-BR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
+                            {formatarHoraBR(agendamento.data_hora_inicio)}
                             {' - '}
-                            {new Date(agendamento.data_hora_fim).toLocaleTimeString('pt-BR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
+                            {formatarHoraBR(agendamento.data_hora_fim)}
                           </p>
                         </div>
                       </div>
