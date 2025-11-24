@@ -14,8 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { localToUTC, DEFAULT_TIMEZONE, getUserTimezone } from "@/utils/timezone";
-import { toZonedTime, format as formatTz } from 'date-fns-tz';
+import { localToUTC, getUserTimezone, utcToLocalDate, extractLocalTime } from "@/utils/timezone";
 import {
   Command,
   CommandEmpty,
@@ -150,11 +149,8 @@ export default function AgendamentoForm() {
         const agendamento = result.data;
         
         // Converter UTC → Local para exibição
-        const dataInicio = toZonedTime(
-          new Date(agendamento.data_hora_inicio),
-          DEFAULT_TIMEZONE
-        );
-        const horarioLocal = formatTz(dataInicio, 'HH:mm');
+        const dataInicio = utcToLocalDate(agendamento.data_hora_inicio);
+        const horarioLocal = extractLocalTime(agendamento.data_hora_inicio);
         
         setLeadSelecionado(agendamento.Lead);
         setProfissionalId(agendamento.profissional_id);
@@ -290,11 +286,10 @@ export default function AgendamentoForm() {
 
       // Converter data/hora local para UTC
       const dataFormatada = format(data, "yyyy-MM-dd");
-      const timezone = DEFAULT_TIMEZONE;
       const userTimezone = getUserTimezone();
 
       // Horário de início em UTC
-      const dataHoraInicioUTC = localToUTC(dataFormatada, horarioSelecionado, timezone);
+      const dataHoraInicioUTC = localToUTC(dataFormatada, horarioSelecionado);
 
       // Calcular horário de fim (adicionar duração)
       const [hora, minuto] = horarioSelecionado.split(":").map(Number);
@@ -304,10 +299,9 @@ export default function AgendamentoForm() {
       const horarioFim = `${String(horaFim).padStart(2, "0")}:${String(minutoFim).padStart(2, "0")}`;
 
       // Horário de fim em UTC
-      const dataHoraFimUTC = localToUTC(dataFormatada, horarioFim, timezone);
+      const dataHoraFimUTC = localToUTC(dataFormatada, horarioFim);
 
       // Backend trabalha SEMPRE em UTC
-      // Campos gerados (duracao_minutos, valor_final) são calculados automaticamente
       const payload = {
         lead_id: leadSelecionado.id,
         profissional_id: profissionalId,
@@ -318,7 +312,7 @@ export default function AgendamentoForm() {
         valor_desconto: valorDesconto,
         observacoes,
         observacoes_internas: observacoesInternas,
-        user_timezone: userTimezone  // Metadata para auditoria
+        user_timezone: userTimezone
       };
 
       const url = isEdit
