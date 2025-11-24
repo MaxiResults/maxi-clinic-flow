@@ -345,7 +345,8 @@ export default function AgendamentoForm() {
           : "Agendamento criado com sucesso",
       });
 
-      navigate("/agendamentos");
+      // Força reload da lista adicionando timestamp único na URL
+      navigate(`/agendamentos?updated=${Date.now()}`);
     } catch (error: any) {
       toast({
         title: "Erro ao salvar",
