@@ -14,6 +14,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { localToUTC, DEFAULT_TIMEZONE, getUserTimezone } from "@/utils/timezone";
+import { toZonedTime, format as formatTz } from 'date-fns-tz';
 import {
   Command,
   CommandEmpty,
@@ -146,11 +148,19 @@ export default function AgendamentoForm() {
 
       if (result.success && result.data) {
         const agendamento = result.data;
+        
+        // Converter UTC → Local para exibição
+        const dataInicio = toZonedTime(
+          new Date(agendamento.data_hora_inicio),
+          DEFAULT_TIMEZONE
+        );
+        const horarioLocal = formatTz(dataInicio, 'HH:mm');
+        
         setLeadSelecionado(agendamento.Lead);
         setProfissionalId(agendamento.profissional_id);
         setProdutoId(agendamento.produto_id);
-        setData(new Date(agendamento.data_hora_inicio));
-        setHorarioSelecionado(format(new Date(agendamento.data_hora_inicio), "HH:mm"));
+        setData(dataInicio);
+        setHorarioSelecionado(horarioLocal);
         setValorServico(agendamento.valor || 0);
         setValorDesconto(agendamento.valor_desconto || 0);
         setObservacoes(agendamento.observacoes || "");
@@ -278,46 +288,38 @@ export default function AgendamentoForm() {
         duracao = horas * 60 + minutos;
       }
 
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('🔍 DEBUG COMPLETO:');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('1. Profissional ID:', profissionalId);
-      console.log('2. Profissional encontrado:', profissionalSelecionado);
-      console.log('3. Campo duracao_padrao_consulta:', profissionalSelecionado?.duracao_padrao_consulta);
-      console.log('4. Tipo:', typeof profissionalSelecionado?.duracao_padrao_consulta);
-      console.log('5. Duração FINAL calculada:', duracao);
-      console.log('6. Tipo da duração:', typeof duracao);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
+      // Converter data/hora local para UTC
       const dataFormatada = format(data, "yyyy-MM-dd");
-      const dataHoraInicio = `${dataFormatada}T${horarioSelecionado}:00`;
-      
+      const timezone = DEFAULT_TIMEZONE;
+      const userTimezone = getUserTimezone();
+
+      // Horário de início em UTC
+      const dataHoraInicioUTC = localToUTC(dataFormatada, horarioSelecionado, timezone);
+
+      // Calcular horário de fim (adicionar duração)
       const [hora, minuto] = horarioSelecionado.split(":").map(Number);
       const totalMinutos = hora * 60 + minuto + duracao;
       const horaFim = Math.floor(totalMinutos / 60);
       const minutoFim = totalMinutos % 60;
-      const dataHoraFim = `${dataFormatada}T${String(horaFim).padStart(2, "0")}:${String(minutoFim).padStart(2, "0")}:00`;
+      const horarioFim = `${String(horaFim).padStart(2, "0")}:${String(minutoFim).padStart(2, "0")}`;
 
-      // Campos gerados automaticamente pelo banco (NÃO enviar):
-      // - duracao_minutos: calculado de (data_hora_fim - data_hora_inicio)
-      // - valor_final: calculado de (valor - valor_desconto)
+      // Horário de fim em UTC
+      const dataHoraFimUTC = localToUTC(dataFormatada, horarioFim, timezone);
+
+      // Backend trabalha SEMPRE em UTC
+      // Campos gerados (duracao_minutos, valor_final) são calculados automaticamente
       const payload = {
         lead_id: leadSelecionado.id,
         profissional_id: profissionalId,
         produto_id: parseInt(produtoId),
-        data_hora_inicio: dataHoraInicio,
-        data_hora_fim: dataHoraFim,
-        // duracao_minutos: REMOVIDO - calculado pelo banco
+        data_hora_inicio: dataHoraInicioUTC,  // ✅ UTC
+        data_hora_fim: dataHoraFimUTC,        // ✅ UTC
         valor: valorServico,
         valor_desconto: valorDesconto,
-        // valor_final: REMOVIDO - calculado pelo banco
         observacoes,
         observacoes_internas: observacoesInternas,
+        user_timezone: userTimezone  // Metadata para auditoria
       };
-
-      console.log('📦 PAYLOAD SENDO ENVIADO:');
-      console.log(JSON.stringify(payload, null, 2));
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       const url = isEdit
         ? `${API_BASE_URL}/agendamentos/${id}`
