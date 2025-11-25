@@ -31,8 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-
-const API_BASE_URL = "https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1";
+import api from "@/lib/api";
 
 interface Lead {
   id: string;
@@ -109,29 +108,16 @@ export default function AgendamentoForm() {
   const carregarDados = async () => {
     try {
       const [leadsRes, profissionaisRes, produtosRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/leads`, {
-          headers: { "ngrok-skip-browser-warning": "true" }
-        }),
-        fetch(`${API_BASE_URL}/profissionais`, {
-          headers: { "ngrok-skip-browser-warning": "true" }
-        }),
-        fetch(`${API_BASE_URL}/produtos`, {
-          headers: { "ngrok-skip-browser-warning": "true" }
-        })
+        api.get('/leads'),
+        api.get('/profissionais'),
+        api.get('/produtos')
       ]);
 
-      const leadsData = await leadsRes.json();
-      const profissionaisData = await profissionaisRes.json();
-      const produtosData = await produtosRes.json();
-
-      if (leadsData.success) setLeads(leadsData.data || []);
-      if (profissionaisData.success) {
-        setProfissionais(profissionaisData.data || []);
-        console.log('✅ Profissionais carregados:', profissionaisData.data);
-        console.log('🔍 Primeiro profissional:', profissionaisData.data?.[0]);
-        console.log('⏱️ Duração do primeiro:', profissionaisData.data?.[0]?.duracao_padrao_consulta);
-      }
-      if (produtosData.success) setProdutos(produtosData.data || []);
+      setLeads(leadsRes.data || []);
+      setProfissionais(profissionaisRes.data || []);
+      setProdutos(produtosRes.data || []);
+      
+      console.log('✅ Profissionais carregados:', profissionaisRes.data);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     }
@@ -140,13 +126,10 @@ export default function AgendamentoForm() {
   const carregarAgendamento = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/agendamentos/${id}`, {
-        headers: { "ngrok-skip-browser-warning": "true" }
-      });
-      const result = await response.json();
+      const response = await api.get(`/agendamentos/${id}`);
+      const agendamento = response.data;
 
-      if (result.success && result.data) {
-        const agendamento = result.data;
+      if (agendamento) {
         
         // Converter UTC → Local para exibição
         const dataInicio = utcToLocalDate(agendamento.data_hora_inicio);
@@ -191,15 +174,15 @@ export default function AgendamentoForm() {
         duracao = horas * 60 + minutos;
       }
 
-      const response = await fetch(
-        `${API_BASE_URL}/agendamentos/horarios-disponiveis?profissional_id=${profissionalId}&data=${dataFormatada}&duracao_minutos=${duracao}`,
-        { headers: { "ngrok-skip-browser-warning": "true" } }
-      );
-      const result = await response.json();
+      const response = await api.get('/agendamentos/horarios-disponiveis', {
+        params: {
+          profissional_id: profissionalId,
+          data: dataFormatada,
+          duracao_minutos: duracao
+        }
+      });
 
-      if (result.success) {
-        setHorariosDisponiveis(result.horarios || []);
-      }
+      setHorariosDisponiveis(response.data.horarios || []);
     } catch (error) {
       console.error("Erro ao buscar horários:", error);
     } finally {
@@ -218,25 +201,16 @@ export default function AgendamentoForm() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/leads`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify({
-          nome: novoLeadNome,
-          telefone: novoLeadTelefone,
-          email: novoLeadEmail,
-          canal_origem: "agendamento_manual",
-          status: "novo"
-        }),
+      const response = await api.post('/leads', {
+        nome: novoLeadNome,
+        telefone: novoLeadTelefone,
+        email: novoLeadEmail,
+        canal_origem: "agendamento_manual",
+        status: "novo"
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        const novoLead = result.data;
+      const novoLead = response.data;
+      if (novoLead) {
         setLeads([...leads, novoLead]);
         setLeadSelecionado(novoLead);
         setCriarLeadOpen(false);
@@ -315,9 +289,13 @@ export default function AgendamentoForm() {
         user_timezone: userTimezone
       };
 
-      const url = isEdit
-        ? `${API_BASE_URL}/agendamentos/${id}`
-        : `${API_BASE_URL}/agendamentos`;
+      const url = isEdit ? `/agendamentos/${id}` : '/agendamentos';
+      
+      if (isEdit) {
+        await api.patch(url, payload);
+      } else {
+        await api.post(url, payload);
+      }
 
       const response = await fetch(url, {
         method: isEdit ? "PATCH" : "POST",

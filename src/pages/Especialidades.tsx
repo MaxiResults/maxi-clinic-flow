@@ -44,8 +44,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from '@/hooks/use-toast';
-
-const API_BASE_URL = 'https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1';
+import api from '@/lib/api';
 
 interface Especialidade {
   id: string;
@@ -139,40 +138,21 @@ export default function Especialidades() {
   const fetchEspecialidades = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/especialidades`, {
-        headers: { 
-          'ngrok-skip-browser-warning': 'true',
-          'User-Agent': 'LovableApp'
-        }
-      });
-      const result = await response.json();
+      const response = await api.get('/especialidades');
+      const data = response.data || [];
+      setEspecialidades(data);
       
-      if (result.success) {
-        setEspecialidades(result.data);
-        
-        // Buscar contadores
-        const counts: Record<string, number> = {};
-        for (const esp of result.data) {
-          try {
-            const countRes = await fetch(
-              `${API_BASE_URL}/especialidades/${esp.id}/profissionais/count`,
-              { 
-                headers: { 
-                  'ngrok-skip-browser-warning': 'true',
-                  'User-Agent': 'LovableApp'
-                } 
-              }
-            );
-            const countData = await countRes.json();
-            if (countData.success) {
-              counts[esp.id] = countData.count || 0;
-            }
-          } catch (error) {
-            counts[esp.id] = 0;
-          }
+      // Buscar contadores
+      const counts: Record<string, number> = {};
+      for (const esp of data) {
+        try {
+          const countRes = await api.get(`/especialidades/${esp.id}/profissionais/count`);
+          counts[esp.id] = countRes.data.count || 0;
+        } catch (error) {
+          counts[esp.id] = 0;
         }
-        setContadores(counts);
       }
+      setContadores(counts);
     } catch (error) {
       toast({
         title: "Erro ao carregar",
@@ -191,40 +171,21 @@ export default function Especialidades() {
   // Criar especialidade
   const handleCreate = async (data: z.infer<typeof especialidadeSchema>) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/especialidades`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-          'User-Agent': 'LovableApp'
-        },
-        body: JSON.stringify({
-          nome: data.nome,
-          descricao: data.descricao || '',
-          icone: data.icone || 'Star',
-          cor: data.cor || '#ec4899',
-          slug: data.slug,
-          ordem: data.ordem || 0,
-        }),
+      await api.post('/especialidades', {
+        nome: data.nome,
+        descricao: data.descricao || '',
+        icone: data.icone || 'Star',
+        cor: data.cor || '#ec4899',
+        slug: data.slug,
+        ordem: data.ordem || 0,
       });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast({
-          title: "✅ Especialidade criada!",
-          description: "A especialidade foi criada com sucesso.",
-        });
-        setIsNewOpen(false);
-        form.reset();
-        fetchEspecialidades();
-      } else {
-        toast({
-          title: "❌ Erro ao criar",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "✅ Especialidade criada!",
+        description: "A especialidade foi criada com sucesso.",
+      });
+      setIsNewOpen(false);
+      form.reset();
+      fetchEspecialidades();
     } catch (error) {
       toast({
         title: "❌ Erro ao criar",
@@ -239,34 +200,15 @@ export default function Especialidades() {
     if (!selected) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/especialidades/${selected.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-          'User-Agent': 'LovableApp'
-        },
-        body: JSON.stringify(data),
+      await api.patch(`/especialidades/${selected.id}`, data);
+      toast({
+        title: "✅ Especialidade atualizada!",
+        description: "A especialidade foi atualizada com sucesso.",
       });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast({
-          title: "✅ Especialidade atualizada!",
-          description: "A especialidade foi atualizada com sucesso.",
-        });
-        setIsEditOpen(false);
-        setSelected(null);
-        form.reset();
-        fetchEspecialidades();
-      } else {
-        toast({
-          title: "❌ Erro ao atualizar",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      setIsEditOpen(false);
+      setSelected(null);
+      form.reset();
+      fetchEspecialidades();
     } catch (error) {
       toast({
         title: "❌ Erro ao atualizar",
@@ -292,31 +234,14 @@ export default function Especialidades() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/especialidades/${selected.id}`, {
-        method: 'DELETE',
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'User-Agent': 'LovableApp'
-        },
+      await api.delete(`/especialidades/${selected.id}`);
+      toast({
+        title: "✅ Especialidade excluída!",
+        description: "A especialidade foi excluída com sucesso.",
       });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toast({
-          title: "✅ Especialidade excluída!",
-          description: "A especialidade foi excluída com sucesso.",
-        });
-        setIsDeleteOpen(false);
-        setSelected(null);
-        fetchEspecialidades();
-      } else {
-        toast({
-          title: "❌ Erro ao excluir",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      setIsDeleteOpen(false);
+      setSelected(null);
+      fetchEspecialidades();
     } catch (error) {
       toast({
         title: "❌ Erro ao excluir",

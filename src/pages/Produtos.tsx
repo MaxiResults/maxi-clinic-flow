@@ -32,8 +32,7 @@ const supabase = createClient(
   "https://sunccjukvrximjiqzdkm.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1bmNjanVrdnJ4aW1qaXF6ZGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNzMyODUsImV4cCI6MjA3NDg0OTI4NX0.Xt68Jol4GQ-GeL7g4z_wmm6ui81BIpTNJmNO7WhR_7E"
 );
-
-const API_BASE_URL = "https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1";
+import api from '@/lib/api';
 
 interface Produto {
   id: number;
@@ -170,15 +169,8 @@ export default function Produtos() {
 
   const fetchCategorias = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/categorias`, {
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setCategorias(result.data);
-      }
+      const response = await api.get('/categorias');
+      setCategorias(response.data || []);
     } catch (error) {
       console.error("Erro ao buscar categorias:", error);
     }
@@ -186,15 +178,8 @@ export default function Produtos() {
 
   const fetchGrupos = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/grupos`, {
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setGrupos(result.data);
-      }
+      const response = await api.get('/grupos');
+      setGrupos(response.data || []);
     } catch (error) {
       console.error("Erro ao buscar grupos:", error);
     }
@@ -203,34 +188,23 @@ export default function Produtos() {
   const fetchProdutos = async () => {
     try {
       setLoading(true);
-      let url = `${API_BASE_URL}/produtos`;
-
-      const params = new URLSearchParams();
+      const params: any = {};
+      
       if (filtroCategoria && filtroCategoria !== "all") {
-        params.append("categoria_id", filtroCategoria);
+        params.categoria_id = filtroCategoria;
       }
       if (filtroGrupo && filtroGrupo !== "all") {
-        params.append("grupo_id", filtroGrupo);
+        params.grupo_id = filtroGrupo;
       }
       if (filtroTipo && filtroTipo !== "all") {
-        params.append("tipo", filtroTipo);
+        params.tipo = filtroTipo;
       }
       if (busca) {
-        params.append("busca", busca);
+        params.busca = busca;
       }
 
-      if (params.toString()) url += "?" + params.toString();
-
-      const response = await fetch(url, {
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-        },
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setProdutos(result.data || []);
-      }
+      const response = await api.get('/produtos', { params });
+      setProdutos(response.data || []);
     } catch (error) {
       console.error("Erro ao buscar produtos:", error);
       toast({
@@ -370,18 +344,9 @@ export default function Produtos() {
         })) : [],
       };
 
-      const response = await fetch(`${API_BASE_URL}/produtos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Erro ao criar produto");
-
-      const result = await response.json();
+      const response = await api.post('/produtos', payload);
+      
+      if (!response.data) throw new Error("Erro ao criar produto");
 
       toast({
         title: "✅ Produto criado!",
@@ -435,16 +400,7 @@ export default function Produtos() {
         })) : [],
       };
 
-      const response = await fetch(`${API_BASE_URL}/produtos/${selectedProduto.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Erro ao atualizar produto");
+      await api.patch(`/produtos/${selectedProduto.id}`, payload);
 
       toast({
         title: "✅ Produto atualizado!",
@@ -470,14 +426,7 @@ export default function Produtos() {
     if (!selectedProduto) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/produtos/${selectedProduto.id}`, {
-        method: "DELETE",
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-        },
-      });
-
-      if (!response.ok) throw new Error("Erro ao excluir produto");
+      await api.delete(`/produtos/${selectedProduto.id}`);
 
       toast({
         title: "✅ Produto excluído!",

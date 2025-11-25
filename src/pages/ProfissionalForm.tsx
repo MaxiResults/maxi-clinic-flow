@@ -17,8 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-
-const API_BASE_URL = "https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1";
+import api from '@/lib/api';
 
 interface HorarioDia {
   ativo: boolean;
@@ -129,13 +128,10 @@ export default function ProfissionalForm() {
 
   const fetchEspecialidades = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/especialidades?ativo=true`, {
-        headers: { "ngrok-skip-browser-warning": "true" },
+      const response = await api.get('/especialidades', {
+        params: { ativo: true }
       });
-      const result = await response.json();
-      if (result.success) {
-        setEspecialidades(result.data || []);
-      }
+      setEspecialidades(response.data || []);
     } catch (error) {
       console.error("Erro ao buscar especialidades:", error);
     }
@@ -144,13 +140,10 @@ export default function ProfissionalForm() {
   const fetchProfissional = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/profissionais/${id}`, {
-        headers: { "ngrok-skip-browser-warning": "true" },
-      });
-      const result = await response.json();
+      const response = await api.get(`/profissionais/${id}`);
+      const prof = response.data;
       
-      if (result.success && result.data) {
-        const prof = result.data;
+      if (prof) {
         
         form.reset({
           nome: prof.nome,
@@ -319,23 +312,10 @@ export default function ProfissionalForm() {
         especialidades: especialidadesSelecionadas,
       };
 
-      const url = isEdit
-        ? `${API_BASE_URL}/profissionais/${id}`
-        : `${API_BASE_URL}/profissionais`;
-
-      const response = await fetch(url, {
-        method: isEdit ? "PATCH" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("❌ Erro do backend:", errorData);
-        throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`);
+      if (isEdit) {
+        await api.patch(`/profissionais/${id}`, payload);
+      } else {
+        await api.post('/profissionais', payload);
       }
 
       toast({

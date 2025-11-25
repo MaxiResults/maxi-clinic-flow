@@ -1,9 +1,11 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://api.maxiclinicas.com.br',
+  baseURL: 'http://api.maxiclinicas.com.br/api/v1',
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true',
+    'User-Agent': 'MaxiResults/1.0',
   },
 });
 

@@ -52,8 +52,7 @@ import {
   Eye,
   Folder,
 } from "lucide-react";
-
-const API_BASE_URL = "https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1";
+import api from '@/lib/api';
 
 interface Categoria {
   id: string;
@@ -189,16 +188,8 @@ export default function Categorias() {
   const fetchCategorias = async () => {
     try {
       setLoadingCategorias(true);
-      const response = await fetch(`${API_BASE_URL}/categorias`, {
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setCategorias(result.data);
-      }
+      const response = await api.get('/categorias');
+      setCategorias(response.data || []);
     } catch (error) {
       toast({
         title: "Erro ao carregar categorias",
@@ -214,20 +205,9 @@ export default function Categorias() {
   const fetchGrupos = async () => {
     try {
       setLoadingGrupos(true);
-      const url = filtroCategoria
-        ? `${API_BASE_URL}/grupos?categoria_id=${filtroCategoria}`
-        : `${API_BASE_URL}/grupos`;
-      const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setGrupos(result.data);
-      }
+      const params = filtroCategoria ? { categoria_id: filtroCategoria } : {};
+      const response = await api.get('/grupos', { params });
+      setGrupos(response.data || []);
     } catch (error) {
       toast({
         title: "Erro ao carregar grupos",
@@ -267,39 +247,21 @@ export default function Categorias() {
   // Handlers Categorias
   const handleCreateCategoria = async (data: z.infer<typeof categoriaSchema>) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/categorias`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-        body: JSON.stringify({
-          nome: data.nome,
-          descricao: data.descricao || "",
-          icone: data.icone || "Package",
-          cor: data.cor || "#ec4899",
-          slug: data.slug,
-          ordem: data.ordem || 0,
-        }),
+      await api.post('/categorias', {
+        nome: data.nome,
+        descricao: data.descricao || "",
+        icone: data.icone || "Package",
+        cor: data.cor || "#ec4899",
+        slug: data.slug,
+        ordem: data.ordem || 0,
       });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Categoria criada!",
-          description: "A categoria foi criada com sucesso.",
-        });
-        setIsNewCategoriaOpen(false);
-        categoriaForm.reset();
-        fetchCategorias();
-      } else {
-        toast({
-          title: "Erro ao criar categoria",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Categoria criada!",
+        description: "A categoria foi criada com sucesso.",
+      });
+      setIsNewCategoriaOpen(false);
+      categoriaForm.reset();
+      fetchCategorias();
     } catch (error) {
       toast({
         title: "Erro ao criar categoria",
@@ -313,33 +275,15 @@ export default function Categorias() {
     if (!selectedCategoria) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/categorias/${selectedCategoria.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-        body: JSON.stringify(data),
+      await api.patch(`/categorias/${selectedCategoria.id}`, data);
+      toast({
+        title: "Categoria atualizada!",
+        description: "A categoria foi atualizada com sucesso.",
       });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Categoria atualizada!",
-          description: "A categoria foi atualizada com sucesso.",
-        });
-        setIsEditCategoriaOpen(false);
-        setSelectedCategoria(null);
-        categoriaForm.reset();
-        fetchCategorias();
-      } else {
-        toast({
-          title: "Erro ao atualizar categoria",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      setIsEditCategoriaOpen(false);
+      setSelectedCategoria(null);
+      categoriaForm.reset();
+      fetchCategorias();
     } catch (error) {
       toast({
         title: "Erro ao atualizar categoria",
@@ -353,31 +297,15 @@ export default function Categorias() {
     if (!selectedCategoria) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/categorias/${selectedCategoria.id}`, {
-        method: "DELETE",
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
+      await api.delete(`/categorias/${selectedCategoria.id}`);
+      toast({
+        title: "Categoria excluída!",
+        description: "A categoria foi excluída com sucesso.",
       });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Categoria excluída!",
-          description: "A categoria foi excluída com sucesso.",
-        });
-        setIsDeleteCategoriaOpen(false);
-        setSelectedCategoria(null);
-        fetchCategorias();
-        fetchGrupos(); // Recarregar grupos também
-      } else {
-        toast({
-          title: "Erro ao excluir categoria",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      setIsDeleteCategoriaOpen(false);
+      setSelectedCategoria(null);
+      fetchCategorias();
+      fetchGrupos();
     } catch (error) {
       toast({
         title: "Erro ao excluir categoria",
@@ -390,38 +318,20 @@ export default function Categorias() {
   // Handlers Grupos
   const handleCreateGrupo = async (data: z.infer<typeof grupoSchema>) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/grupos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-        body: JSON.stringify({
-          categoria_id: data.categoria_id,
-          nome: data.nome,
-          descricao: data.descricao || "",
-          slug: data.slug,
-          ordem: data.ordem || 0,
-        }),
+      await api.post('/grupos', {
+        categoria_id: data.categoria_id,
+        nome: data.nome,
+        descricao: data.descricao || "",
+        slug: data.slug,
+        ordem: data.ordem || 0,
       });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Grupo criado!",
-          description: "O grupo foi criado com sucesso.",
-        });
-        setIsNewGrupoOpen(false);
-        grupoForm.reset();
-        fetchGrupos();
-      } else {
-        toast({
-          title: "Erro ao criar grupo",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Grupo criado!",
+        description: "O grupo foi criado com sucesso.",
+      });
+      setIsNewGrupoOpen(false);
+      grupoForm.reset();
+      fetchGrupos();
     } catch (error) {
       toast({
         title: "Erro ao criar grupo",
@@ -435,33 +345,15 @@ export default function Categorias() {
     if (!selectedGrupo) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/grupos/${selectedGrupo.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
-        body: JSON.stringify(data),
+      await api.patch(`/grupos/${selectedGrupo.id}`, data);
+      toast({
+        title: "Grupo atualizado!",
+        description: "O grupo foi atualizado com sucesso.",
       });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Grupo atualizado!",
-          description: "O grupo foi atualizado com sucesso.",
-        });
-        setIsEditGrupoOpen(false);
-        setSelectedGrupo(null);
-        grupoForm.reset();
-        fetchGrupos();
-      } else {
-        toast({
-          title: "Erro ao atualizar grupo",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      setIsEditGrupoOpen(false);
+      setSelectedGrupo(null);
+      grupoForm.reset();
+      fetchGrupos();
     } catch (error) {
       toast({
         title: "Erro ao atualizar grupo",
@@ -475,30 +367,14 @@ export default function Categorias() {
     if (!selectedGrupo) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/grupos/${selectedGrupo.id}`, {
-        method: "DELETE",
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "LovableApp",
-        },
+      await api.delete(`/grupos/${selectedGrupo.id}`);
+      toast({
+        title: "Grupo excluído!",
+        description: "O grupo foi excluído com sucesso.",
       });
-
-      const result = await response.json();
-      if (result.success) {
-        toast({
-          title: "Grupo excluído!",
-          description: "O grupo foi excluído com sucesso.",
-        });
-        setIsDeleteGrupoOpen(false);
-        setSelectedGrupo(null);
-        fetchGrupos();
-      } else {
-        toast({
-          title: "Erro ao excluir grupo",
-          description: result.message || "Erro desconhecido",
-          variant: "destructive",
-        });
-      }
+      setIsDeleteGrupoOpen(false);
+      setSelectedGrupo(null);
+      fetchGrupos();
     } catch (error) {
       toast({
         title: "Erro ao excluir grupo",
