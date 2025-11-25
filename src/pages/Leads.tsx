@@ -14,8 +14,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Edit, Trash2, Plus, Loader2 } from "lucide-react";
-
-const API_BASE_URL = 'https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1';
+import api from '@/lib/api';
 
 interface Lead {
   id: string;
@@ -102,29 +101,10 @@ export default function Leads() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`${API_BASE_URL}/leads?t=${Date.now()}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-          'User-Agent': 'MaxiResults/1.0'
-        }
+      const response = await api.get('/leads', {
+        params: { t: Date.now() }
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const text = await response.text();
-      
-      if (!text.startsWith('{')) {
-        throw new Error('Ainda recebendo HTML. Tente: 1) Abrir a URL no navegador e clicar "Visit Site" 2) Voltar aqui e recarregar');
-      }
-      
-      const data = JSON.parse(text);
-      const leadsArray = data.success && data.data 
-        ? (Array.isArray(data.data) ? data.data : [])
-        : [];
+      const leadsArray = response.data || [];
       
       setLeads(leadsArray);
     } catch (err: any) {
@@ -214,25 +194,8 @@ const cleanPhone = (phone: string): string => {
     
     console.log('📦 PAYLOAD FINAL:', payload);
     
-    const response = await fetch(`${API_BASE_URL}/leads`, {  // ← CORRIGIDO!
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true',
-      },
-      body: JSON.stringify(payload)
-    });
-    
-    console.log('📡 RESPONSE STATUS:', response.status);
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ ERROR DATA:', errorData);
-      throw new Error(errorData.error || 'Erro ao criar lead');
-    }
-    
-    const result = await response.json();
-    console.log('✅ RESULTADO:', result);
+    const response = await api.post('/leads', payload);
+    console.log('✅ RESULTADO:', response.data);
     
     toast({
       title: "✅ Sucesso!",
@@ -268,18 +231,7 @@ const cleanPhone = (phone: string): string => {
         email: data.email || undefined,
       };
 
-      const response = await fetch(`${API_BASE_URL}/leads/${selectedLead.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao atualizar lead');
-      }
+      await api.patch(`/leads/${selectedLead.id}`, payload);
 
       toast({
         title: "✅ Sucesso!",
@@ -307,16 +259,7 @@ const cleanPhone = (phone: string): string => {
     try {
       setActionLoading(true);
       
-      const response = await fetch(`${API_BASE_URL}/leads/${selectedLead.id}`, {
-        method: 'DELETE',
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao excluir lead');
-      }
+      await api.delete(`/leads/${selectedLead.id}`);
 
       toast({
         title: "✅ Sucesso!",
@@ -413,11 +356,7 @@ const cleanPhone = (phone: string): string => {
                 <strong>💡 Solução:</strong>
               </p>
               <ol className="text-sm text-yellow-700 list-decimal list-inside mt-2 space-y-1">
-                <li>Abra esta URL em uma nova aba:</li>
-                <li className="ml-4 font-mono text-xs break-all">
-                  {API_BASE_URL}/leads
-                </li>
-                <li>Clique em "Visit Site" se aparecer</li>
+                <li>Verifique se o backend está acessível</li>
                 <li>Volte aqui e clique em "Tentar novamente"</li>
               </ol>
             </div>

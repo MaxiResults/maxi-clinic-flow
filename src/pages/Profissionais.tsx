@@ -19,8 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-const API_BASE_URL = "https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1";
+import api from '@/lib/api';
 
 interface Profissional {
   id: string;
@@ -56,13 +55,8 @@ export default function Profissionais() {
   const fetchProfissionais = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/profissionais`, {
-        headers: { "ngrok-skip-browser-warning": "true" },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setProfissionais(result.data || []);
-      }
+      const response = await api.get('/profissionais');
+      setProfissionais(response.data || []);
     } catch (error) {
       toast({
         title: "Erro ao carregar",
@@ -78,12 +72,7 @@ export default function Profissionais() {
     if (!selectedId) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/profissionais/${selectedId}`, {
-        method: "DELETE",
-        headers: { "ngrok-skip-browser-warning": "true" },
-      });
-
-      if (!response.ok) throw new Error("Erro ao excluir");
+      await api.delete(`/profissionais/${selectedId}`);
 
       toast({
         title: "Profissional excluído",

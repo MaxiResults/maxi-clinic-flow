@@ -44,35 +44,12 @@ export default function Conversas() {
       console.log('🔍 Buscando sessões...');
 
       // Por enquanto, vamos buscar os leads como "sessões"
-      const response = await fetch(
-        'https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1/leads?t=' + Date.now(),
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-            'User-Agent': 'MaxiResults/1.0'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const text = await response.text();
+      const response = await api.get('/leads', {
+        params: { t: Date.now() }
+      });
+      const leadsArray = response.data || [];
       
-      if (!text.startsWith('{')) {
-        throw new Error('Abra a URL no navegador e clique em "Visit Site"');
-      }
-
-      const data = JSON.parse(text);
-      console.log('📦 Leads:', data);
-
-      // Transformar leads em sessões
-      const leadsArray = data.success && data.data 
-        ? (Array.isArray(data.data) ? data.data : [])
-        : [];
+      console.log('📦 Leads:', leadsArray);
 
       const sessoesArray = leadsArray.map((lead: any) => ({
         id: lead.id,
@@ -111,34 +88,14 @@ export default function Conversas() {
 
       console.log('🔍 Buscando mensagens do lead:', leadId);
 
-      const response = await fetch(
-        `https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1/conversas/${leadId}/historico?t=${Date.now()}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-            'User-Agent': 'MaxiResults/1.0'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const text = await response.text();
+      const response = await api.get(`/conversas/${leadId}/historico`, {
+        params: { t: Date.now() }
+      });
+      const data = response.data;
       
-      if (!text.startsWith('{')) {
-        throw new Error('Erro ao carregar mensagens');
-      }
-
-      const data = JSON.parse(text);
       console.log('📦 Histórico:', data);
 
-      const mensagensArray = data.success && data.data && data.data.mensagens
-        ? (Array.isArray(data.data.mensagens) ? data.data.mensagens : [])
-        : [];
+      const mensagensArray = data.mensagens || [];
 
       console.log('✅ Total de mensagens:', mensagensArray.length);
       setMensagens(mensagensArray);

@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, User, Package, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { formatDateBR, formatTimeBR } from "@/utils/timezone";
+import api from '@/lib/api';
 
 interface Agendamento {
   id: string;
@@ -42,40 +43,13 @@ export default function Agendamentos() {
 
       console.log('🔍 Buscando agendamentos...');
 
-      const response = await fetch(
-        'https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1/agendamentos?t=' + Date.now(),
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-            'User-Agent': 'MaxiResults/1.0'
-          }
-        }
-      );
+      const response = await api.get('/agendamentos', {
+        params: { t: Date.now() }
+      });
+      const data = response.data;
 
-      console.log('📡 Response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const text = await response.text();
-      console.log('📄 Response (200 chars):', text.substring(0, 200));
-      
-      if (!text.startsWith('{')) {
-        throw new Error('Abra a URL no navegador primeiro e clique em "Visit Site"');
-      }
-
-      const data = JSON.parse(text);
-      console.log('📦 JSON parseado:', data);
-
-      const agendamentosArray = data.success && data.data 
-        ? (Array.isArray(data.data) ? data.data : [])
-        : [];
-
-      console.log('✅ Agendamentos carregados:', agendamentosArray);
-      setAgendamentos(agendamentosArray);
+      console.log('✅ Agendamentos carregados:', data);
+      setAgendamentos(data || []);
 
     } catch (err: any) {
       console.error('❌ Erro:', err);
@@ -143,11 +117,8 @@ export default function Agendamentos() {
                 <strong>💡 Solução:</strong>
               </p>
               <ol className="text-sm text-yellow-700 list-decimal list-inside mt-2 space-y-1">
-                <li>Abra esta URL em nova aba:</li>
-                <li className="ml-4 font-mono text-xs break-all">
-                  https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1/agendamentos
-                </li>
-                <li>Clique em "Visit Site" se aparecer</li>
+                <li>Verifique se o backend está rodando</li>
+                <li>Tente novamente em alguns instantes</li>
                 <li>Volte aqui e clique em "Tentar novamente"</li>
               </ol>
             </div>

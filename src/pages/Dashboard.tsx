@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatusBadge } from "@/components/StatusBadge";
 import { Users, Calendar, MessageSquare, TrendingUp, Clock, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const API_BASE_URL = 'https://viewlessly-unadjoining-lashanda.ngrok-free.dev/api/v1';
+import api from '@/lib/api';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -27,17 +26,17 @@ export default function Dashboard() {
     try {
       setLoading(true);
 
-      // Buscar dados em paralelo
+      // Buscar dados em paralelo usando api centralizado
       const [leadsRes, agendamentosRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/leads?t=${Date.now()}`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/agendamentos?t=${Date.now()}`).then(r => r.json())
+        api.get('/leads', { params: { t: Date.now() } }),
+        api.get('/agendamentos', { params: { t: Date.now() } })
       ]);
 
-      console.log('📊 Leads:', leadsRes);
-      console.log('📅 Agendamentos:', agendamentosRes);
+      console.log('📊 Leads:', leadsRes.data);
+      console.log('📅 Agendamentos:', agendamentosRes.data);
 
       // Processar leads
-      const leads = leadsRes.success ? leadsRes.data : [];
+      const leads = leadsRes.data || [];
       const totalLeads = leads.length;
 
       // Calcular taxa de conversão
@@ -47,7 +46,7 @@ export default function Dashboard() {
         : 0;
 
       // Processar agendamentos
-      const agendamentos = agendamentosRes.success ? agendamentosRes.data : [];
+      const agendamentos = agendamentosRes.data || [];
       
       // Filtrar agendamentos de hoje
       const hoje = new Date().toISOString().split('T')[0];
