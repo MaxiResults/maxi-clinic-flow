@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://viewlessly-unadjoining-lashanda.ngrok-free.dev',
+  baseURL: 'http://api.maxiclinicas.com.br',
   headers: {
     'Content-Type': 'application/json',
   },
