@@ -297,6 +297,21 @@ export default function AgendamentoForm() {
         await api.post(url, payload);
       }
 
+      const response = await fetch(url, {
+        method: isEdit ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Erro ao salvar agendamento");
+      }
+
       toast({
         title: isEdit ? "Agendamento atualizado" : "Agendamento criado",
         description: isEdit
