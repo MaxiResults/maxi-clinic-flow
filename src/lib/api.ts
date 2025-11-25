@@ -1,75 +1,116 @@
 import axios from 'axios';
 
+/**
+ * Cliente API - Multi-ambiente
+ * 
+ * PRODUÇÃO (maxiclinicas.com.br):
+ *   → Usa proxy reverso: /api/v1
+ * 
+ * PREVIEW (lovable.dev/app):
+ *   → Aponta direto: https://api.maxiclinicas.com.br/api/v1
+ */
+
+// Detectar ambiente
+const isProduction = 
+  window.location.hostname === 'maxiclinicas.com.br' ||
+  window.location.hostname === 'www.maxiclinicas.com.br';
+
+// Base URL conforme ambiente
+const API_BASE_URL = isProduction 
+  ? '/api/v1'  // Produção: proxy reverso
+  : 'https://api.maxiclinicas.com.br/api/v1';  // Preview: VPS direto
+
+// Log ambiente
+console.log(`🔧 Ambiente: ${isProduction ? 'PRODUÇÃO' : 'PREVIEW'}`);
+console.log(`🌐 API URL: ${API_BASE_URL}`);
+
 const api = axios.create({
-  baseURL: 'http://api.maxiclinicas.com.br/api/v1',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true',
-    'User-Agent': 'MaxiResults/1.0',
   },
+  timeout: 10000,
+  withCredentials: false,
 });
 
-// Request interceptor
+// ============================================
+// REQUEST INTERCEPTOR - Autenticação
+// ============================================
 api.interceptors.request.use(
   (config) => {
+    // Adicionar token se existir
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Log request
+    console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`);
+    
     return config;
   },
   (error) => {
+    console.error('❌ Request Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor - VERSÃO CORRIGIDA
+// ============================================
+// RESPONSE INTERCEPTOR - Normalização
+// ============================================
 api.interceptors.response.use(
   (response) => {
     console.log('📡 API Response:', {
       url: response.config.url,
-      data: response.data,
-      type: typeof response.data,
-      isArray: Array.isArray(response.data)
+      status: response.status,
+      dataType: typeof response.data,
+      isArray: Array.isArray(response.data),
     });
 
-    // Se backend retorna { success: true, data: [...] }
+    // Backend retorna: { success: true, data: [...] }
     if (
-      response.data && 
-      typeof response.data === 'object' && 
-      'success' in response.data && 
+      response.data &&
+      typeof response.data === 'object' &&
+      'success' in response.data &&
       'data' in response.data
     ) {
       console.log('✅ Extraindo response.data.data');
       
-      // Garantir que data.data é um array
       const extractedData = response.data.data;
       const finalData = Array.isArray(extractedData) ? extractedData : [];
       
-      console.log('📦 Dados finais:', finalData);
+      console.log(`📦 ${finalData.length} itens retornados`);
       
       return {
         ...response,
-        data: finalData
+        data: finalData,
       };
     }
 
-    // Se já vier como array direto, retorna
+    // Já é array? Retorna direto
     if (Array.isArray(response.data)) {
-      console.log('✅ Já é array, retornando direto');
+      console.log(`✅ Array direto: ${response.data.length} itens`);
       return response;
     }
 
-    // Caso contrário, retorna response original
-    console.log('⚠️ Retornando response original');
+    // Outros casos
+    console.log('⚠️ Response original mantido');
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', error);
+    console.error('❌ API Error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+
+    // Unauthorized - logout
     if (error.response?.status === 401) {
+      console.warn('🔒 Token inválido - redirecionando login');
       localStorage.removeItem('auth_token');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );
