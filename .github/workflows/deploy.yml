@@ -1,0 +1,51 @@
+name: Deploy Frontend para VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Instalar dependências
+        run: npm ci
+
+      - name: 🏗️ Build de produção
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: 🚀 Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/maxi-system/frontend
+            git pull origin main
+            npm install
+            VITE_API_URL=${{ secrets.VITE_API_URL }} \
+            VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }} \
+            VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }} \
+            npm run build
+            docker-compose -f /root/maxi-system/docker-compose.yml restart nginx
+            echo "✅ Deploy concluído em $(date)"
+
+      - name: ✅ Deploy bem-sucedido!
+        if: success()
+        run: echo "🎉 Frontend deployado com sucesso!"
