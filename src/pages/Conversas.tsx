@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, MessageSquare } from "lucide-react";
+import api from "@/lib/api";
 
 interface Sessao {
   id: string;
