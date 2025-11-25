@@ -44,6 +44,8 @@ export function formatDateBR(isoString: string): string {
   if (!isoString) return '';
   
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '';
+  
   return date.toLocaleDateString('pt-BR', {
     timeZone: DEFAULT_TIMEZONE,
     day: '2-digit',
@@ -62,6 +64,8 @@ export function formatTimeBR(isoString: string): string {
   if (!isoString) return '';
   
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '';
+  
   return date.toLocaleTimeString('pt-BR', {
     timeZone: DEFAULT_TIMEZONE,
     hour: '2-digit',
@@ -79,6 +83,8 @@ export function formatDateTimeBR(isoString: string): string {
   if (!isoString) return '';
   
   const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '';
+  
   const datePart = date.toLocaleDateString('pt-BR', {
     timeZone: DEFAULT_TIMEZONE,
     day: '2-digit',
