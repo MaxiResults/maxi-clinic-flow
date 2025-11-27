@@ -126,11 +126,14 @@ export default function AgendamentoForm() {
   const carregarAgendamento = async () => {
     try {
       setLoading(true);
+      console.log('📥 Carregando agendamento ID:', id);
+      
       const response = await api.get(`/agendamentos/${id}`);
       const agendamento = response.data;
 
+      console.log('✅ Agendamento carregado:', agendamento);
+
       if (agendamento) {
-        
         // Converter UTC → Local para exibição
         const dataInicio = utcToLocalDate(agendamento.data_hora_inicio);
         const horarioLocal = extractLocalTime(agendamento.data_hora_inicio);
@@ -144,13 +147,23 @@ export default function AgendamentoForm() {
         setValorDesconto(agendamento.valor_desconto || 0);
         setObservacoes(agendamento.observacoes || "");
         setObservacoesInternas(agendamento.observacoes_internas || "");
+      } else {
+        console.error('❌ Agendamento não encontrado');
+        toast({
+          title: "Agendamento não encontrado",
+          description: "O agendamento solicitado não existe",
+          variant: "destructive",
+        });
+        navigate("/agendamentos");
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Erro ao carregar agendamento:', error);
       toast({
         title: "Erro ao carregar",
-        description: "Não foi possível carregar o agendamento",
+        description: error.message || "Não foi possível carregar o agendamento",
         variant: "destructive",
       });
+      navigate("/agendamentos");
     } finally {
       setLoading(false);
     }
@@ -295,21 +308,6 @@ export default function AgendamentoForm() {
         await api.patch(url, payload);
       } else {
         await api.post(url, payload);
-      }
-
-      const response = await fetch(url, {
-        method: isEdit ? "PATCH" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || "Erro ao salvar agendamento");
       }
 
       toast({
