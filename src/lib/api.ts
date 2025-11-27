@@ -1,26 +1,13 @@
 import axios from 'axios';
 
-/**
- * Cliente API - Multi-ambiente
- * 
- * PRODUÇÃO (maxiclinicas.com.br):
- *   → Usa proxy reverso: /api/v1
- * 
- * PREVIEW (lovable.dev/app):
- *   → Aponta direto: https://api.maxiclinicas.com.br/api/v1
- */
-
-// Detectar ambiente
 const isProduction = 
   window.location.hostname === 'maxiclinicas.com.br' ||
   window.location.hostname === 'www.maxiclinicas.com.br';
 
-// Base URL conforme ambiente
 const API_BASE_URL = isProduction 
-  ? '/api/v1'  // Produção: proxy reverso
-  : 'https://api.maxiclinicas.com.br/api/v1';  // Preview: VPS direto
+  ? '/api/v1'
+  : 'https://api.maxiclinicas.com.br/api/v1';
 
-// Log ambiente
 console.log(`🔧 Ambiente: ${isProduction ? 'PRODUÇÃO' : 'PREVIEW'}`);
 console.log(`🌐 API URL: ${API_BASE_URL}`);
 
@@ -33,18 +20,14 @@ const api = axios.create({
   withCredentials: false,
 });
 
-// ============================================
-// REQUEST INTERCEPTOR - Autenticação
-// ============================================
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Adicionar token se existir
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Log request
     console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`);
     
     return config;
@@ -55,9 +38,7 @@ api.interceptors.request.use(
   }
 );
 
-// ============================================
-// RESPONSE INTERCEPTOR - Normalização
-// ============================================
+// Response interceptor - CORRIGIDO
 api.interceptors.response.use(
   (response) => {
     console.log('📡 API Response:', {
@@ -67,7 +48,7 @@ api.interceptors.response.use(
       isArray: Array.isArray(response.data),
     });
 
-    // Backend retorna: { success: true, data: [...] }
+    // Backend retorna: { success: true, data: [...] ou {...} }
     if (
       response.data &&
       typeof response.data === 'object' &&
@@ -77,24 +58,34 @@ api.interceptors.response.use(
       console.log('✅ Extraindo response.data.data');
       
       const extractedData = response.data.data;
-      const finalData = Array.isArray(extractedData) ? extractedData : [];
       
-      console.log(`📦 ${finalData.length} itens retornados`);
+      // Array
+      if (Array.isArray(extractedData)) {
+        console.log(`📦 ${extractedData.length} itens retornados`);
+        return {
+          ...response,
+          data: extractedData,
+        };
+      }
       
-      return {
-        ...response,
-        data: finalData,
-      };
+      // Objeto único
+      if (extractedData && typeof extractedData === 'object') {
+        console.log('📦 1 objeto retornado');
+        return {
+          ...response,
+          data: extractedData,
+        };
+      }
     }
 
-    // Já é array? Retorna direto
+    // Array direto
     if (Array.isArray(response.data)) {
       console.log(`✅ Array direto: ${response.data.length} itens`);
       return response;
     }
 
-    // Outros casos
-    console.log('⚠️ Response original mantido');
+    // Outros
+    console.log('✅ Response original mantido');
     return response;
   },
   (error) => {
@@ -104,7 +95,6 @@ api.interceptors.response.use(
       data: error.response?.data,
     });
 
-    // Unauthorized - logout
     if (error.response?.status === 401) {
       console.warn('🔒 Token inválido - redirecionando login');
       localStorage.removeItem('auth_token');
