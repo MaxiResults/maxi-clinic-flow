@@ -39,6 +39,7 @@ api.interceptors.request.use(
 );
 
 // Response interceptor - CORRIGIDO
+// Response interceptor
 api.interceptors.response.use(
   (response) => {
     console.log('📡 API Response:', {
@@ -48,6 +49,13 @@ api.interceptors.response.use(
       isArray: Array.isArray(response.data),
     });
 
+    console.log('🔍 RESPONSE COMPLETA:', JSON.stringify(response.data, null, 2));
+    console.log('🔍 response.data.data:', response.data.data);
+    console.log('🔍 Tipo de response.data.data:', typeof response.data.data);
+    console.log('🔍 É array?', Array.isArray(response.data.data));
+    console.log('🔍 É null?', response.data.data === null);
+    console.log('🔍 É undefined?', response.data.data === undefined);
+    
     // Backend retorna: { success: true, data: [...] ou {...} }
     if (
       response.data &&
