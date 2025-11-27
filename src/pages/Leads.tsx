@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Edit, Trash2, Plus, Loader2 } from "lucide-react";
 import api from '@/lib/api';
+import { formatarData } from '@/utils/date';
+import { FormattedDate } from '@/components/ui/FormattedDate';
 
 interface Lead {
   id: string;
@@ -435,7 +437,7 @@ const cleanPhone = (phone: string): string => {
                         {getStatusBadge(lead.status)}
                       </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {new Date(lead.created_at).toLocaleDateString('pt-BR')}
+                        <FormattedDate value={lead.created_at} format="short" />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
@@ -1151,13 +1153,13 @@ const cleanPhone = (phone: string): string => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Criado em:</span>
                     <span className="font-medium">
-                      {new Date(selectedLead.created_at).toLocaleString('pt-BR')}
+                      {formatarData(selectedLead.created_at)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Atualizado em:</span>
                     <span className="font-medium">
-                      {new Date(selectedLead.updated_at).toLocaleString('pt-BR')}
+                      {formatarData(selectedLead.updated_at)}
                     </span>
                   </div>
                 </div>
