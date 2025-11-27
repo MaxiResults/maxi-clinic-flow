@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { localToUTC, getUserTimezone, utcToLocalDate, extractLocalTime } from "@/utils/timezone";
+import { formatarDataCurta, parseDataSegura } from "@/utils/date";
 import {
   Command,
   CommandEmpty,
@@ -135,13 +136,13 @@ export default function AgendamentoForm() {
 
       if (agendamento) {
         // Converter UTC → Local para exibição
-        const dataInicio = utcToLocalDate(agendamento.data_hora_inicio);
+        const dataInicio = parseDataSegura(agendamento.data_hora_inicio);
         const horarioLocal = extractLocalTime(agendamento.data_hora_inicio);
         
         setLeadSelecionado(agendamento.Lead);
         setProfissionalId(agendamento.profissional_id);
         setProdutoId(agendamento.produto_id);
-        setData(dataInicio);
+        setData(dataInicio || undefined);
         setHorarioSelecionado(horarioLocal);
         setValorServico(agendamento.valor || 0);
         setValorDesconto(agendamento.valor_desconto || 0);
@@ -520,7 +521,7 @@ export default function AgendamentoForm() {
                       className="w-full justify-start text-left font-normal"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {data ? format(data, "PPP", { locale: ptBR }) : "Selecione a data"}
+                      {data && parseDataSegura(data) ? format(data, "PPP", { locale: ptBR }) : "Selecione a data"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
