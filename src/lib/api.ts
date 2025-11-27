@@ -38,7 +38,6 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - CORRIGIDO
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
@@ -49,13 +48,14 @@ api.interceptors.response.use(
       isArray: Array.isArray(response.data),
     });
 
+    // DEBUG completo
     console.log('🔍 RESPONSE COMPLETA:', JSON.stringify(response.data, null, 2));
     console.log('🔍 response.data.data:', response.data.data);
-    console.log('🔍 Tipo de response.data.data:', typeof response.data.data);
+    console.log('🔍 Tipo:', typeof response.data.data);
     console.log('🔍 É array?', Array.isArray(response.data.data));
     console.log('🔍 É null?', response.data.data === null);
     console.log('🔍 É undefined?', response.data.data === undefined);
-    
+
     // Backend retorna: { success: true, data: [...] ou {...} }
     if (
       response.data &&
@@ -63,21 +63,6 @@ api.interceptors.response.use(
       'success' in response.data &&
       'data' in response.data
     ) {
-      
-      // ANTES de verificar success/data
-      console.log('🔍 URL:', response.config.url);
-      console.log('🔍 RESPONSE COMPLETA:', JSON.stringify(response.data, null, 2));
-      
-      if (
-        response.data &&
-        typeof response.data === 'object' &&
-        'success' in response.data &&
-        'data' in response.data
-      ) {
-        console.log('🔍 response.data.data existe:', !!response.data.data);
-        console.log('🔍 response.data.data:', response.data.data);
-     
-      
       console.log('✅ Extraindo response.data.data');
       
       const extractedData = response.data.data;
@@ -99,6 +84,13 @@ api.interceptors.response.use(
           data: extractedData,
         };
       }
+
+      // Se data é null ou undefined
+      console.log('⚠️ response.data.data é null/undefined');
+      return {
+        ...response,
+        data: null,
+      };
     }
 
     // Array direto
