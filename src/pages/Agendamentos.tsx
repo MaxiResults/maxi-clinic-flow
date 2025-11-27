@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, User, Package, CheckCircle, XCircle, AlertCircle } from "lucide-react";
-import { formatDateBR, formatTimeBR } from "@/utils/timezone";
+import { formatTimeBR } from "@/utils/timezone";
+import { formatarDataCurta } from '@/utils/date';
+import { FormattedDate } from '@/components/ui/FormattedDate';
 import api from '@/lib/api';
 
 interface Agendamento {
@@ -224,7 +226,7 @@ export default function Agendamentos() {
                         <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
                         <div>
                           <p className="font-medium">
-                            {formatDateBR(agendamento.data_hora_inicio)}
+                            <FormattedDate value={agendamento.data_hora_inicio} format="short" />
                           </p>
                           <p className="text-xs">
                             {formatTimeBR(agendamento.data_hora_inicio)}
