@@ -56,48 +56,7 @@ export default function Agendamentos() {
     } catch (err: any) {
       console.error('❌ Erro ao buscar agendamentos da API:', err);
       setError(err.message);
-      
-      // Dados mockados para teste enquanto API está com problema
-      console.log('⚠️ Usando dados mockados para teste');
-      const mockData: Agendamento[] = [
-        {
-          id: '1',
-          Lead: {
-            nome: 'João Silva',
-            telefone: '(11) 98765-4321'
-          },
-          Profissional: {
-            nome: 'Dr. Carlos Santos'
-          },
-          Produto: {
-            nome: 'Consulta Odontológica'
-          },
-          data_hora_inicio: '2025-11-28T10:00:00Z',
-          data_hora_fim: '2025-11-28T11:00:00Z',
-          status: 'agendado',
-          valor: 150.00,
-          observacoes: 'Primeira consulta'
-        },
-        {
-          id: '2',
-          Lead: {
-            nome: 'Maria Oliveira',
-            telefone: '(11) 91234-5678'
-          },
-          Profissional: {
-            nome: 'Dra. Ana Paula'
-          },
-          Produto: {
-            nome: 'Limpeza Dental'
-          },
-          data_hora_inicio: '2025-11-28T14:00:00Z',
-          data_hora_fim: '2025-11-28T15:00:00Z',
-          status: 'confirmado',
-          valor: 200.00,
-          observacoes: 'Retorno'
-        }
-      ];
-      setAgendamentos(mockData);
+      setAgendamentos([]);
     } finally {
       setLoading(false);
     }
