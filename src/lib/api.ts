@@ -41,6 +41,7 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    console.log('🚨 INTERCEPTOR VERSÃO 2.0 ATIVO'); // ← ADICIONAR ISSO
     console.log('📡 API Response:', {
       url: response.config.url,
       status: response.status,
