@@ -1,119 +1,56 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Eye, Edit, Trash2, Plus, Loader2 } from "lucide-react";
-import api from '@/lib/api';
-import { formatarData } from '@/utils/date';
-import { FormattedDate } from '@/components/ui/FormattedDate';
-
-interface Lead {
-  id: string;
-  nome: string;
-  telefone: string;
-  email?: string;
-  cpf?: string;
-  canal_origem: string;
-  campanha?: string;
-  utm_source?: string;
-  utm_medium?: string;
-  utm_campaign?: string;
-  utm_content?: string;
-  origem_url?: string;
-  status: 'novo' | 'qualificado' | 'convertido';
-  interesse?: string;
-  observacoes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-const leadSchema = z.object({
-  nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
-  telefone: z.string()
-    .min(1, "Telefone é obrigatório")
-    .transform(val => val.replace(/\D/g, ''))
-    .refine(val => val.length === 10 || val.length === 11, "Telefone deve ter 10 ou 11 dígitos"),
-  email: z.string().email("Email inválido").optional().or(z.literal('')),
-  cpf: z.string()
-    .optional()
-    .refine(val => !val || val.replace(/\D/g, '').length === 11, "CPF deve ter 11 dígitos"),
-  canal_origem: z.string().min(1, "Selecione o canal de origem"),
-  status: z.enum(['novo', 'qualificado', 'convertido']),
-  interesse: z.string().optional(),
-  observacoes: z.string().optional(),
-  campanha: z.string().optional(),
-  utm_source: z.string().optional(),
-  utm_medium: z.string().optional(),
-  utm_campaign: z.string().optional(),
-  utm_content: z.string().optional(),
-  origem_url: z.string().optional(),
-});
-
-type LeadFormData = z.infer<typeof leadSchema>;
+import { Plus, Eye } from "lucide-react";
+import { useLeadsData } from "@/hooks/useLeadsData";
+import { useLeadFilters } from "@/hooks/useLeadFilters";
+import { useLeadStats } from "@/hooks/useLeadStats";
+import { LeadCard } from "@/components/leads/LeadCard";
+import { LeadFilters } from "@/components/leads/LeadFilters";
+import { LeadStats } from "@/components/leads/LeadStats";
+import { LeadDialog } from "@/components/leads/LeadDialog";
+import { LeadViewToggle } from "@/components/leads/LeadViewToggle";
+import { FormattedDate } from "@/components/ui/FormattedDate";
+import type { Lead } from "@/hooks/useLeadsData";
 
 export default function Leads() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isNewLeadOpen, setIsNewLeadOpen] = useState(false);
-  const [isEditLeadOpen, setIsEditLeadOpen] = useState(false);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const { leads, loading, error, deleteLead, refreshLeads } = useLeadsData();
+  const filters = useLeadFilters(leads);
+  const stats = useLeadStats(leads);
+  
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create');
+  const [selectedLeadId, setSelectedLeadId] = useState<string>();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const { toast } = useToast();
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('grid');
 
-  const form = useForm<LeadFormData>({
-    resolver: zodResolver(leadSchema),
-    defaultValues: {
-      nome: "",
-      telefone: "",
-      email: "",
-      cpf: "",
-      canal_origem: "",
-      status: "novo",
-      interesse: "",
-      observacoes: "",
-      campanha: "",
-      utm_source: "",
-      utm_medium: "",
-      utm_campaign: "",
-      utm_content: "",
-      origem_url: "",
-    },
-  });
+  const handleCreate = () => {
+    setDialogMode('create');
+    setSelectedLeadId(undefined);
+    setDialogOpen(true);
+  };
 
-  useEffect(() => {
-    fetchLeads();
-  }, []);
+  const handleEdit = (id: string) => {
+    setDialogMode('edit');
+    setSelectedLeadId(id);
+    setDialogOpen(true);
+  };
 
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await api.get('/leads', {
-        params: { t: Date.now() }
-      });
-      const leadsArray = response.data || [];
-      
-      setLeads(leadsArray);
-    } catch (err: any) {
-      setError(err.message);
-      setLeads([]);
-    } finally {
-      setLoading(false);
+  const handleDeleteClick = (id: string) => {
+    const lead = leads.find(l => l.id === id);
+    if (lead) {
+      setLeadToDelete(lead);
+      setIsDeleteOpen(true);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (leadToDelete) {
+      await deleteLead(leadToDelete.id);
+      setIsDeleteOpen(false);
+      setLeadToDelete(null);
     }
   };
 
@@ -129,195 +66,6 @@ export default function Leads() {
     return phone;
   };
 
-  const formatCPF = (cpf: string) => {
-    const cleaned = cpf.replace(/\D/g, '');
-    if (cleaned.length === 11) {
-      return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9)}`;
-    }
-    return cpf;
-  };
-
-const cleanPhone = (phone: string): string => {
-  // Remove tudo exceto números
-  const digits = phone.replace(/\D/g, '');
-  
-  // Adiciona +55 se não tiver
-  if (digits.startsWith('55')) {
-    return '+' + digits;
-  }
-  
-  return '+55' + digits;
-};
-
-  const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    
-    if (value.length <= 11) {
-      if (value.length > 6) {
-        if (value.length === 11) {
-          value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
-        } else {
-          value = `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
-        }
-      } else if (value.length > 2) {
-        value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
-      }
-      e.target.value = value;
-    }
-  };
-
-  const handleCPFInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, '');
-    
-    if (value.length <= 11) {
-      if (value.length > 9) {
-        value = `${value.slice(0, 3)}.${value.slice(3, 6)}.${value.slice(6, 9)}-${value.slice(9)}`;
-      } else if (value.length > 6) {
-        value = `${value.slice(0, 3)}.${value.slice(3, 6)}.${value.slice(6)}`;
-      } else if (value.length > 3) {
-        value = `${value.slice(0, 3)}.${value.slice(3)}`;
-      }
-      e.target.value = value;
-    }
-  };
-
-  const handleCreate = async (data: LeadFormData) => {
-  try {
-    setActionLoading(true);
-    
-    console.log('📤 DADOS ORIGINAIS:', data);
-    
-    const payload = {
-      ...data,
-      telefone: cleanPhone(data.telefone),
-      cpf: data.cpf ? data.cpf.replace(/\D/g, '') : undefined,
-      email: data.email || undefined,
-    };
-    
-    console.log('📦 PAYLOAD FINAL:', payload);
-    
-    const response = await api.post('/leads', payload);
-    console.log('✅ RESULTADO:', response.data);
-    
-    toast({
-      title: "✅ Sucesso!",
-      description: "Lead criado com sucesso!",
-    });
-    
-    setIsNewLeadOpen(false);
-    form.reset();
-    fetchLeads();
-    
-  } catch (err: any) {
-    console.error('❌ ERRO COMPLETO:', err);
-    toast({
-      title: "❌ Erro",
-      description: err.message || "Erro ao criar lead. Tente novamente.",
-      variant: "destructive",
-    });
-  } finally {
-    setActionLoading(false);
-  }
-};
-
-  const handleUpdate = async (data: LeadFormData) => {
-    if (!selectedLead) return;
-
-    try {
-      setActionLoading(true);
-      
-      const payload = {
-        ...data,
-        telefone: cleanPhone(data.telefone),
-        cpf: data.cpf ? data.cpf.replace(/\D/g, '') : undefined,
-        email: data.email || undefined,
-      };
-
-      await api.patch(`/leads/${selectedLead.id}`, payload);
-
-      toast({
-        title: "✅ Sucesso!",
-        description: "Lead atualizado com sucesso!",
-      });
-
-      setIsEditLeadOpen(false);
-      setSelectedLead(null);
-      form.reset();
-      fetchLeads();
-    } catch (err: any) {
-      toast({
-        title: "❌ Erro",
-        description: err.message || "Erro ao atualizar lead. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!selectedLead) return;
-
-    try {
-      setActionLoading(true);
-      
-      await api.delete(`/leads/${selectedLead.id}`);
-
-      toast({
-        title: "✅ Sucesso!",
-        description: "Lead excluído com sucesso!",
-      });
-
-      setIsDeleteOpen(false);
-      setSelectedLead(null);
-      fetchLeads();
-    } catch (err: any) {
-      toast({
-        title: "❌ Erro",
-        description: err.message || "Erro ao excluir lead. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openNewLeadModal = () => {
-    form.reset();
-    setIsNewLeadOpen(true);
-  };
-
-  const openEditLeadModal = (lead: Lead) => {
-    setSelectedLead(lead);
-    form.reset({
-      nome: lead.nome,
-      telefone: formatPhone(lead.telefone),
-      email: lead.email || "",
-      cpf: lead.cpf ? formatCPF(lead.cpf) : "",
-      canal_origem: lead.canal_origem,
-      status: lead.status,
-      interesse: lead.interesse || "",
-      observacoes: lead.observacoes || "",
-      campanha: lead.campanha || "",
-      utm_source: lead.utm_source || "",
-      utm_medium: lead.utm_medium || "",
-      utm_campaign: lead.utm_campaign || "",
-      utm_content: lead.utm_content || "",
-      origem_url: lead.origem_url || "",
-    });
-    setIsEditLeadOpen(true);
-  };
-
-  const openDetailsModal = (lead: Lead) => {
-    setSelectedLead(lead);
-    setIsDetailsOpen(true);
-  };
-
-  const openDeleteDialog = (lead: Lead) => {
-    setSelectedLead(lead);
-    setIsDeleteOpen(true);
-  };
-
   const getStatusBadge = (status: string) => {
     const config = {
       novo: { label: "Novo", className: "bg-blue-100 text-blue-800 border-blue-200" },
@@ -325,13 +73,7 @@ const cleanPhone = (phone: string): string => {
       convertido: { label: "Convertido", className: "bg-green-100 text-green-800 border-green-200" },
     };
     
-    const statusConfig = config[status as keyof typeof config] || config.novo;
-    
-    return (
-      <Badge variant="outline" className={statusConfig.className}>
-        {statusConfig.label}
-      </Badge>
-    );
+    return config[status as keyof typeof config] || config.novo;
   };
 
   if (loading) {
@@ -351,19 +93,8 @@ const cleanPhone = (phone: string): string => {
         <div className="p-8">
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6">
             <h3 className="text-destructive font-bold mb-3">❌ Erro ao carregar</h3>
-            <p className="text-destructive/80 mb-4 whitespace-pre-wrap">{error}</p>
-            
-            <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mb-4">
-              <p className="text-sm text-yellow-800">
-                <strong>💡 Solução:</strong>
-              </p>
-              <ol className="text-sm text-yellow-700 list-decimal list-inside mt-2 space-y-1">
-                <li>Verifique se o backend está acessível</li>
-                <li>Volte aqui e clique em "Tentar novamente"</li>
-              </ol>
-            </div>
-            
-            <Button onClick={fetchLeads} variant="destructive">
+            <p className="text-destructive/80 mb-4">{error}</p>
+            <Button onClick={refreshLeads} variant="destructive">
               🔄 Tentar novamente
             </Button>
           </div>
@@ -375,35 +106,108 @@ const cleanPhone = (phone: string): string => {
   return (
     <DashboardLayout title="Leads">
       <div className="p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">
-              Total de Leads: {leads.length}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Gerencie seus leads e potenciais clientes
-            </p>
+        {/* Estatísticas */}
+        <LeadStats stats={stats} loading={loading} />
+        
+        {/* Filtros + View Toggle + Novo */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex-1 w-full">
+            <LeadFilters
+              searchTerm={filters.searchTerm}
+              onSearchChange={filters.setSearchTerm}
+              filterStatus={filters.filterStatus}
+              onStatusChange={filters.setFilterStatus}
+              filterOrigin={filters.filterOrigin}
+              onOriginChange={filters.setFilterOrigin}
+            />
           </div>
           <div className="flex gap-2">
-            <Button onClick={fetchLeads} variant="outline">
-              🔄 Recarregar
-            </Button>
-            <Button onClick={openNewLeadModal}>
+            <LeadViewToggle view={viewMode} onViewChange={setViewMode} />
+            <Button onClick={handleCreate}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Lead
             </Button>
           </div>
         </div>
         
-        {leads.length === 0 ? (
+        {/* Lista vazia */}
+        {filters.filteredLeads.length === 0 && (
           <div className="text-center py-12 bg-muted/50 rounded-lg">
-            <p className="text-muted-foreground text-lg">Nenhum lead encontrado</p>
-            <Button onClick={openNewLeadModal} className="mt-4">
-              <Plus className="mr-2 h-4 w-4" />
-              Criar primeiro lead
-            </Button>
+            <p className="text-muted-foreground text-lg">
+              {leads.length === 0 ? "Nenhum lead encontrado" : "Nenhum lead corresponde aos filtros"}
+            </p>
+            {leads.length === 0 && (
+              <Button onClick={handleCreate} className="mt-4">
+                <Plus className="mr-2 h-4 w-4" />
+                Criar primeiro lead
+              </Button>
+            )}
           </div>
-        ) : (
+        )}
+        
+        {/* Grid View */}
+        {viewMode === 'grid' && filters.filteredLeads.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filters.filteredLeads.map(lead => (
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClick}
+              />
+            ))}
+          </div>
+        )}
+        
+        {/* List View */}
+        {viewMode === 'list' && filters.filteredLeads.length > 0 && (
+          <div className="space-y-2">
+            {filters.filteredLeads.map(lead => {
+              const statusConfig = getStatusBadge(lead.status);
+              return (
+                <div
+                  key={lead.id}
+                  className="flex items-center justify-between p-4 bg-card border rounded-lg hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground">{lead.nome}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {formatPhone(lead.telefone)} • {lead.email || 'Sem email'}
+                      </p>
+                    </div>
+                    <div className="text-sm text-muted-foreground">{lead.canal_origem}</div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>
+                      {statusConfig.label}
+                    </div>
+                    <FormattedDate value={lead.created_at} format="short" className="text-sm text-muted-foreground" />
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(lead.id)}
+                      className="h-8 w-8"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteClick(lead.id)}
+                      className="h-8 w-8 text-destructive"
+                    >
+                      <Plus className="h-4 w-4 rotate-45" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        
+        {/* Table View */}
+        {viewMode === 'table' && filters.filteredLeads.length > 0 && (
           <div className="bg-card rounded-lg border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -419,56 +223,49 @@ const cleanPhone = (phone: string): string => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {leads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-foreground">
-                        {lead.nome}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        📱 {formatPhone(lead.telefone)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {lead.email ? `✉️ ${lead.email}` : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {lead.canal_origem}
-                      </td>
-                      <td className="px-4 py-3">
-                        {getStatusBadge(lead.status)}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        <FormattedDate value={lead.created_at} format="short" />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDetailsModal(lead)}
-                            title="Ver detalhes"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditLeadModal(lead)}
-                            title="Editar"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openDeleteDialog(lead)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filters.filteredLeads.map((lead) => {
+                    const statusConfig = getStatusBadge(lead.status);
+                    return (
+                      <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-foreground">{lead.nome}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">📱 {formatPhone(lead.telefone)}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {lead.email ? `✉️ ${lead.email}` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{lead.canal_origem}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>
+                            {statusConfig.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          <FormattedDate value={lead.created_at} format="short" />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(lead.id)}
+                              title="Editar"
+                              className="h-8 w-8"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteClick(lead.id)}
+                              title="Excluir"
+                              className="h-8 w-8 text-destructive"
+                            >
+                              <Plus className="h-4 w-4 rotate-45" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -476,761 +273,32 @@ const cleanPhone = (phone: string): string => {
         )}
       </div>
 
-      {/* Modal Novo Lead */}
-      <Dialog open={isNewLeadOpen} onOpenChange={setIsNewLeadOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Novo Lead</DialogTitle>
-            <DialogDescription>
-              Preencha os dados do novo lead
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCreate)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="nome"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome completo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      {/* Dialog Create/Edit */}
+      <LeadDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        mode={dialogMode}
+        leadId={selectedLeadId}
+        onSuccess={() => {
+          setDialogOpen(false);
+          refreshLeads();
+        }}
+      />
 
-                <FormField
-                  control={form.control}
-                  name="telefone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefone *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="(11) 98765-4321"
-                          {...field}
-                          onChange={(e) => {
-                            handlePhoneInput(e);
-                            field.onChange(e);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="email@exemplo.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="cpf"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CPF</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="000.000.000-00"
-                          {...field}
-                          onChange={(e) => {
-                            handleCPFInput(e);
-                            field.onChange(e);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="canal_origem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Canal de Origem *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o canal" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                          <SelectItem value="Instagram">Instagram</SelectItem>
-                          <SelectItem value="Facebook">Facebook</SelectItem>
-                          <SelectItem value="Site">Site</SelectItem>
-                          <SelectItem value="Indicação">Indicação</SelectItem>
-                          <SelectItem value="Google Ads">Google Ads</SelectItem>
-                          <SelectItem value="Outro">Outro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="novo">Novo</SelectItem>
-                          <SelectItem value="qualificado">Qualificado</SelectItem>
-                          <SelectItem value="convertido">Convertido</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="interesse"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Interesse</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Limpeza de pele, Botox" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="observacoes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observações</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Anotações sobre o lead" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Accordion type="single" collapsible className="border rounded-lg">
-                <AccordionItem value="marketing" className="border-0">
-                  <AccordionTrigger className="px-4 hover:no-underline">
-                    📊 Dados de Marketing
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="campanha"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Campanha</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Nome da campanha" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="utm_source"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>UTM Source</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: google, facebook" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="utm_medium"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>UTM Medium</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: cpc, email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="utm_campaign"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>UTM Campaign</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Nome da campanha UTM" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="utm_content"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>UTM Content</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Conteúdo do anúncio" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="origem_url"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Origem URL</FormLabel>
-                            <FormControl>
-                              <Input placeholder="URL de origem" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsNewLeadOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={actionLoading}>
-                  {actionLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Criando...
-                    </>
-                  ) : (
-                    'Criar Lead'
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Editar Lead */}
-      <Dialog open={isEditLeadOpen} onOpenChange={setIsEditLeadOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Lead</DialogTitle>
-            <DialogDescription>
-              Atualize os dados do lead
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleUpdate)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="nome"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome completo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="telefone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefone *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="(11) 98765-4321"
-                          {...field}
-                          onChange={(e) => {
-                            handlePhoneInput(e);
-                            field.onChange(e);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="email@exemplo.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="cpf"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CPF</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="000.000.000-00"
-                          {...field}
-                          onChange={(e) => {
-                            handleCPFInput(e);
-                            field.onChange(e);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="canal_origem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Canal de Origem *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o canal" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                          <SelectItem value="Instagram">Instagram</SelectItem>
-                          <SelectItem value="Facebook">Facebook</SelectItem>
-                          <SelectItem value="Site">Site</SelectItem>
-                          <SelectItem value="Indicação">Indicação</SelectItem>
-                          <SelectItem value="Google Ads">Google Ads</SelectItem>
-                          <SelectItem value="Outro">Outro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="novo">Novo</SelectItem>
-                          <SelectItem value="qualificado">Qualificado</SelectItem>
-                          <SelectItem value="convertido">Convertido</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="interesse"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Interesse</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Limpeza de pele, Botox" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="observacoes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observações</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Anotações sobre o lead" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Accordion type="single" collapsible className="border rounded-lg">
-                <AccordionItem value="marketing" className="border-0">
-                  <AccordionTrigger className="px-4 hover:no-underline">
-                    📊 Dados de Marketing
-                  </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="campanha"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Campanha</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Nome da campanha" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="utm_source"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>UTM Source</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: google, facebook" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="utm_medium"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>UTM Medium</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ex: cpc, email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="utm_campaign"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>UTM Campaign</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Nome da campanha UTM" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="utm_content"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>UTM Content</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Conteúdo do anúncio" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="origem_url"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Origem URL</FormLabel>
-                            <FormControl>
-                              <Input placeholder="URL de origem" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEditLeadOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={actionLoading}>
-                  {actionLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    'Salvar Alterações'
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Detalhes */}
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              {selectedLead?.nome}
-              {selectedLead && getStatusBadge(selectedLead.status)}
-            </DialogTitle>
-            <DialogDescription>
-              Informações completas do lead
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedLead && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-semibold mb-3 text-foreground">📱 Contato</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Telefone:</span>
-                    <span className="font-medium">{formatPhone(selectedLead.telefone)}</span>
-                  </div>
-                  {selectedLead.email && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Email:</span>
-                      <span className="font-medium">{selectedLead.email}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {selectedLead.cpf && (
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-foreground">📄 Documentos</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">CPF:</span>
-                      <span className="font-medium">{formatCPF(selectedLead.cpf)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <h3 className="text-sm font-semibold mb-3 text-foreground">📍 Origem</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Canal:</span>
-                    <span className="font-medium">{selectedLead.canal_origem}</span>
-                  </div>
-                  {selectedLead.campanha && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Campanha:</span>
-                      <span className="font-medium">{selectedLead.campanha}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {(selectedLead.utm_source || selectedLead.utm_medium || selectedLead.utm_campaign) && (
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-foreground">📊 Marketing</h3>
-                  <div className="space-y-2 text-sm">
-                    {selectedLead.utm_source && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">UTM Source:</span>
-                        <span className="font-medium">{selectedLead.utm_source}</span>
-                      </div>
-                    )}
-                    {selectedLead.utm_medium && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">UTM Medium:</span>
-                        <span className="font-medium">{selectedLead.utm_medium}</span>
-                      </div>
-                    )}
-                    {selectedLead.utm_campaign && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">UTM Campaign:</span>
-                        <span className="font-medium">{selectedLead.utm_campaign}</span>
-                      </div>
-                    )}
-                    {selectedLead.utm_content && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">UTM Content:</span>
-                        <span className="font-medium">{selectedLead.utm_content}</span>
-                      </div>
-                    )}
-                    {selectedLead.origem_url && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Origem URL:</span>
-                        <span className="font-medium text-xs break-all">{selectedLead.origem_url}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {(selectedLead.interesse || selectedLead.observacoes) && (
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 text-foreground">📝 Informações</h3>
-                  <div className="space-y-2 text-sm">
-                    {selectedLead.interesse && (
-                      <div>
-                        <span className="text-muted-foreground">Interesse:</span>
-                        <p className="font-medium mt-1">{selectedLead.interesse}</p>
-                      </div>
-                    )}
-                    {selectedLead.observacoes && (
-                      <div>
-                        <span className="text-muted-foreground">Observações:</span>
-                        <p className="font-medium mt-1">{selectedLead.observacoes}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <h3 className="text-sm font-semibold mb-3 text-foreground">📅 Datas</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Criado em:</span>
-                    <span className="font-medium">
-                      {formatarData(selectedLead.created_at)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Atualizado em:</span>
-                    <span className="font-medium">
-                      {formatarData(selectedLead.updated_at)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDetailsOpen(false);
-                if (selectedLead) {
-                  openEditLeadModal(selectedLead);
-                }
-              }}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setIsDetailsOpen(false);
-                if (selectedLead) {
-                  openDeleteDialog(selectedLead);
-                }
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Excluir
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => {
-                toast({
-                  title: "Em breve",
-                  description: "Funcionalidade de conversão em cliente será implementada em breve!",
-                });
-              }}
-            >
-              Converter em Cliente
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* AlertDialog Confirmar Exclusão */}
+      {/* Delete Confirmation */}
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O lead <strong>{selectedLead?.nome}</strong> será excluído permanentemente.
+              Tem certeza que deseja excluir o lead <strong>{leadToDelete?.nome}</strong>?
+              Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={actionLoading}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Excluindo...
-                </>
-              ) : (
-                'Excluir'
-              )}
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
