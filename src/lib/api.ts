@@ -63,6 +63,21 @@ api.interceptors.response.use(
       'success' in response.data &&
       'data' in response.data
     ) {
+      
+      // ANTES de verificar success/data
+      console.log('🔍 URL:', response.config.url);
+      console.log('🔍 RESPONSE COMPLETA:', JSON.stringify(response.data, null, 2));
+      
+      if (
+        response.data &&
+        typeof response.data === 'object' &&
+        'success' in response.data &&
+        'data' in response.data
+      ) {
+        console.log('🔍 response.data.data existe:', !!response.data.data);
+        console.log('🔍 response.data.data:', response.data.data);
+     
+      
       console.log('✅ Extraindo response.data.data');
       
       const extractedData = response.data.data;
