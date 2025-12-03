@@ -8,21 +8,26 @@ import { Loader2, MessageSquare, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
-interface Sessao {
+interface Lead {
   id: string;
+  nome: string;
+  telefone: string;
   whatsapp_id: string;
-  lead_id?: string;
-  canal: string;
-  status_sessao: string;
-  profissional_responsavel_id?: string;
-  tipo_atendimento_atual: string;
-  ultima_interacao: string;
-  total_mensagens: number;
-  ultima_mensagem?: {
+  status: string;
+  canal_origem: string;
+  sessao_ativa: {
+    id: string;
+    status_sessao: string;
+    ultima_interacao: string;
+    total_mensagens: number;
+  } | null;
+  ultima_mensagem: {
     mensagem: string;
     data_envio: string;
     tipo_mensagem: string;
-  };
+  } | null;
+  total_mensagens: number;
+  ultima_interacao: string;
 }
 
 interface Mensagem {
@@ -37,13 +42,14 @@ interface Mensagem {
   midia_url?: string;
   midia_tipo?: string;
 }
+
 export default function Conversas() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [sessoes, setSessoes] = useState<Sessao[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [selectedSessao, setSelectedSessao] = useState<Sessao | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMensagens, setLoadingMensagens] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -59,54 +65,61 @@ export default function Conversas() {
   }, [mensagens]);
 
   useEffect(() => {
-    fetchSessoes();
+    fetchLeads();
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchSessoes(true);
+      fetchLeads(true);
     }, 10000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (!selectedSessao) return;
+    if (!selectedLead) return;
     const interval = setInterval(() => {
-      fetchMensagens(selectedSessao.id, true);
+      fetchMensagens(selectedLead.id, true);
     }, 5000);
     return () => clearInterval(interval);
-  }, [selectedSessao]);
-  const fetchSessoes = async (silent = false) => {
+  }, [selectedLead]);
+
+  const fetchLeads = async (silent = false) => {
     try {
       if (!silent) {
         setLoading(true);
         setError(null);
       }
-      const response = await api.get('/conversas', {
-        params: { status: 'ativa', t: Date.now() }
+
+      const response = await api.get('/conversas/leads', {
+        params: { t: Date.now() }
       });
-      const sessoesArray = response.data || [];
-      setSessoes(sessoesArray);
-      if (!silent && sessoesArray.length > 0 && !selectedSessao) {
-        setSelectedSessao(sessoesArray[0]);
-        fetchMensagens(sessoesArray[0].id);
+
+      const leadsArray = response.data || [];
+      setLeads(leadsArray);
+
+      if (!silent && leadsArray.length > 0 && !selectedLead) {
+        const primeiro = leadsArray[0];
+        setSelectedLead(primeiro);
+        fetchMensagens(primeiro.id);
       }
     } catch (err: any) {
       if (!silent) {
         setError(err.message);
-        setSessoes([]);
+        setLeads([]);
       }
     } finally {
       if (!silent) setLoading(false);
     }
   };
 
-  const fetchMensagens = async (sessaoId: string, silent = false) => {
+  const fetchMensagens = async (leadId: string, silent = false) => {
     try {
       if (!silent) setLoadingMensagens(true);
-      const response = await api.get(`/conversas/${sessaoId}/mensagens`, {
+
+      const response = await api.get(`/conversas/leads/${leadId}/mensagens`, {
         params: { t: Date.now() }
       });
+
       setMensagens(response.data || []);
     } catch (err: any) {
       if (!silent) setMensagens([]);
@@ -115,46 +128,63 @@ export default function Conversas() {
     }
   };
 
-  const handleSelectSessao = (sessao: Sessao) => {
-    setSelectedSessao(sessao);
+  const handleSelectLead = (lead: Lead) => {
+    setSelectedLead(lead);
     setMensagens([]);
-    fetchMensagens(sessao.id);
+    fetchMensagens(lead.id);
   };
 
   const handleEnviarMensagem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!novaMsg.trim() || !selectedSessao || enviando) return;
+    if (!novaMsg.trim() || !selectedLead || enviando) return;
+
     try {
       setEnviando(true);
+
       const mensagemTemp: Mensagem = {
         id: `temp-${Date.now()}`,
-        sessao_id: selectedSessao.id,
+        sessao_id: selectedLead.sessao_ativa?.id || '',
         remetente: 'atendente',
         tipo_mensagem: 'text',
         mensagem: novaMsg,
         data_envio: new Date().toISOString(),
         status_entrega: 'enviando',
       };
+
       setMensagens(prev => [...prev, mensagemTemp]);
       setNovaMsg("");
-      await api.post(`/conversas/${selectedSessao.id}/mensagens`, { texto: novaMsg });
-      setTimeout(() => fetchMensagens(selectedSessao.id, true), 1000);
-      toast({ title: "✅ Mensagem enviada" });
+
+      await api.post(`/conversas/leads/${selectedLead.id}/mensagens`, {
+        texto: novaMsg,
+      });
+
+      setTimeout(() => {
+        fetchMensagens(selectedLead.id, true);
+      }, 1000);
+
+      toast({
+        title: "✅ Mensagem enviada",
+        description: "Sua mensagem foi enviada com sucesso",
+      });
     } catch (err: any) {
       setMensagens(prev => prev.filter(m => !m.id.startsWith('temp-')));
-      toast({ title: "❌ Erro ao enviar", variant: "destructive" });
+      toast({
+        title: "❌ Erro ao enviar",
+        description: err.message || "Não foi possível enviar a mensagem",
+        variant: "destructive",
+      });
     } finally {
       setEnviando(false);
     }
   };
 
-  const formatPhone = (whatsappId: string) => {
-    if (!whatsappId) return 'Sem telefone';
-    const numbers = whatsappId.replace(/\D/g, '');
+  const formatPhone = (phone: string) => {
+    if (!phone) return 'Sem telefone';
+    const numbers = phone.replace(/\D/g, '');
     if (numbers.length === 13) {
       return `+${numbers.slice(0, 2)} (${numbers.slice(2, 4)}) ${numbers.slice(4, 9)}-${numbers.slice(9)}`;
     }
-    return whatsappId;
+    return phone;
   };
 
   const formatTime = (dateString: string) => {
@@ -170,6 +200,7 @@ export default function Conversas() {
     if (diffDays < 7) return `${diffDays}d`;
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
+
   if (loading) {
     return (
       <DashboardLayout title="Conversas WhatsApp">
@@ -188,7 +219,7 @@ export default function Conversas() {
           <div className="bg-red-50 border border-red-200 rounded-lg p-6">
             <h3 className="text-red-800 font-bold mb-3">❌ Erro ao carregar</h3>
             <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={() => fetchSessoes()} variant="destructive">
+            <Button onClick={() => fetchLeads()} variant="destructive">
               🔄 Tentar novamente
             </Button>
           </div>
@@ -197,7 +228,7 @@ export default function Conversas() {
     );
   }
 
-  if (sessoes.length === 0) {
+  if (leads.length === 0) {
     return (
       <DashboardLayout title="Conversas WhatsApp">
         <div className="text-center py-12">
@@ -206,13 +237,14 @@ export default function Conversas() {
           <p className="text-sm text-muted-foreground mt-2">
             As conversas aparecerão aqui quando clientes enviarem mensagens
           </p>
-          <Button onClick={() => fetchSessoes()} variant="outline" className="mt-4">
+          <Button onClick={() => fetchLeads()} variant="outline" className="mt-4">
             🔄 Recarregar
           </Button>
         </div>
       </DashboardLayout>
     );
   }
+
   return (
     <DashboardLayout title="Conversas WhatsApp">
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
@@ -220,34 +252,37 @@ export default function Conversas() {
           <div className="flex h-full flex-col">
             <div className="border-b p-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Conversas ({sessoes.length})</h3>
-                <Button onClick={() => fetchSessoes()} variant="ghost" size="sm">🔄</Button>
+                <h3 className="font-semibold">Conversas ({leads.length})</h3>
+                <Button onClick={() => fetchLeads()} variant="ghost" size="sm">🔄</Button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-              {sessoes.map((sessao) => (
+              {leads.map((lead) => (
                 <div
-                  key={sessao.id}
+                  key={lead.id}
                   className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
-                    selectedSessao?.id === sessao.id ? "bg-blue-50" : ""
+                    selectedLead?.id === lead.id ? "bg-blue-50" : ""
                   }`}
-                  onClick={() => handleSelectSessao(sessao)}
+                  onClick={() => handleSelectLead(lead)}
                 >
                   <div className="flex items-start gap-3">
                     <Avatar>
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        {formatPhone(sessao.whatsapp_id).substring(0, 2)}
+                        {lead.nome.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium truncate">{formatPhone(sessao.whatsapp_id)}</p>
+                        <p className="font-medium truncate">{lead.nome}</p>
                         <span className="text-xs text-muted-foreground">
-                          {formatTime(sessao.ultima_interacao)}
+                          {formatTime(lead.ultima_interacao)}
                         </span>
                       </div>
                       <p className="truncate text-sm text-muted-foreground">
-                        {sessao.ultima_mensagem?.mensagem || 'Sem mensagens'}
+                        {lead.ultima_mensagem?.mensagem || 'Sem mensagens'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        💬 {lead.total_mensagens} mensagens
                       </p>
                     </div>
                   </div>
@@ -259,19 +294,19 @@ export default function Conversas() {
 
         <Card className="col-span-1 md:col-span-2 overflow-hidden">
           <div className="flex h-full flex-col">
-            {selectedSessao ? (
+            {selectedLead ? (
               <>
                 <div className="border-b p-4 bg-gray-50">
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        {formatPhone(selectedSessao.whatsapp_id).substring(0, 2)}
+                        {selectedLead.nome.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold">{formatPhone(selectedSessao.whatsapp_id)}</h3>
+                      <h3 className="font-semibold">{selectedLead.nome}</h3>
                       <p className="text-xs text-muted-foreground">
-                        {selectedSessao.tipo_atendimento_atual === 'bot' ? '🤖 Bot' : '👤 Humano'}
+                        {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
                       </p>
                     </div>
                   </div>
