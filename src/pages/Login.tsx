@@ -4,37 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Login() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [senha, setSenha] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { login, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    // Simulate API call
-    setTimeout(() => {
-      if (email && password) {
-        localStorage.setItem('auth_token', 'demo_token_123');
-        toast({
-          title: "Login realizado!",
-          description: "Redirecionando para o dashboard...",
-        });
-        navigate('/');
-      } else {
-        toast({
-          title: "Erro no login",
-          description: "Por favor, preencha todos os campos.",
-          variant: "destructive",
-        });
-      }
-      setIsLoading(false);
-    }, 1000);
+    setError("");
+    try {
+      await login(email, senha);
+      navigate("/");
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Erro ao fazer login. Verifique suas credenciais.");
+    }
   };
 
   return (
@@ -49,6 +36,11 @@ export default function Login() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -61,13 +53,13 @@ export default function Login() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="senha">Senha</Label>
               <Input
-                id="password"
+                id="senha"
                 type="password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
                 required
               />
             </div>
