@@ -17,7 +17,8 @@ interface TopBarProps {
 
 export function TopBar({ title }: TopBarProps) {
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem('mc_access_token');
+    localStorage.removeItem('mc_refresh_token');
     window.location.href = '/login';
   };
 
