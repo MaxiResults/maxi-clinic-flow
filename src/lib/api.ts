@@ -1,14 +1,8 @@
 import axios from 'axios';
 
-const isProduction = 
-  window.location.hostname === 'maxiclinicas.com.br' ||
-  window.location.hostname === 'www.maxiclinicas.com.br';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
-const API_BASE_URL = isProduction 
-  ? '/api/v1'
-  : 'https://api.maxiclinicas.com.br/api/v1';
-
-console.log(`🔧 Ambiente: ${isProduction ? 'PRODUÇÃO' : 'PREVIEW'}`);
+console.log(`🔧 Ambiente: ${import.meta.env.PROD ? 'PRODUÇÃO' : 'DESENVOLVIMENTO'}`);
 console.log(`🌐 API URL: ${API_BASE_URL}`);
 
 const api = axios.create({
