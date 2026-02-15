@@ -1,4 +1,6 @@
 import { Bell } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -16,11 +18,12 @@ interface TopBarProps {
 }
 
 export function TopBar({ title }: TopBarProps) {
-  const handleLogout = () => {
-    localStorage.removeItem('mc_access_token');
-    localStorage.removeItem('mc_refresh_token');
-    window.location.href = '/login';
-  };
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const initials = user?.nome
+    ? user.nome.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
+    : "?";
 
   return (
     <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-card px-4 shadow-sm">
@@ -47,7 +50,7 @@ export function TopBar({ title }: TopBarProps) {
               <Avatar className="h-8 w-8">
                 <AvatarImage src="" />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  AD
+                  {initials}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -55,10 +58,10 @@ export function TopBar({ title }: TopBarProps) {
           <DropdownMenuContent align="end" className="w-56 z-50 bg-popover">
             <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Perfil</DropdownMenuItem>
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/perfil")}>Perfil</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/configuracoes")}>Configurações</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>Sair</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>Sair</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

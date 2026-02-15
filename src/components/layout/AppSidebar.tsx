@@ -1,4 +1,5 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { NavLink } from "@/components/NavLink";
 import {
   LayoutDashboard,
@@ -34,12 +35,12 @@ const menuItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-  const handleLogout = () => {
-    localStorage.removeItem('mc_access_token');
-    localStorage.removeItem('mc_refresh_token');
-    window.location.href = '/login';
-  };
+  const initials = user?.nome
+    ? user.nome.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
+    : "?";
 
   return (
     <Sidebar className="border-r border-sidebar-border">
@@ -88,20 +89,20 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <button onClick={() => navigate("/perfil")} className="flex items-center gap-2 rounded-md hover:bg-sidebar-accent/50 p-1 transition-colors">
             <Avatar className="h-8 w-8">
-              <AvatarImage src="" />
+              <AvatarImage src={user?.avatar_url || ""} />
               <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs">
-                AD
+                {initials}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <p className="text-sm font-medium text-sidebar-foreground">Admin</p>
-              <p className="text-xs text-sidebar-foreground/60">admin@maxiia.com</p>
+            <div className="text-left">
+              <p className="text-sm font-medium text-sidebar-foreground">{user?.nome || "Usuário"}</p>
+              <p className="text-xs text-sidebar-foreground/60">{user?.email || ""}</p>
             </div>
-          </div>
+          </button>
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className="p-2 rounded-md hover:bg-sidebar-accent transition-colors"
             title="Sair"
           >

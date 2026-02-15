@@ -18,6 +18,7 @@ import Produtos from "./pages/Produtos";
 import Settings from "./pages/Settings";
 import Categorias from "./pages/Categorias";
 import Especialidades from "./pages/Especialidades";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const AppRoutes = () => (
     <Route path="/configuracoes" element={<PrivateRoute><Settings /></PrivateRoute>} />
     <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
     <Route path="/especialidades" element={<PrivateRoute><Especialidades /></PrivateRoute>} />
+    <Route path="/perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
