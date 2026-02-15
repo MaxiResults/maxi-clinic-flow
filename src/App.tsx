@@ -32,6 +32,26 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/login" element={<Login />} />
+    <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+    <Route path="/leads" element={<PrivateRoute><Leads /></PrivateRoute>} />
+    <Route path="/agendamentos" element={<PrivateRoute><Agendamentos /></PrivateRoute>} />
+    <Route path="/agendamentos/novo" element={<PrivateRoute><AgendamentoForm /></PrivateRoute>} />
+    <Route path="/agendamentos/:id/editar" element={<PrivateRoute><AgendamentoForm /></PrivateRoute>} />
+    <Route path="/conversas" element={<PrivateRoute><Conversas /></PrivateRoute>} />
+    <Route path="/profissionais" element={<PrivateRoute><Profissionais /></PrivateRoute>} />
+    <Route path="/profissionais/novo" element={<PrivateRoute><ProfissionalForm /></PrivateRoute>} />
+    <Route path="/profissionais/:id/editar" element={<PrivateRoute><ProfissionalForm /></PrivateRoute>} />
+    <Route path="/produtos" element={<PrivateRoute><Produtos /></PrivateRoute>} />
+    <Route path="/configuracoes" element={<PrivateRoute><Settings /></PrivateRoute>} />
+    <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
+    <Route path="/especialidades" element={<PrivateRoute><Especialidades /></PrivateRoute>} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -39,23 +59,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/leads" element={<PrivateRoute><Leads /></PrivateRoute>} />
-            <Route path="/agendamentos" element={<PrivateRoute><Agendamentos /></PrivateRoute>} />
-            <Route path="/agendamentos/novo" element={<PrivateRoute><AgendamentoForm /></PrivateRoute>} />
-            <Route path="/agendamentos/:id/editar" element={<PrivateRoute><AgendamentoForm /></PrivateRoute>} />
-            <Route path="/conversas" element={<PrivateRoute><Conversas /></PrivateRoute>} />
-            <Route path="/profissionais" element={<PrivateRoute><Profissionais /></PrivateRoute>} />
-            <Route path="/profissionais/novo" element={<PrivateRoute><ProfissionalForm /></PrivateRoute>} />
-            <Route path="/profissionais/:id/editar" element={<PrivateRoute><ProfissionalForm /></PrivateRoute>} />
-            <Route path="/produtos" element={<PrivateRoute><Produtos /></PrivateRoute>} />
-            <Route path="/configuracoes" element={<PrivateRoute><Settings /></PrivateRoute>} />
-            <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
-            <Route path="/especialidades" element={<PrivateRoute><Especialidades /></PrivateRoute>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppRoutes />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
