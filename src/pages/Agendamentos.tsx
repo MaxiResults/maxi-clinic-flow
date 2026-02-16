@@ -7,6 +7,7 @@ import { formatTimeBR } from "@/utils/timezone";
 import { formatarDataCurta } from '@/utils/date';
 import { FormattedDate } from '@/components/ui/FormattedDate';
 import api from '@/lib/api';
+import { ListSkeleton } from '@/components/skeletons/ListSkeleton';
 
 interface Agendamento {
   id: string;
@@ -98,10 +99,7 @@ export default function Agendamentos() {
   if (loading) {
     return (
       <DashboardLayout title="Agendamentos">
-        <div className="p-8 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <p className="mt-4 text-lg">Carregando agendamentos...</p>
-        </div>
+        <ListSkeleton />
       </DashboardLayout>
     );
   }

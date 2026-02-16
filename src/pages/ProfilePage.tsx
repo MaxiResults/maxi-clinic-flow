@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { User, Lock, Mail, Shield } from "lucide-react";
+import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 
 const roleLabels: Record<string, string> = {
   superadmin: "Super Admin",
@@ -22,7 +23,7 @@ const roleLabels: Record<string, string> = {
 };
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, isLoading } = useAuth();
   const { toast } = useToast();
 
   const [nome, setNome] = useState(user?.nome || "");
@@ -99,6 +100,14 @@ export default function ProfilePage() {
       setSavingPassword(false);
     }
   };
+
+  if (isLoading || !user) {
+    return (
+      <DashboardLayout title="Meu Perfil">
+        <ProfileSkeleton />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Meu Perfil">
