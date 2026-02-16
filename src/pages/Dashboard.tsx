@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Users, Calendar, MessageSquare, TrendingUp, Clock, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '@/lib/api';
+import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -112,10 +113,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <DashboardLayout title="Dashboard">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Carregando dashboard...</span>
-        </div>
+        <DashboardSkeleton />
       </DashboardLayout>
     );
   }

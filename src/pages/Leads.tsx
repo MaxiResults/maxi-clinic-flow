@@ -13,6 +13,7 @@ import { LeadDialog } from "@/components/leads/LeadDialog";
 import { LeadViewToggle } from "@/components/leads/LeadViewToggle";
 import { FormattedDate } from "@/components/ui/FormattedDate";
 import type { Lead } from "@/hooks/useLeadsData";
+import { ListSkeleton } from "@/components/skeletons/ListSkeleton";
 
 export default function Leads() {
   const { leads, loading, error, deleteLead, refreshLeads } = useLeadsData();
@@ -79,10 +80,7 @@ export default function Leads() {
   if (loading) {
     return (
       <DashboardLayout title="Leads">
-        <div className="p-8 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="mt-4 text-lg text-foreground">Carregando leads...</p>
-        </div>
+        <ListSkeleton />
       </DashboardLayout>
     );
   }
