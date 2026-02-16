@@ -8,9 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Mail, Shield } from "lucide-react";
+import { toast } from "sonner";
+import { User, Lock, Shield, Loader2 } from "lucide-react";
 import { ProfileSkeleton } from "@/components/skeletons/ProfileSkeleton";
 
 const roleLabels: Record<string, string> = {
@@ -24,7 +23,6 @@ const roleLabels: Record<string, string> = {
 
 export default function ProfilePage() {
   const { user, refreshUser, isLoading } = useAuth();
-  const { toast } = useToast();
 
   const [nome, setNome] = useState(user?.nome || "");
   const [email, setEmail] = useState(user?.email || "");
@@ -36,17 +34,12 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const initials = user?.nome
-    ? user.nome
-        .split(" ")
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
+    ? user.nome.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
     : "?";
 
   const handleSaveProfile = async () => {
     if (!nome.trim() || !email.trim()) {
-      toast({ title: "Erro", description: "Nome e email são obrigatórios", variant: "destructive" });
+      toast.error("Nome e email são obrigatórios");
       return;
     }
 
@@ -54,13 +47,9 @@ export default function ProfilePage() {
     try {
       await api.patch('/auth/profile', { nome, email });
       await refreshUser();
-      toast({ title: "Perfil atualizado", description: "Suas informações foram salvas com sucesso" });
+      toast.success("Perfil atualizado com sucesso");
     } catch (error: any) {
-      toast({
-        title: "Erro ao salvar",
-        description: error.response?.data?.error || "Erro ao atualizar perfil",
-        variant: "destructive",
-      });
+      toast.error(error.response?.data?.error || "Erro ao atualizar perfil");
     } finally {
       setSavingProfile(false);
     }
@@ -68,15 +57,15 @@ export default function ProfilePage() {
 
   const handleChangePassword = async () => {
     if (!senhaAtual || !senhaNova || !senhaConfirm) {
-      toast({ title: "Erro", description: "Preencha todos os campos", variant: "destructive" });
+      toast.error("Preencha todos os campos de senha");
       return;
     }
     if (senhaNova.length < 6) {
-      toast({ title: "Erro", description: "A nova senha deve ter no mínimo 6 caracteres", variant: "destructive" });
+      toast.error("A nova senha deve ter no mínimo 6 caracteres");
       return;
     }
     if (senhaNova !== senhaConfirm) {
-      toast({ title: "Erro", description: "As senhas não coincidem", variant: "destructive" });
+      toast.error("As senhas não coincidem");
       return;
     }
 
@@ -86,16 +75,12 @@ export default function ProfilePage() {
         senha_atual: senhaAtual,
         senha_nova: senhaNova,
       });
-      toast({ title: "Senha alterada", description: "Sua senha foi alterada com sucesso" });
+      toast.success("Senha alterada com sucesso");
       setSenhaAtual("");
       setSenhaNova("");
       setSenhaConfirm("");
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.response?.data?.error || "Erro ao alterar senha",
-        variant: "destructive",
-      });
+      toast.error(error.response?.data?.error || "Erro ao alterar senha");
     } finally {
       setSavingPassword(false);
     }
@@ -111,15 +96,13 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout title="Meu Perfil">
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-2xl space-y-6 animate-fade-in">
         {/* Avatar & Info */}
         <Card>
           <CardContent className="flex items-center gap-5 p-6">
             <Avatar className="h-20 w-20 text-2xl">
               <AvatarImage src={user?.avatar_url || ""} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {initials}
-              </AvatarFallback>
+              <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
             </Avatar>
             <div className="space-y-1">
               <h2 className="text-xl font-semibold text-foreground">{user?.nome}</h2>
@@ -150,6 +133,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex justify-end">
               <Button onClick={handleSaveProfile} disabled={savingProfile}>
+                {savingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {savingProfile ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </div>
@@ -179,6 +163,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex justify-end">
               <Button onClick={handleChangePassword} disabled={savingPassword}>
+                {savingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {savingPassword ? "Alterando..." : "Alterar Senha"}
               </Button>
             </div>
