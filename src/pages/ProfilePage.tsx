@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import api from "@/lib/api";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,13 +51,13 @@ export default function ProfilePage() {
 
     setSavingProfile(true);
     try {
-      // TODO: await api.patch('/auth/profile', { nome, email });
-      toast({ title: "Perfil atualizado", description: "Suas informações foram salvas (endpoint pendente)" });
-      // await refreshUser();
+      await api.patch('/auth/profile', { nome, email });
+      await refreshUser();
+      toast({ title: "Perfil atualizado", description: "Suas informações foram salvas com sucesso" });
     } catch (error: any) {
       toast({
-        title: "Erro",
-        description: error.response?.data?.error || "Erro ao salvar perfil",
+        title: "Erro ao salvar",
+        description: error.response?.data?.error || "Erro ao atualizar perfil",
         variant: "destructive",
       });
     } finally {
@@ -80,8 +81,11 @@ export default function ProfilePage() {
 
     setSavingPassword(true);
     try {
-      // TODO: await api.post('/auth/change-password', { senha_atual: senhaAtual, senha_nova: senhaNova });
-      toast({ title: "Senha alterada", description: "Sua senha foi alterada com sucesso (endpoint pendente)" });
+      await api.post('/auth/change-password', {
+        senha_atual: senhaAtual,
+        senha_nova: senhaNova,
+      });
+      toast({ title: "Senha alterada", description: "Sua senha foi alterada com sucesso" });
       setSenhaAtual("");
       setSenhaNova("");
       setSenhaConfirm("");
