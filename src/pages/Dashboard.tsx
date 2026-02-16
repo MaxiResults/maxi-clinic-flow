@@ -3,7 +3,9 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Users, Calendar, MessageSquare, TrendingUp, Clock, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
+import { Users, Calendar, MessageSquare, TrendingUp, Clock, RefreshCw, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '@/lib/api';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
@@ -18,46 +20,34 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
 
-      // Buscar dados em paralelo usando api centralizado
       const [leadsRes, agendamentosRes] = await Promise.all([
         api.get('/leads', { params: { t: Date.now() } }),
         api.get('/agendamentos', { params: { t: Date.now() } })
       ]);
 
-      console.log('📊 Leads:', leadsRes.data);
-      console.log('📅 Agendamentos:', agendamentosRes.data);
-
-      // Processar leads
       const leads = leadsRes.data || [];
       const totalLeads = leads.length;
-
-      // Calcular taxa de conversão
       const convertidos = leads.filter(l => l.status === 'convertido').length;
-      const taxaConversao = totalLeads > 0 
-        ? Math.round((convertidos / totalLeads) * 100) 
-        : 0;
+      const taxaConversao = totalLeads > 0 ? Math.round((convertidos / totalLeads) * 100) : 0;
 
-      // Processar agendamentos
       const agendamentos = agendamentosRes.data || [];
-      
-      // Filtrar agendamentos de hoje
       const hoje = new Date().toISOString().split('T')[0];
       const agendamentosHoje = agendamentos.filter(a => {
         if (!a.data_hora_inicio) return false;
-        const dataAgendamento = a.data_hora_inicio.split('T')[0];
-        return dataAgendamento === hoje;
+        return a.data_hora_inicio.split('T')[0] === hoje;
       });
 
-      // Próximos 5 agendamentos de hoje
       const proximos = agendamentosHoje
         .filter(a => a.status === 'agendado' || a.status === 'confirmado')
         .slice(0, 5)
@@ -65,14 +55,10 @@ export default function Dashboard() {
           id: a.id,
           clientName: a.Lead?.nome || a.Cliente_Final?.nome_completo || 'Cliente',
           procedure: a.Produto?.nome || 'Procedimento',
-          time: new Date(a.data_hora_inicio).toLocaleTimeString('pt-BR', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          }),
+          time: new Date(a.data_hora_inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           status: a.status
         }));
 
-      // Agrupar leads por canal de origem
       const leadsPorCanal = leads.reduce((acc, lead) => {
         const canal = lead.canal_origem || 'Não informado';
         acc[canal] = (acc[canal] || 0) + 1;
@@ -84,29 +70,19 @@ export default function Dashboard() {
         leads
       }));
 
-      // Conversas ativas (últimas 24h)
       const conversasAtivas = leads.filter(l => {
         if (!l.updated_at) return false;
-        const diff = Date.now() - new Date(l.updated_at).getTime();
-        const hours = diff / (1000 * 60 * 60);
-        return hours <= 24;
+        return (Date.now() - new Date(l.updated_at).getTime()) / (1000 * 60 * 60) <= 24;
       }).length;
 
-      // Atualizar estados
-      setStats({
-        totalLeads,
-        agendamentosHoje: agendamentosHoje.length,
-        conversasAtivas,
-        taxaConversao
-      });
-
+      setStats({ totalLeads, agendamentosHoje: agendamentosHoje.length, conversasAtivas, taxaConversao });
       setChartData(chartDataFormatted);
       setUpcomingAppointments(proximos);
-
     } catch (error) {
       console.error('❌ Erro ao carregar dashboard:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -120,33 +96,13 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout title="Dashboard">
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Total de Leads"
-            value={stats.totalLeads.toString()}
-            icon={Users}
-            trend={{ value: 12.5, isPositive: true }}
-          />
-          <StatCard
-            title="Agendamentos Hoje"
-            value={stats.agendamentosHoje.toString()}
-            icon={Calendar}
-            description={`${upcomingAppointments.filter(a => a.status === 'confirmado').length} confirmados`}
-          />
-          <StatCard
-            title="Conversas Ativas"
-            value={stats.conversasAtivas.toString()}
-            icon={MessageSquare}
-            description="Últimas 24h"
-          />
-          <StatCard
-            title="Taxa de Conversão"
-            value={`${stats.taxaConversao}%`}
-            icon={TrendingUp}
-            trend={{ value: 4.2, isPositive: true }}
-          />
+          <StatCard title="Total de Leads" value={stats.totalLeads.toString()} icon={Users} trend={{ value: 12.5, isPositive: true }} />
+          <StatCard title="Agendamentos Hoje" value={stats.agendamentosHoje.toString()} icon={Calendar} description={`${upcomingAppointments.filter(a => a.status === 'confirmado').length} confirmados`} />
+          <StatCard title="Conversas Ativas" value={stats.conversasAtivas.toString()} icon={MessageSquare} description="Últimas 24h" />
+          <StatCard title="Taxa de Conversão" value={`${stats.taxaConversao}%`} icon={TrendingUp} trend={{ value: 4.2, isPositive: true }} />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -161,10 +117,11 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {upcomingAppointments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhum agendamento para hoje</p>
-                </div>
+                <EmptyState
+                  icon={Calendar}
+                  title="Nenhum agendamento para hoje"
+                  description="Não há agendamentos programados para hoje."
+                />
               ) : (
                 <div className="space-y-3">
                   {upcomingAppointments.map((appointment) => (
@@ -195,35 +152,19 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {chartData.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhum lead cadastrado ainda</p>
-                </div>
+                <EmptyState
+                  icon={TrendingUp}
+                  title="Nenhum lead cadastrado"
+                  description="Cadastre leads para visualizar a distribuição por origem."
+                />
               ) : (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar 
-                      dataKey="leads" 
-                      fill="hsl(var(--chart-1))" 
-                      radius={[8, 8, 0, 0]}
-                    />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
+                    <Bar dataKey="leads" fill="hsl(var(--chart-1))" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -231,14 +172,12 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Botão para recarregar */}
+        {/* Atualizar */}
         <div className="flex justify-end">
-          <button
-            onClick={fetchDashboardData}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          >
-            🔄 Atualizar Dashboard
-          </button>
+          <Button variant="outline" onClick={() => fetchDashboardData(true)} disabled={refreshing}>
+            {refreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            {refreshing ? "Atualizando..." : "Atualizar Dashboard"}
+          </Button>
         </div>
       </div>
     </DashboardLayout>
