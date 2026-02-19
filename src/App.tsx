@@ -20,6 +20,7 @@ import Categorias from "./pages/Categorias";
 import Especialidades from "./pages/Especialidades";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
+import AnamneseTemplates from '@/pages/AnamneseTemplates';
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const AppRoutes = () => (
     <Route path="/especialidades" element={<PrivateRoute><Especialidades /></PrivateRoute>} />
     <Route path="/perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
     <Route path="*" element={<NotFound />} />
+    <Route path="/anamnese/templates" element={<AnamneseTemplates />} />
   </Routes>
 );
 
