@@ -14,35 +14,41 @@ export function useAnamneseTemplates() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  /**
-   * Listar templates
-   */
-  const listar = useCallback(async (filtros?: {
-    tipo?: string;
-    ativo?: boolean;
-    busca?: string;
-  }) => {
-    try {
-      setLoading(true);
-      const response = await anamneseTemplatesApi.listar(filtros);
-      
-      if (response.success && response.data) {
-        setTemplates(response.data);
+ /**
+ * Listar templates
+ */
+const listar = useCallback(async (filtros?: {
+  tipo?: string;
+  ativo?: boolean;
+  busca?: string;
+}) => {
+  try {
+    setLoading(true);
+    const response = await anamneseTemplatesApi.listar(filtros);
+    
+    // A resposta já vem tratada pelo interceptor como { success, data, total }
+    if (response.success && response.data) {
+      setTemplates(response.data);
+    } else {
+      // Se não tem data mas tem success, significa array vazio
+      if (response.success) {
+        setTemplates([]);
       } else {
         throw new Error(response.error || 'Erro ao listar templates');
       }
-    } catch (error: any) {
-      console.error('Erro ao listar templates:', error);
-      toast({
-        title: 'Erro ao carregar templates',
-        description: error.message,
-        variant: 'destructive'
-      });
-      setTemplates([]);
-    } finally {
-      setLoading(false);
     }
-  }, [toast]);
+  } catch (error: any) {
+    console.error('Erro ao listar templates:', error);
+    toast({
+      title: 'Erro ao carregar templates',
+      description: error.message,
+      variant: 'destructive'
+    });
+    setTemplates([]);
+  } finally {
+    setLoading(false);
+  }
+}, [toast]);
 
   /**
    * Buscar template completo por ID

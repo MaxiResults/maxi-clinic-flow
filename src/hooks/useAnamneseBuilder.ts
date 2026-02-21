@@ -257,6 +257,119 @@ export function useAnamneseBuilder(templateId: string) {
     }
   }, [toast]);
 
+  /**
+   * Duplicar campo
+   */
+  const duplicarCampo = useCallback(async (campoId: string) => {
+    try {
+      setLoading(true);
+      const response = await anamneseCamposApi.duplicar(campoId);
+      
+      if (response.success && response.data) {
+        const novoCampo = response.data;
+        const secaoId = novoCampo.secao_id;
+        
+        setCampos(prev => ({
+          ...prev,
+          [secaoId]: [...(prev[secaoId] || []), novoCampo].sort(
+            (a, b) => a.ordem - b.ordem
+          )
+        }));
+        
+        toast({
+          title: 'Campo duplicado!',
+          description: `"${novoCampo.label}" foi criado.`
+        });
+        
+        return novoCampo;
+      } else {
+        throw new Error(response.error || 'Erro ao duplicar campo');
+      }
+    } catch (error: any) {
+      console.error('Erro ao duplicar campo:', error);
+      toast({
+        title: 'Erro ao duplicar campo',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  /**
+   * Reordenar seções
+   */
+  const reordenarSecoes = useCallback(async (novaOrdem: Array<{ id: string; ordem: number }>) => {
+    try {
+      setLoading(true);
+      const response = await anamneseSecoesApi.reordenar(templateId, novaOrdem);  // ✅ CORRETO
+      
+      if (response.success && response.data) {
+        setSecoes(response.data.sort((a, b) => a.ordem - b.ordem));
+        
+        toast({
+          title: 'Ordem atualizada!',
+          description: 'As seções foram reordenadas.'
+        });
+        
+        return true;
+      } else {
+        throw new Error(response.error || 'Erro ao reordenar seções');
+      }
+    } catch (error: any) {
+      console.error('Erro ao reordenar seções:', error);
+      toast({
+        title: 'Erro ao reordenar seções',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [templateId, toast]);
+
+  /**
+   * Reordenar campos
+   */
+  const reordenarCampos = useCallback(async (
+    secaoId: string,
+    novaOrdem: Array<{ id: string; ordem: number }>
+  ) => {
+    try {
+      setLoading(true);
+      const response = await anamneseCamposApi.reordenar(secaoId, novaOrdem);  // ✅ CORRETO
+      
+      if (response.success && response.data) {
+        setCampos(prev => ({
+          ...prev,
+          [secaoId]: response.data!.sort((a, b) => a.ordem - b.ordem)
+        }));
+        
+        toast({
+          title: 'Ordem atualizada!',
+          description: 'Os campos foram reordenados.'
+        });
+        
+        return true;
+      } else {
+        throw new Error(response.error || 'Erro ao reordenar campos');
+      }
+    } catch (error: any) {
+      console.error('Erro ao reordenar campos:', error);
+      toast({
+        title: 'Erro ao reordenar campos',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
   return {
     secoes,
     campos,
@@ -270,6 +383,9 @@ export function useAnamneseBuilder(templateId: string) {
     criarCampo,
     atualizarCampo,
     excluirCampo,
+    duplicarCampo,
+    reordenarSecoes,
+    reordenarCampos,
     setSecaoSelecionada,
     setCampoSelecionado
   };

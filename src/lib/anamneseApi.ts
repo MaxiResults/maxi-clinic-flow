@@ -8,7 +8,6 @@ import {
   CriarTemplateForm,
   CriarSecaoForm,
   CriarCampoForm,
-  ApiResponse
 } from '@/types/anamnese.types';
 
 // ============================================================================
@@ -30,7 +29,11 @@ export const anamneseTemplatesApi = {
     if (filtros?.busca) params.append('busca', filtros.busca);
 
     const response = await api.get(`/anamnese/templates?${params.toString()}`);
-    return response.data as ApiResponse<AnamneseTemplate[]>;
+    // Interceptor já extraiu response.data.data, então response.data JÁ É o array
+    return {
+      success: true,
+      data: response.data as AnamneseTemplate[]
+    };
   },
 
   /**
@@ -38,7 +41,10 @@ export const anamneseTemplatesApi = {
    */
   buscarPorId: async (id: string) => {
     const response = await api.get(`/anamnese/templates/${id}`);
-    return response.data as ApiResponse<TemplateCompleto>;
+    return {
+      success: true,
+      data: response.data as TemplateCompleto
+    };
   },
 
   /**
@@ -46,7 +52,10 @@ export const anamneseTemplatesApi = {
    */
   criar: async (dados: CriarTemplateForm) => {
     const response = await api.post('/anamnese/templates', dados);
-    return response.data as ApiResponse<AnamneseTemplate>;
+    return {
+      success: true,
+      data: response.data as AnamneseTemplate
+    };
   },
 
   /**
@@ -54,7 +63,10 @@ export const anamneseTemplatesApi = {
    */
   atualizar: async (id: string, dados: Partial<CriarTemplateForm>) => {
     const response = await api.patch(`/anamnese/templates/${id}`, dados);
-    return response.data as ApiResponse<AnamneseTemplate>;
+    return {
+      success: true,
+      data: response.data as AnamneseTemplate
+    };
   },
 
   /**
@@ -62,7 +74,10 @@ export const anamneseTemplatesApi = {
    */
   excluir: async (id: string) => {
     const response = await api.delete(`/anamnese/templates/${id}`);
-    return response.data as ApiResponse<void>;
+    return {
+      success: true,
+      data: response.data
+    };
   },
 
   /**
@@ -70,7 +85,10 @@ export const anamneseTemplatesApi = {
    */
   toggleAtivo: async (id: string, ativo: boolean) => {
     const response = await api.patch(`/anamnese/templates/${id}/toggle`, { ativo });
-    return response.data as ApiResponse<AnamneseTemplate>;
+    return {
+      success: true,
+      data: response.data as AnamneseTemplate
+    };
   },
 
   /**
@@ -80,7 +98,10 @@ export const anamneseTemplatesApi = {
     const response = await api.post(`/anamnese/templates/${id}/duplicar`, {
       novo_nome: novoNome
     });
-    return response.data as ApiResponse<TemplateCompleto>;
+    return {
+      success: true,
+      data: response.data as TemplateCompleto
+    };
   }
 };
 
@@ -94,7 +115,10 @@ export const anamneseSecoesApi = {
    */
   listar: async (templateId: string) => {
     const response = await api.get(`/anamnese/templates/${templateId}/secoes`);
-    return response.data as ApiResponse<AnamneseSecao[]>;
+    return {
+      success: true,
+      data: response.data as AnamneseSecao[]
+    };
   },
 
   /**
@@ -102,7 +126,10 @@ export const anamneseSecoesApi = {
    */
   criar: async (templateId: string, dados: CriarSecaoForm) => {
     const response = await api.post(`/anamnese/templates/${templateId}/secoes`, dados);
-    return response.data as ApiResponse<AnamneseSecao>;
+    return {
+      success: true,
+      data: response.data as AnamneseSecao
+    };
   },
 
   /**
@@ -110,7 +137,10 @@ export const anamneseSecoesApi = {
    */
   atualizar: async (id: string, dados: Partial<CriarSecaoForm>) => {
     const response = await api.patch(`/anamnese/secoes/${id}`, dados);
-    return response.data as ApiResponse<AnamneseSecao>;
+    return {
+      success: true,
+      data: response.data as AnamneseSecao
+    };
   },
 
   /**
@@ -118,7 +148,10 @@ export const anamneseSecoesApi = {
    */
   excluir: async (id: string) => {
     const response = await api.delete(`/anamnese/secoes/${id}`);
-    return response.data as ApiResponse<void>;
+    return {
+      success: true,
+      data: response.data
+    };
   },
 
   /**
@@ -132,7 +165,10 @@ export const anamneseSecoesApi = {
       `/anamnese/templates/${templateId}/secoes/reordenar`,
       { secoes }
     );
-    return response.data as ApiResponse<AnamneseSecao[]>;
+    return {
+      success: true,
+      data: response.data as AnamneseSecao[]
+    };
   }
 };
 
@@ -146,7 +182,10 @@ export const anamneseCamposApi = {
    */
   listar: async (secaoId: string) => {
     const response = await api.get(`/anamnese/secoes/${secaoId}/campos`);
-    return response.data as ApiResponse<AnamneseCampo[]>;
+    return {
+      success: true,
+      data: response.data as AnamneseCampo[]
+    };
   },
 
   /**
@@ -166,7 +205,10 @@ export const anamneseCamposApi = {
       largura: dados.largura,
       ajuda: dados.ajuda
     });
-    return response.data as ApiResponse<AnamneseCampo>;
+    return {
+      success: true,
+      data: response.data as AnamneseCampo
+    };
   },
 
   /**
@@ -187,7 +229,10 @@ export const anamneseCamposApi = {
     if (dados.ajuda !== undefined) updateData.ajuda = dados.ajuda;
 
     const response = await api.patch(`/anamnese/campos/${id}`, updateData);
-    return response.data as ApiResponse<AnamneseCampo>;
+    return {
+      success: true,
+      data: response.data as AnamneseCampo
+    };
   },
 
   /**
@@ -195,7 +240,10 @@ export const anamneseCamposApi = {
    */
   excluir: async (id: string) => {
     const response = await api.delete(`/anamnese/campos/${id}`);
-    return response.data as ApiResponse<void>;
+    return {
+      success: true,
+      data: response.data
+    };
   },
 
   /**
@@ -209,7 +257,10 @@ export const anamneseCamposApi = {
       `/anamnese/secoes/${secaoId}/campos/reordenar`,
       { campos }
     );
-    return response.data as ApiResponse<AnamneseCampo[]>;
+    return {
+      success: true,
+      data: response.data as AnamneseCampo[]
+    };
   },
 
   /**
@@ -217,7 +268,10 @@ export const anamneseCamposApi = {
    */
   duplicar: async (id: string) => {
     const response = await api.post(`/anamnese/campos/${id}/duplicar`);
-    return response.data as ApiResponse<AnamneseCampo>;
+    return {
+      success: true,
+      data: response.data as AnamneseCampo
+    };
   }
 };
 
@@ -237,7 +291,10 @@ export const anamnesesApi = {
     link_expira_em?: string;
   }) => {
     const response = await api.post('/anamnese', dados);
-    return response.data as ApiResponse<Anamnese>;
+    return {
+      success: true,
+      data: response.data as Anamnese
+    };
   },
 
   /**
@@ -245,7 +302,10 @@ export const anamnesesApi = {
    */
   enviarPorWhatsApp: async (id: string) => {
     const response = await api.post(`/anamnese/${id}/enviar`);
-    return response.data as ApiResponse<void>;
+    return {
+      success: true,
+      data: response.data
+    };
   },
 
   /**
@@ -272,7 +332,10 @@ export const anamnesesApi = {
       respostas,
       progresso_percentual: progressoPercentual
     });
-    return response.data as ApiResponse<void>;
+    return {
+      success: true,
+      data: response.data
+    };
   },
 
   /**
@@ -293,6 +356,9 @@ export const anamnesesApi = {
     }
   ) => {
     const response = await api.post(`/anamnese/publico/${token}/finalizar`, dados);
-    return response.data as ApiResponse<void>;
+    return {
+      success: true,
+      data: response.data
+    };
   }
 };
