@@ -34,7 +34,7 @@ const listar = useCallback(async (filtros?: {
       if (response.success) {
         setTemplates([]);
       } else {
-        throw new Error(response.error || 'Erro ao listar templates');
+        throw new Error('Erro ao listar templates');
       }
     }
   } catch (error: any) {
@@ -62,7 +62,7 @@ const listar = useCallback(async (filtros?: {
         setTemplateSelecionado(response.data);
         return response.data;
       } else {
-        throw new Error(response.error || 'Template não encontrado');
+        throw new Error('Template não encontrado');
       }
     } catch (error: any) {
       console.error('Erro ao buscar template:', error);
@@ -96,7 +96,7 @@ const listar = useCallback(async (filtros?: {
         
         return response.data;
       } else {
-        throw new Error(response.error || 'Erro ao criar template');
+        throw new Error('Erro ao criar template');
       }
     } catch (error: any) {
       console.error('Erro ao criar template:', error);
@@ -130,7 +130,7 @@ const listar = useCallback(async (filtros?: {
         
         return response.data;
       } else {
-        throw new Error(response.error || 'Erro ao atualizar template');
+        throw new Error('Erro ao atualizar template');
       }
     } catch (error: any) {
       console.error('Erro ao atualizar template:', error);
@@ -164,7 +164,7 @@ const listar = useCallback(async (filtros?: {
         
         return true;
       } else {
-        throw new Error(response.error || 'Erro ao excluir template');
+        throw new Error('Erro ao excluir template');
       }
     } catch (error: any) {
       console.error('Erro ao excluir template:', error);
@@ -200,7 +200,7 @@ const listar = useCallback(async (filtros?: {
         
         return response.data;
       } else {
-        throw new Error(response.error || 'Erro ao alterar status');
+        throw new Error('Erro ao alterar status');
       }
     } catch (error: any) {
       console.error('Erro ao alterar status:', error);
@@ -234,7 +234,7 @@ const listar = useCallback(async (filtros?: {
         
         return response.data;
       } else {
-        throw new Error(response.error || 'Erro ao duplicar template');
+        throw new Error('Erro ao duplicar template');
       }
     } catch (error: any) {
       console.error('Erro ao duplicar template:', error);

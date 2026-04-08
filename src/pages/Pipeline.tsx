@@ -17,6 +17,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Tooltip, TooltipContent, TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -75,14 +78,33 @@ function formatWhatsApp(telefone: string): string {
 
 function CardSkeleton() {
   return (
-    <Card className="mb-3">
-      <CardContent className="p-4 space-y-2">
+    <Card className="rounded-xl">
+      <CardContent className="p-5 space-y-3">
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-3 w-1/2" />
         <Skeleton className="h-3 w-1/3" />
         <Skeleton className="h-8 w-full mt-2" />
       </CardContent>
     </Card>
+  );
+}
+
+// ─────────────────────────────────────────
+// Sub-componente: Botão com Tooltip
+// ─────────────────────────────────────────
+
+function ActionButton({
+  tooltip, children, ...props
+}: React.ComponentProps<typeof Button> & { tooltip: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button {...props}>{children}</Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p className="text-xs">{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -120,140 +142,145 @@ function OportunidadeCard({
   const isLoading = loadingId === oportunidade.id;
 
   return (
-    <Card className="mb-3 border border-border/60 hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
+    <Card
+      className="rounded-xl border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] overflow-hidden animate-slide-up"
+    >
+      {/* Borda superior colorida */}
+      <div className="h-1" style={{ backgroundColor: etapaAtual.cor }} />
+
+      <CardContent className="p-5">
         {/* Cabeçalho */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <p className="font-semibold text-sm leading-tight line-clamp-2">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <p className="font-semibold text-sm leading-tight line-clamp-2 text-foreground">
             {oportunidade.titulo}
           </p>
           {isLoading && <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" />}
         </div>
 
         {/* Dados do paciente */}
-        <div className="space-y-1 mb-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="h-3 w-3 shrink-0" />
+        <div className="space-y-1.5 mb-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{oportunidade.lead_nome || '—'}</span>
           </div>
           {oportunidade.lead_telefone && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Phone className="h-3 w-3 shrink-0" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Phone className="h-3.5 w-3.5 shrink-0" />
               <span>{oportunidade.lead_telefone}</span>
             </div>
           )}
-          <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
-            <DollarSign className="h-3 w-3 shrink-0" />
+          <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: 'hsl(var(--pipeline-green))' }}>
+            <DollarSign className="h-3.5 w-3.5 shrink-0" />
             <span>{formatBRL(oportunidade.valor_estimado)}</span>
           </div>
           {oportunidade.data_previsao_fechamento && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3 shrink-0" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
               <span>{formatDate(oportunidade.data_previsao_fechamento)}</span>
             </div>
           )}
         </div>
 
         {/* Ações */}
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5 pt-3 border-t border-border/50">
           {/* Mover */}
           {!isPrimeira && (
-            <Button
+            <ActionButton
+              tooltip="Voltar etapa"
               variant="outline"
               size="icon"
-              className="h-7 w-7"
+              className="h-8 w-8 rounded-lg"
               disabled={isLoading}
               onClick={() => onMover(oportunidade, 'anterior')}
-              title="Voltar etapa"
             >
-              <ArrowLeft className="h-3 w-3" />
-            </Button>
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </ActionButton>
           )}
           {!isUltima && (
-            <Button
+            <ActionButton
+              tooltip="Avançar etapa"
               variant="outline"
               size="icon"
-              className="h-7 w-7"
+              className="h-8 w-8 rounded-lg"
               disabled={isLoading}
               onClick={() => onMover(oportunidade, 'proxima')}
-              title="Avançar etapa"
             >
-              <ArrowRight className="h-3 w-3" />
-            </Button>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </ActionButton>
           )}
 
           {/* WhatsApp */}
           {oportunidade.lead_telefone && (
-            <Button
+            <ActionButton
+              tooltip="Abrir WhatsApp"
               variant="outline"
               size="icon"
-              className="h-7 w-7 text-green-600 hover:text-green-700"
-              title="WhatsApp"
+              className="h-8 w-8 rounded-lg text-status-converted hover:text-status-converted hover:bg-status-converted/10"
               onClick={() =>
                 window.open(`https://wa.me/${formatWhatsApp(oportunidade.lead_telefone!)}`, '_blank')
               }
             >
-              <MessageCircle className="h-3 w-3" />
-            </Button>
+              <MessageCircle className="h-3.5 w-3.5" />
+            </ActionButton>
           )}
 
           {/* Detalhes */}
-          <Button
+          <ActionButton
+            tooltip="Ver detalhes"
             variant="outline"
             size="icon"
-            className="h-7 w-7"
-            title="Ver detalhes"
+            className="h-8 w-8 rounded-lg"
             onClick={() => onVerDetalhes(oportunidade)}
           >
-            <Eye className="h-3 w-3" />
-          </Button>
+            <Eye className="h-3.5 w-3.5" />
+          </ActionButton>
 
           {/* Editar */}
-          <Button
+          <ActionButton
+            tooltip="Editar"
             variant="outline"
             size="icon"
-            className="h-7 w-7"
-            title="Editar"
+            className="h-8 w-8 rounded-lg"
             onClick={() => onEditar(oportunidade)}
           >
-            <Pencil className="h-3 w-3" />
-          </Button>
+            <Pencil className="h-3.5 w-3.5" />
+          </ActionButton>
 
           {/* Ganhar */}
-          <Button
+          <ActionButton
+            tooltip="Marcar como ganha"
             variant="outline"
             size="icon"
-            className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:border-emerald-300"
-            title="Marcar como ganha"
+            className="h-8 w-8 rounded-lg text-status-converted hover:text-status-converted hover:bg-status-converted/10 hover:border-status-converted/30"
             disabled={isLoading}
             onClick={() => onGanhar(oportunidade)}
           >
-            <Check className="h-3 w-3" />
-          </Button>
+            <Check className="h-3.5 w-3.5" />
+          </ActionButton>
 
           {/* Perder */}
-          <Button
+          <ActionButton
+            tooltip="Marcar como perdida"
             variant="outline"
             size="icon"
-            className="h-7 w-7 text-orange-500 hover:text-orange-600 hover:border-orange-300"
-            title="Marcar como perdida"
+            className="h-8 w-8 rounded-lg text-status-qualified hover:text-status-qualified hover:bg-status-qualified/10 hover:border-status-qualified/30"
             disabled={isLoading}
             onClick={() => onPerder(oportunidade)}
           >
-            <X className="h-3 w-3" />
-          </Button>
+            <X className="h-3.5 w-3.5" />
+          </ActionButton>
 
           {/* Deletar */}
-          <Button
+          <ActionButton
+            tooltip="Deletar"
             variant="outline"
             size="icon"
-            className="h-7 w-7 text-destructive hover:text-destructive hover:border-destructive/30"
-            title="Deletar"
+            className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30"
             disabled={isLoading}
             onClick={() => onDeletar(oportunidade)}
           >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+            <Trash2 className="h-3.5 w-3.5" />
+          </ActionButton>
         </div>
       </CardContent>
     </Card>
@@ -337,15 +364,15 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { resetForm(); onClose(); } }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md rounded-xl">
         <DialogHeader>
-          <DialogTitle>Nova Oportunidade</DialogTitle>
+          <DialogTitle className="text-lg">Nova Oportunidade</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Combobox pacientes */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Paciente *</label>
+            <label className="text-sm font-medium mb-1.5 block text-foreground">Paciente *</label>
             <Popover open={comboOpen} onOpenChange={setComboOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between font-normal">
@@ -391,7 +418,7 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
 
           {/* Título */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Título *</label>
+            <label className="text-sm font-medium mb-1.5 block text-foreground">Título *</label>
             <Input
               placeholder="Ex: Implante dentário + clareamento"
               value={titulo}
@@ -402,7 +429,7 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
           <div className="grid grid-cols-2 gap-3">
             {/* Valor */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Valor estimado (R$)</label>
+              <label className="text-sm font-medium mb-1.5 block text-foreground">Valor estimado (R$)</label>
               <Input
                 placeholder="0,00"
                 value={valor}
@@ -415,7 +442,7 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
 
             {/* Etapa */}
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Etapa inicial</label>
+              <label className="text-sm font-medium mb-1.5 block text-foreground">Etapa inicial</label>
               <select
                 className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                 value={etapaId}
@@ -431,7 +458,7 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
 
           {/* Data previsão */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Previsão de fechamento</label>
+            <label className="text-sm font-medium mb-1.5 block text-foreground">Previsão de fechamento</label>
             <Input
               type="date"
               value={dataPrevisao}
@@ -441,7 +468,7 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
 
           {/* Observações */}
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Observações</label>
+            <label className="text-sm font-medium mb-1.5 block text-foreground">Observações</label>
             <Textarea
               placeholder="Notas sobre a oportunidade..."
               value={observacoes}
@@ -514,20 +541,20 @@ function ModalEditar({ oportunidade, onClose, onSalvo }: ModalEditarProps) {
 
   return (
     <Dialog open={!!oportunidade} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md rounded-xl">
         <DialogHeader>
-          <DialogTitle>Editar Oportunidade</DialogTitle>
+          <DialogTitle className="text-lg">Editar Oportunidade</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Título *</label>
+            <label className="text-sm font-medium mb-1.5 block text-foreground">Título *</label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Valor estimado (R$)</label>
+              <label className="text-sm font-medium mb-1.5 block text-foreground">Valor estimado (R$)</label>
               <Input
                 type="number"
                 min="0"
@@ -537,7 +564,7 @@ function ModalEditar({ oportunidade, onClose, onSalvo }: ModalEditarProps) {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Previsão de fechamento</label>
+              <label className="text-sm font-medium mb-1.5 block text-foreground">Previsão de fechamento</label>
               <Input
                 type="date"
                 value={dataPrevisao}
@@ -547,7 +574,7 @@ function ModalEditar({ oportunidade, onClose, onSalvo }: ModalEditarProps) {
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Observações</label>
+            <label className="text-sm font-medium mb-1.5 block text-foreground">Observações</label>
             <Textarea
               rows={3}
               value={observacoes}
@@ -586,9 +613,9 @@ function ModalPerder({ oportunidade, onClose, onConfirmado, loading }: ModalPerd
 
   return (
     <Dialog open={!!oportunidade} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm rounded-xl">
         <DialogHeader>
-          <DialogTitle>Marcar como Perdida</DialogTitle>
+          <DialogTitle className="text-lg">Marcar como Perdida</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Informe o motivo pelo qual a oportunidade <strong>{oportunidade?.titulo}</strong> foi perdida.
@@ -649,70 +676,71 @@ function ModalDetalhes({ oportunidade, onClose, onEditar }: ModalDetalhesProps) 
 
   return (
     <Dialog open={!!oportunidade} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-lg max-h-[85vh] flex flex-col rounded-xl">
         <DialogHeader>
-          <DialogTitle className="pr-8 leading-snug">{oportunidade.titulo}</DialogTitle>
+          <DialogTitle className="pr-8 leading-snug text-lg">{oportunidade.titulo}</DialogTitle>
         </DialogHeader>
 
         <div className="overflow-y-auto flex-1 space-y-5 pr-1">
           {/* Dados principais */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
-              <span className="text-muted-foreground block text-xs">Paciente</span>
-              <span className="font-medium">{oportunidade.lead_nome || '—'}</span>
+              <span className="text-muted-foreground block text-xs mb-0.5">Paciente</span>
+              <span className="font-medium text-foreground">{oportunidade.lead_nome || '—'}</span>
             </div>
             <div>
-              <span className="text-muted-foreground block text-xs">Telefone</span>
-              <span>{oportunidade.lead_telefone || '—'}</span>
+              <span className="text-muted-foreground block text-xs mb-0.5">Telefone</span>
+              <span className="text-foreground">{oportunidade.lead_telefone || '—'}</span>
             </div>
             <div>
-              <span className="text-muted-foreground block text-xs">Valor estimado</span>
-              <span className="font-semibold text-emerald-600">
+              <span className="text-muted-foreground block text-xs mb-0.5">Valor estimado</span>
+              <span className="font-semibold" style={{ color: 'hsl(var(--pipeline-green))' }}>
                 {formatBRL(oportunidade.valor_estimado)}
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground block text-xs">Etapa atual</span>
+              <span className="text-muted-foreground block text-xs mb-0.5">Etapa atual</span>
               <Badge
                 variant="outline"
+                className="rounded-full"
                 style={{ borderColor: oportunidade.etapa_cor, color: oportunidade.etapa_cor }}
               >
                 {oportunidade.etapa_nome || '—'}
               </Badge>
             </div>
             <div>
-              <span className="text-muted-foreground block text-xs">Previsão de fechamento</span>
-              <span>{formatDate(oportunidade.data_previsao_fechamento)}</span>
+              <span className="text-muted-foreground block text-xs mb-0.5">Previsão de fechamento</span>
+              <span className="text-foreground">{formatDate(oportunidade.data_previsao_fechamento)}</span>
             </div>
             <div>
-              <span className="text-muted-foreground block text-xs">Criada em</span>
-              <span>{formatDate(oportunidade.created_at)}</span>
+              <span className="text-muted-foreground block text-xs mb-0.5">Criada em</span>
+              <span className="text-foreground">{formatDate(oportunidade.created_at)}</span>
             </div>
             {oportunidade.observacoes && (
               <div className="col-span-2">
-                <span className="text-muted-foreground block text-xs">Observações</span>
-                <p className="text-sm mt-0.5">{oportunidade.observacoes}</p>
+                <span className="text-muted-foreground block text-xs mb-0.5">Observações</span>
+                <p className="text-sm mt-0.5 text-foreground">{oportunidade.observacoes}</p>
               </div>
             )}
           </div>
 
           {/* Timeline de atividades */}
           <div>
-            <h4 className="text-sm font-semibold mb-3">Timeline de atividades</h4>
+            <h4 className="text-sm font-semibold mb-3 text-foreground">Timeline de atividades</h4>
             {loadingAtv ? (
               <div className="space-y-2">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full" />)}
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}
               </div>
             ) : atividades.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nenhuma atividade registrada.</p>
             ) : (
-              <ol className="relative border-l border-border ml-2 space-y-4">
+              <ol className="relative border-l-2 border-border/60 ml-2 space-y-4">
                 {atividades.map((atv) => (
-                  <li key={atv.id} className="pl-4">
+                  <li key={atv.id} className="pl-5">
                     <div
-                      className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border-2 border-background bg-primary"
+                      className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full border-2 border-background bg-primary"
                     />
-                    <p className="text-xs font-medium">
+                    <p className="text-xs font-medium text-foreground">
                       {ACAO_LABELS[atv.tipo_acao] ?? atv.tipo_acao}
                     </p>
                     <p className="text-sm text-muted-foreground">{atv.descricao}</p>
@@ -899,96 +927,96 @@ export default function Pipeline() {
 
   return (
     <DashboardLayout title="Pipeline CRM">
-      <div className="space-y-5">
+      <div className="space-y-6 animate-fade-in">
 
         {/* ── Cabeçalho ── */}
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Pipeline CRM</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Pipeline CRM</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Gerencie o funil de vendas da clínica
             </p>
           </div>
-          <Button onClick={() => setModalCriarOpen(true)}>
+          <Button onClick={() => setModalCriarOpen(true)} className="rounded-lg shadow-sm">
             <Plus className="h-4 w-4 mr-2" />
             Nova Oportunidade
           </Button>
+        </div>
+
+        {/* ── Stats globais ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Card className="rounded-xl border-0 shadow-sm overflow-hidden">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="rounded-xl p-2.5" style={{ backgroundColor: 'hsl(var(--pipeline-blue) / 0.12)' }}>
+                <Users className="h-5 w-5" style={{ color: 'hsl(var(--pipeline-blue))' }} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Em aberto</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{stats.totalAbertas}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-0 shadow-sm overflow-hidden">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="rounded-xl p-2.5" style={{ backgroundColor: 'hsl(var(--pipeline-green) / 0.12)' }}>
+                <DollarSign className="h-5 w-5" style={{ color: 'hsl(var(--pipeline-green))' }} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Valor total</p>
+                <p className="text-lg font-bold leading-tight tabular-nums text-foreground">{formatBRL(stats.valorTotal)}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-0 shadow-sm overflow-hidden">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="rounded-xl p-2.5" style={{ backgroundColor: 'hsl(var(--pipeline-yellow) / 0.12)' }}>
+                <Trophy className="h-5 w-5" style={{ color: 'hsl(var(--pipeline-yellow))' }} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Ganhas</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{stats.totalGanhas}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl border-0 shadow-sm overflow-hidden">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="rounded-xl p-2.5" style={{ backgroundColor: 'hsl(var(--pipeline-purple) / 0.12)' }}>
+                <TrendingUp className="h-5 w-5" style={{ color: 'hsl(var(--pipeline-purple))' }} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Conversão</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{stats.taxa}%</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* ── Busca ── */}
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            className="pl-9"
+            className="pl-9 rounded-lg"
             placeholder="Buscar por título ou paciente..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
         </div>
 
-        {/* ── Stats globais ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 dark:bg-blue-900/30 p-2">
-                <Users className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Em aberto</p>
-                <p className="text-xl font-bold">{stats.totalAbertas}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="rounded-lg bg-emerald-100 dark:bg-emerald-900/30 p-2">
-                <DollarSign className="h-4 w-4 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Valor total</p>
-                <p className="text-lg font-bold leading-tight">{formatBRL(stats.valorTotal)}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="rounded-lg bg-yellow-100 dark:bg-yellow-900/30 p-2">
-                <Trophy className="h-4 w-4 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Ganhas</p>
-                <p className="text-xl font-bold">{stats.totalGanhas}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 dark:bg-purple-900/30 p-2">
-                <TrendingUp className="h-4 w-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Conversão</p>
-                <p className="text-xl font-bold">{stats.taxa}%</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* ── Kanban por abas ── */}
         {loadingEtapas ? (
-          <div className="space-y-3">
-            <Skeleton className="h-10 w-full" />
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full rounded-lg" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => <CardSkeleton key={i} />)}
             </div>
           </div>
         ) : etapas.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              <p className="font-medium">Nenhuma etapa de workflow configurada.</p>
+          <Card className="rounded-xl border-0 shadow-sm">
+            <CardContent className="p-10 text-center text-muted-foreground">
+              <p className="font-medium text-foreground">Nenhuma etapa de workflow configurada.</p>
               <p className="text-sm mt-1">
                 Execute o seed de workflow-etapas ou configure as etapas pelo painel.
               </p>
@@ -996,26 +1024,28 @@ export default function Pipeline() {
           </Card>
         ) : (
           <Tabs value={tabAtiva} onValueChange={setTabAtiva}>
-            {/* Tab triggers com cor da etapa */}
-            <TabsList className="h-auto flex-wrap justify-start gap-1 bg-transparent p-0 mb-4">
+            {/* Tab triggers estilo pill */}
+            <TabsList className="h-auto flex-wrap justify-start gap-2 bg-transparent p-0 mb-5">
               {etapas.map((etapa) => {
                 const count = porEtapa(etapa.id).length;
+                const isActive = tabAtiva === String(etapa.id);
                 return (
                   <TabsTrigger
                     key={etapa.id}
                     value={String(etapa.id)}
-                    className="data-[state=active]:text-white data-[state=active]:shadow-sm transition-colors"
+                    className="rounded-full px-4 py-2 text-sm font-medium border transition-all duration-200 data-[state=active]:shadow-md"
                     style={
-                      tabAtiva === String(etapa.id)
-                        ? { backgroundColor: etapa.cor, borderColor: etapa.cor }
-                        : { borderColor: etapa.cor, color: etapa.cor }
+                      isActive
+                        ? { backgroundColor: etapa.cor, borderColor: etapa.cor, color: '#fff' }
+                        : { borderColor: `${etapa.cor}60`, color: etapa.cor, backgroundColor: `${etapa.cor}08` }
                     }
                   >
                     {etapa.nome}
                     {count > 0 && (
                       <Badge
                         variant="secondary"
-                        className="ml-2 h-5 min-w-5 px-1 text-xs"
+                        className="ml-2 h-5 min-w-5 px-1.5 text-xs rounded-full"
+                        style={isActive ? { backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' } : {}}
                       >
                         {count}
                       </Badge>
@@ -1034,16 +1064,19 @@ export default function Pipeline() {
                 <TabsContent key={etapa.id} value={String(etapa.id)}>
                   {/* Stats da etapa */}
                   <div
-                    className="flex items-center gap-4 text-sm mb-4 pb-3 border-b"
-                    style={{ borderColor: `${etapa.cor}40` }}
+                    className="flex items-center gap-4 text-sm mb-5 pb-3 border-b-2"
+                    style={{ borderColor: `${etapa.cor}30` }}
                   >
-                    <span className="font-medium" style={{ color: etapa.cor }}>
-                      {etapa.nome}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: etapa.cor }} />
+                      <span className="font-semibold text-foreground">
+                        {etapa.nome}
+                      </span>
+                    </div>
                     <span className="text-muted-foreground">
                       {cards.length} {cards.length === 1 ? 'oportunidade' : 'oportunidades'}
                     </span>
-                    <span className="font-semibold text-emerald-600">
+                    <span className="font-semibold" style={{ color: 'hsl(var(--pipeline-green))' }}>
                       {formatBRL(valorEtapa)}
                     </span>
                   </div>
@@ -1054,13 +1087,16 @@ export default function Pipeline() {
                       {[1, 2, 3].map((i) => <CardSkeleton key={i} />)}
                     </div>
                   ) : cards.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <p className="font-medium">Nenhuma oportunidade nesta etapa</p>
+                    <div className="text-center py-16 text-muted-foreground">
+                      <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                        <Users className="h-5 w-5" />
+                      </div>
+                      <p className="font-medium text-foreground">Nenhuma oportunidade nesta etapa</p>
                       {busca && (
                         <p className="text-sm mt-1">
                           Tente limpar a busca ou{' '}
                           <button
-                            className="underline"
+                            className="underline text-primary"
                             onClick={() => setBusca('')}
                           >
                             ver todas
