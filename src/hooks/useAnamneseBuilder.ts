@@ -21,15 +21,14 @@ export function useAnamneseBuilder(templateId: string) {
    * Carregar template completo
    */
   const carregarTemplate = useCallback((template: TemplateCompleto) => {
-    const secoesOrdenadas = template.secoes
-      .map(s => s.secao)
+    const secoesOrdenadas = [...template.secoes]
       .sort((a, b) => a.ordem - b.ordem);
     
     setSecoes(secoesOrdenadas);
 
     const camposPorSecao: Record<string, AnamneseCampo[]> = {};
     template.secoes.forEach(secaoData => {
-      camposPorSecao[secaoData.secao.id] = secaoData.campos.sort(
+      camposPorSecao[secaoData.id] = [...secaoData.campos].sort(
         (a, b) => a.ordem - b.ordem
       );
     });
@@ -56,7 +55,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return response.data;
       } else {
-        throw new Error(response.error || 'Erro ao criar seção');
+        throw new Error('Erro ao criar seção');
       }
     } catch (error: any) {
       console.error('Erro ao criar seção:', error);
@@ -91,7 +90,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return response.data;
       } else {
-        throw new Error(response.error || 'Erro ao atualizar seção');
+        throw new Error('Erro ao atualizar seção');
       }
     } catch (error: any) {
       console.error('Erro ao atualizar seção:', error);
@@ -129,7 +128,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return true;
       } else {
-        throw new Error(response.error || 'Erro ao excluir seção');
+        throw new Error('Erro ao excluir seção');
       }
     } catch (error: any) {
       console.error('Erro ao excluir seção:', error);
@@ -167,7 +166,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return response.data;
       } else {
-        throw new Error(response.error || 'Erro ao criar campo');
+        throw new Error('Erro ao criar campo');
       }
     } catch (error: any) {
       console.error('Erro ao criar campo:', error);
@@ -206,7 +205,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return response.data;
       } else {
-        throw new Error(response.error || 'Erro ao atualizar campo');
+        throw new Error('Erro ao atualizar campo');
       }
     } catch (error: any) {
       console.error('Erro ao atualizar campo:', error);
@@ -242,7 +241,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return true;
       } else {
-        throw new Error(response.error || 'Erro ao excluir campo');
+        throw new Error('Erro ao excluir campo');
       }
     } catch (error: any) {
       console.error('Erro ao excluir campo:', error);
@@ -283,7 +282,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return novoCampo;
       } else {
-        throw new Error(response.error || 'Erro ao duplicar campo');
+        throw new Error('Erro ao duplicar campo');
       }
     } catch (error: any) {
       console.error('Erro ao duplicar campo:', error);
@@ -316,7 +315,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return true;
       } else {
-        throw new Error(response.error || 'Erro ao reordenar seções');
+        throw new Error('Erro ao reordenar seções');
       }
     } catch (error: any) {
       console.error('Erro ao reordenar seções:', error);
@@ -355,7 +354,7 @@ export function useAnamneseBuilder(templateId: string) {
         
         return true;
       } else {
-        throw new Error(response.error || 'Erro ao reordenar campos');
+        throw new Error('Erro ao reordenar campos');
       }
     } catch (error: any) {
       console.error('Erro ao reordenar campos:', error);
