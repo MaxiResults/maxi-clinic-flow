@@ -10,6 +10,7 @@ import {
   Package,
   Settings,
   LogOut,
+  KanbanSquare,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Leads", url: "/leads", icon: Users },
+  { title: "Pipeline CRM", url: "/pipeline", icon: KanbanSquare },
   { title: "Agendamentos", url: "/agendamentos", icon: Calendar },
   { title: "Conversas", url: "/conversas", icon: MessageSquare },
   { title: "Configurações", url: "/configuracoes", icon: Settings },

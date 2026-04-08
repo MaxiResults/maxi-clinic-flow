@@ -24,6 +24,7 @@ import AnamneseTemplates from '@/pages/AnamneseTemplates';
 import AnamneseTemplateBuilder from '@/pages/AnamneseTemplateBuilder';
 import AnamnesePublica from '@/pages/AnamnesePublica';
 import { AnamneseDashboard } from './pages/AnamneseDashboard';
+import Pipeline from './pages/Pipeline';
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const AppRoutes = () => (
     <Route path="/anamnese/templates/:id" element={<AnamneseTemplateBuilder />} />
     <Route path="/anamnese/p/:token" element={<AnamnesePublica />} />
     <Route path="/anamneses" element={<PrivateRoute><AnamneseDashboard /></PrivateRoute>} />
+    <Route path="/pipeline" element={<PrivateRoute><Pipeline /></PrivateRoute>} />
   </Routes>
 );
 
