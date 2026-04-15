@@ -25,6 +25,7 @@ import AnamneseTemplateBuilder from '@/pages/AnamneseTemplateBuilder';
 import AnamnesePublica from '@/pages/AnamnesePublica';
 import { AnamneseDashboard } from './pages/AnamneseDashboard';
 import Pipeline from './pages/Pipeline';
+import ConfiguracaoGoogleCalendar from '@/pages/ConfiguracaoGoogleCalendar';
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const AppRoutes = () => (
     <Route path="/anamnese/p/:token" element={<AnamnesePublica />} />
     <Route path="/anamneses" element={<PrivateRoute><AnamneseDashboard /></PrivateRoute>} />
     <Route path="/pipeline" element={<PrivateRoute><Pipeline /></PrivateRoute>} />
+    <Route path="/configuracoes/google-calendar" element={<PrivateRoute><ConfiguracaoGoogleCalendar /></PrivateRoute>} />
   </Routes>
 );
 

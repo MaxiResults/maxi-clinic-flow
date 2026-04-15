@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   KanbanSquare,
+  CalendarCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -84,6 +85,29 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/60">Integrações</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to="/configuracoes/google-calendar"
+                    end
+                    className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
+                      location.pathname === "/configuracoes/google-calendar"
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                    }`}
+                  >
+                    <CalendarCheck className="h-4 w-4" />
+                    <span>Google Calendar</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
