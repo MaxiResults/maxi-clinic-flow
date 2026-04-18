@@ -95,14 +95,14 @@ export function AssignmentModal({
         : `/conversas/${conversationId}/assign`;
 
       const payload = isTransfer
-        ? { para_atendente_id: selectedAtendente, motivo }
-        : { atendente_id: selectedAtendente, motivo };
+        ? { novo_profissional_id: selectedAtendente, motivo }
+        : { profissional_id: selectedAtendente, motivo };
 
-      await api.post(endpoint, payload);
+      const response = await api.post(endpoint, payload);
 
       toast({
         title: isTransfer ? "Conversa transferida" : "Conversa atribuída",
-        description: "A ação foi realizada com sucesso",
+        description: response.data?.message || "A ação foi realizada com sucesso",
       });
 
       onSuccess();
