@@ -7,6 +7,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, MessageSquare, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import { AssignmentModal } from "@/components/whatsapp/Assignment/AssignmentModal";
+import { AttendantBadge } from "@/components/whatsapp/Assignment/AttendantBadge";
+import { ConversationFilters } from "@/components/whatsapp/Assignment/ConversationFilters";
+
+interface Atendente {
+  id: string;
+  nome: string;
+  email?: string;
+}
 
 interface Lead {
   id: string;
@@ -20,6 +29,7 @@ interface Lead {
     status_sessao: string;
     ultima_interacao: string;
     total_mensagens: number;
+    atendente?: Atendente | null;
   } | null;
   ultima_mensagem: {
     mensagem: string;
@@ -55,6 +65,8 @@ export default function Conversas() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [novaMsg, setNovaMsg] = useState("");
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -66,14 +78,16 @@ export default function Conversas() {
 
   useEffect(() => {
     fetchLeads();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationFilter]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       fetchLeads(true);
     }, 10000);
     return () => clearInterval(interval);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationFilter]);
 
   useEffect(() => {
     if (!selectedLead) return;
@@ -90,7 +104,11 @@ export default function Conversas() {
         setError(null);
       }
 
-      const response = await api.get('/conversas/leads', {
+      const endpoint = conversationFilter === 'minhas'
+        ? '/conversas/minhas'
+        : '/conversas/leads';
+
+      const response = await api.get(endpoint, {
         params: { t: Date.now() }
       });
 
@@ -201,6 +219,13 @@ export default function Conversas() {
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
+  const handleAssignSuccess = () => {
+    fetchLeads(true);
+    if (selectedLead) {
+      fetchMensagens(selectedLead.id, true);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout title="Conversas WhatsApp">
@@ -216,30 +241,13 @@ export default function Conversas() {
     return (
       <DashboardLayout title="Conversas WhatsApp">
         <div className="p-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h3 className="text-red-800 font-bold mb-3">❌ Erro ao carregar</h3>
-            <p className="text-red-600 mb-4">{error}</p>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6">
+            <h3 className="text-destructive font-bold mb-3">❌ Erro ao carregar</h3>
+            <p className="text-destructive/80 mb-4">{error}</p>
             <Button onClick={() => fetchLeads()} variant="destructive">
               🔄 Tentar novamente
             </Button>
           </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (leads.length === 0) {
-    return (
-      <DashboardLayout title="Conversas WhatsApp">
-        <div className="text-center py-12">
-          <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <p className="text-lg font-medium">Nenhuma conversa ativa</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            As conversas aparecerão aqui quando clientes enviarem mensagens
-          </p>
-          <Button onClick={() => fetchLeads()} variant="outline" className="mt-4">
-            🔄 Recarregar
-          </Button>
         </div>
       </DashboardLayout>
     );
@@ -250,44 +258,69 @@ export default function Conversas() {
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="col-span-1 overflow-hidden">
           <div className="flex h-full flex-col">
-            <div className="border-b p-4">
+            <div className="border-b p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Conversas ({leads.length})</h3>
                 <Button onClick={() => fetchLeads()} variant="ghost" size="sm">🔄</Button>
               </div>
+              <ConversationFilters
+                filter={conversationFilter}
+                onFilterChange={(filter) => {
+                  setConversationFilter(filter);
+                }}
+              />
             </div>
             <div className="flex-1 overflow-y-auto">
-              {leads.map((lead) => (
-                <div
-                  key={lead.id}
-                  className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
-                    selectedLead?.id === lead.id ? "bg-blue-50" : ""
-                  }`}
-                  onClick={() => handleSelectLead(lead)}
-                >
-                  <div className="flex items-start gap-3">
-                    <Avatar>
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {lead.nome.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 overflow-hidden">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium truncate">{lead.nome}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {formatTime(lead.ultima_interacao)}
-                        </span>
+              {leads.length === 0 ? (
+                <div className="text-center py-12 px-4">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm font-medium">Nenhuma conversa</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {conversationFilter === 'minhas'
+                      ? 'Você não tem conversas atribuídas'
+                      : 'Aguardando mensagens de clientes'}
+                  </p>
+                </div>
+              ) : (
+                leads.map((lead) => (
+                  <div
+                    key={lead.id}
+                    className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
+                      selectedLead?.id === lead.id ? "bg-muted" : ""
+                    }`}
+                    onClick={() => handleSelectLead(lead)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar>
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {lead.nome.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 overflow-hidden">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-medium truncate">{lead.nome}</p>
+                          <span className="text-xs text-muted-foreground">
+                            {formatTime(lead.ultima_interacao)}
+                          </span>
+                        </div>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {lead.ultima_mensagem?.mensagem || 'Sem mensagens'}
+                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-muted-foreground">
+                            💬 {lead.total_mensagens} mensagens
+                          </p>
+                          {lead.sessao_ativa?.atendente && (
+                            <span className="text-xs text-muted-foreground truncate ml-2">
+                              👤 {lead.sessao_ativa.atendente.nome}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p className="truncate text-sm text-muted-foreground">
-                        {lead.ultima_mensagem?.mensagem || 'Sem mensagens'}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        💬 {lead.total_mensagens} mensagens
-                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </Card>
@@ -296,23 +329,40 @@ export default function Conversas() {
           <div className="flex h-full flex-col">
             {selectedLead ? (
               <>
-                <div className="border-b p-4 bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {selectedLead.nome.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold">{selectedLead.nome}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
-                      </p>
+                <div className="border-b p-4 bg-muted/30">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {selectedLead.nome.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold">{selectedLead.nome}</h3>
+                        <p className="text-xs text-muted-foreground">
+                          {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <AttendantBadge
+                        atendente={selectedLead.sessao_ativa?.atendente || undefined}
+                        onTransfer={() => setAssignModalOpen(true)}
+                      />
+                      {!selectedLead.sessao_ativa?.atendente && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setAssignModalOpen(true)}
+                        >
+                          Atribuir
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 bg-gray-50/50">
+                <div className="flex-1 overflow-y-auto p-4 bg-muted/20">
                   {loadingMensagens ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -328,10 +378,10 @@ export default function Conversas() {
                         return (
                           <div key={mensagem.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                              isOwn ? 'bg-blue-500 text-white' : 'bg-white border'
+                              isOwn ? 'bg-primary text-primary-foreground' : 'bg-card border'
                             }`}>
                               <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
-                              <p className={`text-xs mt-1 ${isOwn ? 'text-white/70' : 'text-muted-foreground'}`}>
+                              <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                                 {new Date(mensagem.data_envio).toLocaleTimeString('pt-BR', {
                                   hour: '2-digit', minute: '2-digit'
                                 })}
@@ -345,7 +395,7 @@ export default function Conversas() {
                   )}
                 </div>
 
-                <div className="border-t p-4 bg-white">
+                <div className="border-t p-4 bg-card">
                   <form onSubmit={handleEnviarMensagem} className="flex gap-2">
                     <Input
                       value={novaMsg}
@@ -368,6 +418,16 @@ export default function Conversas() {
           </div>
         </Card>
       </div>
+
+      {selectedLead && (
+        <AssignmentModal
+          open={assignModalOpen}
+          onOpenChange={setAssignModalOpen}
+          conversationId={selectedLead.id}
+          currentAtendente={selectedLead.sessao_ativa?.atendente || undefined}
+          onSuccess={handleAssignSuccess}
+        />
+      )}
     </DashboardLayout>
   );
 }
