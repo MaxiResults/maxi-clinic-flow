@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://maxiclinicas.com.br/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.maxiclinicas.com.br/api/v1';
 
 console.log(`🔧 Ambiente: ${import.meta.env.PROD ? 'PRODUÇÃO' : 'DESENVOLVIMENTO'}`);
 console.log(`🌐 API URL: ${API_BASE_URL}`);
