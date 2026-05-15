@@ -10,6 +10,7 @@ import api from "@/lib/api";
 import { AssignmentModal } from "@/components/whatsapp/Assignment/AssignmentModal";
 import { AttendantBadge } from "@/components/whatsapp/Assignment/AttendantBadge";
 import { ConversationFilters } from "@/components/whatsapp/Assignment/ConversationFilters";
+import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 
 interface Atendente {
   id: string;
@@ -67,6 +68,7 @@ export default function Conversas() {
   const [novaMsg, setNovaMsg] = useState("");
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -189,6 +191,62 @@ export default function Conversas() {
       toast({
         title: "❌ Erro ao enviar",
         description: err.message || "Não foi possível enviar a mensagem",
+        variant: "destructive",
+      });
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  const handleEnviarAudio = async (audioBlob: Blob, duracao: number) => {
+    if (!selectedLead || enviando) return;
+
+    try {
+      setEnviando(true);
+      const audioBase64 = await blobToBase64(audioBlob);
+
+      const mensagemTemp: Mensagem = {
+        id: `temp-audio-${Date.now()}`,
+        sessao_id: selectedLead.sessao_ativa?.id || '',
+        remetente: 'atendente',
+        tipo_mensagem: 'audio',
+        mensagem: '[Áudio]',
+        data_envio: new Date().toISOString(),
+        status_entrega: 'enviando',
+        midia_tipo: 'audio',
+      };
+
+      setMensagens(prev => [...prev, mensagemTemp]);
+      setShowAudioRecorder(false);
+
+      await api.post('/evolution/send-audio', {
+        conversaId: selectedLead.sessao_ativa?.id,
+        audioBase64,
+        duracao,
+      });
+
+      setTimeout(() => {
+        fetchMensagens(selectedLead.id, true);
+      }, 1000);
+
+      toast({
+        title: "🎤 Áudio enviado",
+        description: "Seu áudio foi enviado com sucesso",
+      });
+    } catch (err: any) {
+      setMensagens(prev => prev.filter(m => !m.id.startsWith('temp-audio-')));
+      toast({
+        title: "❌ Erro ao enviar áudio",
+        description: err.message || "Não foi possível enviar o áudio",
         variant: "destructive",
       });
     } finally {
@@ -396,18 +454,31 @@ export default function Conversas() {
                 </div>
 
                 <div className="border-t p-4 bg-card">
-                  <form onSubmit={handleEnviarMensagem} className="flex gap-2">
-                    <Input
-                      value={novaMsg}
-                      onChange={(e) => setNovaMsg(e.target.value)}
-                      placeholder="Digite uma mensagem..."
-                      disabled={enviando}
-                      className="flex-1"
-                    />
-                    <Button type="submit" disabled={!novaMsg.trim() || enviando} size="icon">
-                      {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    </Button>
-                  </form>
+                  {showAudioRecorder ? (
+                    <div className="flex items-center justify-center">
+                      <AudioRecorder
+                        onAudioReady={handleEnviarAudio}
+                        onCancel={() => setShowAudioRecorder(false)}
+                      />
+                    </div>
+                  ) : (
+                    <form onSubmit={handleEnviarMensagem} className="flex items-center gap-2">
+                      <AudioRecorder
+                        onAudioReady={handleEnviarAudio}
+                        onCancel={() => setShowAudioRecorder(false)}
+                      />
+                      <Input
+                        value={novaMsg}
+                        onChange={(e) => setNovaMsg(e.target.value)}
+                        placeholder="Digite uma mensagem..."
+                        disabled={enviando}
+                        className="flex-1"
+                      />
+                      <Button type="submit" disabled={!novaMsg.trim() || enviando} size="icon">
+                        {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                      </Button>
+                    </form>
+                  )}
                 </div>
               </>
             ) : (
