@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const RAW_API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.maxiclinicas.com.br/api/v1';
-const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, '').endsWith('/api/v1')
-  ? RAW_API_BASE_URL.replace(/\/+$/, '')
-  : `${RAW_API_BASE_URL.replace(/\/+$/, '')}/api/v1`;
+// Forçar URL correta para produção
+const API_BASE_URL = import.meta.env.MODE === 'production'
+  ? 'https://api.maxiclinicas.com.br/api/v1'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1');
 
 console.log(`🔧 Ambiente: ${import.meta.env.PROD ? 'PRODUÇÃO' : 'DESENVOLVIMENTO'}`);
 console.log(`🌐 API URL: ${API_BASE_URL}`);
