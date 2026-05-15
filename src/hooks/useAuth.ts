@@ -1,5 +1,6 @@
-export { useAuth } from '@/contexts/AuthContext';
 import { useAuth } from '@/contexts/AuthContext';
+
+export { useAuth };
 
 export function useRequireRole(allowedRoles: string[]) {
   const { user } = useAuth();
