@@ -565,11 +565,14 @@ export default function Conversas() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {mensagens.map((mensagem) => {
+                       {mensagens.map((mensagem) => {
                         const isOwn = mensagem.remetente === 'atendente';
                         const isAudio = mensagem.tipo_mensagem === 'audio';
                         return (
-                          <div key={mensagem.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                          <div
+                            key={mensagem.id}
+                            className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
+                          >
                             {!isOwn && (
                               <Avatar className="h-8 w-8 mr-2 mt-1">
                                 <AvatarFallback className="bg-[#075E54] text-white text-xs">
