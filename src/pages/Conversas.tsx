@@ -12,6 +12,7 @@ import { AttendantBadge } from "@/components/whatsapp/Assignment/AttendantBadge"
 import { ConversationFilters } from "@/components/whatsapp/Assignment/ConversationFilters";
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
+import { io, Socket } from "socket.io-client";
 
 const whatsappStyles = {
   headerBg: 'bg-[#075E54]',
@@ -82,6 +83,7 @@ export default function Conversas() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,21 +98,87 @@ export default function Conversas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationFilter]);
 
+  // Socket.io connection
   useEffect(() => {
+    const socketConnection = io('https://api.maxiclinicas.com.br', {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+    });
+
+    socketConnection.on('connect', () => {
+      console.log('[Socket.io] Conectado ao servidor:', socketConnection.id);
+    });
+    socketConnection.on('disconnect', () => {
+      console.log('[Socket.io] Desconectado do servidor');
+    });
+    socketConnection.on('connect_error', (error) => {
+      console.error('[Socket.io] Erro de conexão:', error);
+    });
+
+    setSocket(socketConnection);
+
+    return () => {
+      socketConnection.disconnect();
+    };
+  }, []);
+
+  // Join/Leave conversation rooms
+  useEffect(() => {
+    if (!socket || !selectedLead?.sessao_ativa?.id) return;
+    const conversaId = selectedLead.sessao_ativa.id;
+
+    socket.emit('join_conversation', conversaId);
+    console.log('[Socket.io] Entrou na sala:', conversaId);
+
+    return () => {
+      socket.emit('leave_conversation', conversaId);
+      console.log('[Socket.io] Saiu da sala:', conversaId);
+    };
+  }, [socket, selectedLead?.sessao_ativa?.id]);
+
+  // Listen to nova_mensagem event
+  useEffect(() => {
+    if (!socket || !selectedLead?.sessao_ativa?.id) return;
+    const conversaId = selectedLead.sessao_ativa.id;
+
+    const handleNovaMensagem = (data: any) => {
+      console.log('[Socket.io] Nova mensagem recebida:', data);
+      if (data.conversaId === conversaId) {
+        setMensagens((prev) => {
+          const existe = prev.some((m) => m.id === data.mensagem.id);
+          if (existe) return prev;
+          return [...prev, data.mensagem];
+        });
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    };
+
+    socket.on('nova_mensagem', handleNovaMensagem);
+    return () => {
+      socket.off('nova_mensagem', handleNovaMensagem);
+    };
+  }, [socket, selectedLead?.sessao_ativa?.id]);
+
+  // Fallback polling - leads (only if socket not connected)
+  useEffect(() => {
+    if (socket?.connected) return;
     const interval = setInterval(() => {
       fetchLeads(true);
-    }, 10000);
+    }, 30000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationFilter]);
+  }, [conversationFilter, socket?.connected]);
 
+  // Fallback polling - mensagens (only if socket not connected)
   useEffect(() => {
-    if (!selectedLead) return;
+    if (!selectedLead || socket?.connected) return;
     const interval = setInterval(() => {
       fetchMensagens(selectedLead.id, true);
-    }, 5000);
+    }, 30000);
     return () => clearInterval(interval);
-  }, [selectedLead]);
+  }, [selectedLead, socket?.connected]);
 
   const fetchLeads = async (silent = false) => {
     try {
@@ -174,26 +242,12 @@ export default function Conversas() {
     try {
       setEnviando(true);
 
-      const mensagemTemp: Mensagem = {
-        id: `temp-${Date.now()}`,
-        sessao_id: selectedLead.sessao_ativa?.id || '',
-        remetente: 'atendente',
-        tipo_mensagem: 'text',
-        mensagem: novaMsg,
-        data_envio: new Date().toISOString(),
-        status_entrega: 'enviando',
-      };
-
-      setMensagens(prev => [...prev, mensagemTemp]);
+      // Mensagem otimista removida - Socket.io entrega em tempo real
       setNovaMsg("");
 
       await api.post(`/conversas/leads/${selectedLead.id}/mensagens`, {
         texto: novaMsg,
       });
-
-      setTimeout(() => {
-        fetchMensagens(selectedLead.id, true);
-      }, 1000);
 
       toast({
         title: "✅ Mensagem enviada",
@@ -227,18 +281,7 @@ export default function Conversas() {
       setEnviando(true);
       const audioBase64 = await blobToBase64(audioBlob);
 
-      const mensagemTemp: Mensagem = {
-        id: `temp-audio-${Date.now()}`,
-        sessao_id: selectedLead.sessao_ativa?.id || '',
-        remetente: 'atendente',
-        tipo_mensagem: 'audio',
-        mensagem: '[Áudio]',
-        data_envio: new Date().toISOString(),
-        status_entrega: 'enviando',
-        midia_tipo: 'audio',
-      };
-
-      setMensagens(prev => [...prev, mensagemTemp]);
+      // Mensagem otimista removida - Socket.io entrega em tempo real
       setShowAudioRecorder(false);
 
       await api.post('/evolution/send-audio', {
@@ -246,10 +289,6 @@ export default function Conversas() {
         audioBase64,
         duracao,
       });
-
-      setTimeout(() => {
-        fetchMensagens(selectedLead.id, true);
-      }, 1000);
 
       toast({
         title: "🎤 Áudio enviado",
