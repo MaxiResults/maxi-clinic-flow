@@ -11,6 +11,7 @@ import { AssignmentModal } from "@/components/whatsapp/Assignment/AssignmentModa
 import { AttendantBadge } from "@/components/whatsapp/Assignment/AttendantBadge";
 import { ConversationFilters } from "@/components/whatsapp/Assignment/ConversationFilters";
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
+import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 
 interface Atendente {
   id: string;
