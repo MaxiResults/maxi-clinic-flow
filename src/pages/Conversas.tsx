@@ -53,6 +53,7 @@ interface Mensagem {
   status_entrega: string;
   midia_url?: string;
   midia_tipo?: string;
+  duracao_audio_segundos?: number;
 }
 
 export default function Conversas() {
