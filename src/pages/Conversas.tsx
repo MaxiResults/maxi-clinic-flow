@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,31 @@ import { ConversationFilters } from "@/components/whatsapp/Assignment/Conversati
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 import { io, Socket } from "socket.io-client";
+
+// Hook para tocar som de notificação ao receber mensagens
+const useNotificationSound = () => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio('/sounds/notification.mp3');
+    audioRef.current.volume = 0.5;
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  return useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((err) => {
+        console.log('Autoplay bloqueado pelo navegador:', err);
+      });
+    }
+  }, []);
+};
 
 const whatsappStyles = {
   headerBg: 'bg-[#075E54]',
@@ -85,6 +110,8 @@ export default function Conversas() {
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
 
+  const playNotification = useNotificationSound();
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -152,6 +179,10 @@ export default function Conversas() {
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
+        // Tocar som apenas para mensagens recebidas (não enviadas por mim)
+        if (data.mensagem?.is_from_me === false) {
+          playNotification();
+        }
       }
     };
 
@@ -159,7 +190,7 @@ export default function Conversas() {
     return () => {
       socket.off('nova_mensagem', handleNovaMensagem);
     };
-  }, [socket, selectedLead?.sessao_ativa?.id]);
+  }, [socket, selectedLead?.sessao_ativa?.id, playNotification]);
 
   // Fallback polling - leads (only if socket not connected)
   useEffect(() => {
@@ -561,6 +592,12 @@ export default function Conversas() {
                       <Input
                         value={novaMsg}
                         onChange={(e) => setNovaMsg(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleEnviarMensagem(e as any);
+                          }
+                        }}
                         placeholder="Digite uma mensagem..."
                         disabled={enviando}
                         className="flex-1"
