@@ -4,8 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, MessageSquare, Send, Mic } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
 import { AssignmentModal } from "@/components/whatsapp/Assignment/AssignmentModal";
 import { AttendantBadge } from "@/components/whatsapp/Assignment/AttendantBadge";
@@ -109,6 +110,9 @@ export default function Conversas() {
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
+  const [usuarioDigitando, setUsuarioDigitando] = useState(false);
+  const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playNotification = useNotificationSound();
 
@@ -192,6 +196,19 @@ export default function Conversas() {
     };
   }, [socket, selectedLead?.sessao_ativa?.id, playNotification]);
 
+  // Listen lead_digitando
+  useEffect(() => {
+    if (!socket || !selectedLead?.sessao_ativa?.id) return;
+    const handler = (data: { digitando: boolean }) => {
+      setUsuarioDigitando(data.digitando);
+    };
+    socket.on('lead_digitando', handler);
+    return () => {
+      socket.off('lead_digitando', handler);
+      setUsuarioDigitando(false);
+    };
+  }, [socket, selectedLead?.sessao_ativa?.id]);
+
   // Fallback polling - leads (only if socket not connected)
   useEffect(() => {
     if (socket?.connected) return;
@@ -274,10 +291,11 @@ export default function Conversas() {
       setEnviando(true);
 
       // Mensagem otimista removida - Socket.io entrega em tempo real
+      const textoEnvio = novaMsg;
       setNovaMsg("");
 
       await api.post(`/conversas/leads/${selectedLead.id}/mensagens`, {
-        texto: novaMsg,
+        texto: textoEnvio,
       });
     } catch (err: any) {
       setMensagens(prev => prev.filter(m => !m.id.startsWith('temp-')));
@@ -287,8 +305,43 @@ export default function Conversas() {
         variant: "destructive",
       });
     } finally {
-      setEnviando(false);
+      setTimeout(() => setEnviando(false), 300);
     }
+  };
+
+  const handleMensagemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const texto = e.target.value;
+    setNovaMsg(texto);
+
+    if (socket && selectedLead?.sessao_ativa?.id && texto.length > 0) {
+      socket.emit('usuario_digitando', {
+        conversaId: selectedLead.sessao_ativa.id,
+        digitando: true,
+      });
+      if (timeoutDigitando.current) clearTimeout(timeoutDigitando.current);
+      timeoutDigitando.current = setTimeout(() => {
+        socket.emit('usuario_digitando', {
+          conversaId: selectedLead.sessao_ativa!.id,
+          digitando: false,
+        });
+      }, 3000);
+    }
+  };
+
+  const handleAnexarFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    console.log('Foto selecionada:', file.name);
+    sonnerToast.success(`Foto "${file.name}" selecionada`);
+    e.target.value = '';
+  };
+
+  const handleAnexarDocumento = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    console.log('Documento selecionado:', file.name);
+    sonnerToast.success(`Documento "${file.name}" selecionado`);
+    e.target.value = '';
   };
 
   const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -512,11 +565,14 @@ export default function Conversas() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {mensagens.map((mensagem) => {
+                       {mensagens.map((mensagem) => {
                         const isOwn = mensagem.remetente === 'atendente';
                         const isAudio = mensagem.tipo_mensagem === 'audio';
                         return (
-                          <div key={mensagem.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                          <div
+                            key={mensagem.id}
+                            className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
+                          >
                             {!isOwn && (
                               <Avatar className="h-8 w-8 mr-2 mt-1">
                                 <AvatarFallback className="bg-[#075E54] text-white text-xs">
@@ -575,7 +631,20 @@ export default function Conversas() {
                   )}
                 </div>
 
-                <div className="border-t px-4 py-3 bg-[#F0F2F5]">
+                <div className="border-t px-4 py-2 bg-[#F0F2F5]">
+                  {/* Indicador "digitando..." */}
+                  {usuarioDigitando && !showAudioRecorder && (
+                    <div className="flex items-center gap-2 px-2 py-1 mb-1 animate-fade-in">
+                      <div className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-[#25D366] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-1.5 bg-[#25D366] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-1.5 bg-[#25D366] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-xs text-[#667781] italic">
+                        {selectedLead?.nome || 'Usuário'} está digitando...
+                      </span>
+                    </div>
+                  )}
                   {showAudioRecorder ? (
                     <div className="flex items-center justify-center">
                       <AudioRecorder
@@ -584,9 +653,78 @@ export default function Conversas() {
                       />
                     </div>
                   ) : (
-                    <form onSubmit={handleEnviarMensagem} className="flex items-center gap-2">
+                    <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
                       {/* Input arredondado estilo WhatsApp */}
                       <div className="flex-1 flex items-center gap-3 bg-white rounded-[24px] border border-[#E9EDEF] px-4 py-2.5 transition-all hover:border-[#D1D7DB] shadow-sm">
+                        {/* Botão de anexo */}
+                        <div className="relative flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setMenuAnexoAberto((v) => !v)}
+                            className="text-[#54656F] hover:text-[#25D366] transition-colors duration-200 flex items-center"
+                            title="Anexar"
+                          >
+                            <Paperclip className="w-6 h-6" />
+                          </button>
+                          {menuAnexoAberto && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setMenuAnexoAberto(false)}
+                              />
+                              <div className="absolute bottom-10 left-0 z-20 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden min-w-[180px] animate-fade-in">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    document.getElementById('input-foto')?.click();
+                                    setMenuAnexoAberto(false);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                                >
+                                  <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                    <Camera className="w-5 h-5 text-purple-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-800">Foto</p>
+                                    <p className="text-xs text-gray-500">JPG, PNG, GIF</p>
+                                  </div>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    document.getElementById('input-documento')?.click();
+                                    setMenuAnexoAberto(false);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                                >
+                                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <FileText className="w-5 h-5 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-800">Documento</p>
+                                    <p className="text-xs text-gray-500">PDF, DOC, XLS</p>
+                                  </div>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                          <input
+                            id="input-foto"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleAnexarFoto}
+                          />
+                          <input
+                            id="input-documento"
+                            type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                            className="hidden"
+                            onChange={handleAnexarDocumento}
+                          />
+                        </div>
+
                         {/* Ícone emoji */}
                         <button
                           type="button"
@@ -603,7 +741,7 @@ export default function Conversas() {
                           type="text"
                           placeholder="Digite uma mensagem"
                           value={novaMsg}
-                          onChange={(e) => setNovaMsg(e.target.value)}
+                          onChange={handleMensagemChange}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -612,6 +750,7 @@ export default function Conversas() {
                               }
                             }
                           }}
+                          maxLength={1000}
                           disabled={enviando}
                           autoComplete="off"
                           className="flex-1 bg-transparent outline-none text-[15px] text-gray-800 placeholder:text-[#8696A0] min-w-0 disabled:opacity-50"
@@ -633,7 +772,7 @@ export default function Conversas() {
                         <button
                           type="submit"
                           disabled={enviando}
-                          className="w-12 h-12 flex items-center justify-center rounded-full bg-[#25D366] hover:bg-[#1DA851] transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0 disabled:opacity-50"
+                          className="w-12 h-12 flex items-center justify-center rounded-full bg-[#25D366] hover:bg-[#1DA851] transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0 disabled:opacity-50 animate-scale-in"
                           title="Enviar mensagem"
                         >
                           {enviando ? (
@@ -642,6 +781,30 @@ export default function Conversas() {
                             <Send className="w-5 h-5 text-white" />
                           )}
                         </button>
+                      )}
+                      </div>
+
+                      {/* Contador de caracteres */}
+                      {novaMsg.length > 0 && (
+                        <div className="flex items-center gap-2 px-3 text-[11px] mt-0.5">
+                          <span
+                            className={
+                              novaMsg.length > 1000
+                                ? 'text-red-500 font-medium'
+                                : novaMsg.length > 500
+                                ? 'text-orange-500'
+                                : 'text-[#8696A0]'
+                            }
+                          >
+                            {novaMsg.length} caracteres
+                          </span>
+                          {novaMsg.length > 500 && novaMsg.length <= 1000 && (
+                            <span className="text-orange-500">• Mensagem longa</span>
+                          )}
+                          {novaMsg.length > 1000 && (
+                            <span className="text-red-500">• Limite atingido</span>
+                          )}
+                        </div>
                       )}
                     </form>
                   )}
