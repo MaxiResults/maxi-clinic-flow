@@ -435,12 +435,27 @@ export default function Conversas() {
                     <div className="space-y-3">
                       {mensagens.map((mensagem) => {
                         const isOwn = mensagem.remetente === 'atendente';
+                        const isAudio = mensagem.tipo_mensagem === 'audio';
                         return (
                           <div key={mensagem.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                            {!isOwn && (
+                              <Avatar className="h-8 w-8 mr-2 mt-1">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                  {selectedLead?.nome?.[0] || 'L'}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
                             <div className={`max-w-[70%] rounded-lg px-4 py-2 ${
                               isOwn ? 'bg-primary text-primary-foreground' : 'bg-card border'
                             }`}>
-                              <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
+                              {isAudio && mensagem.midia_url ? (
+                                <AudioPlayer
+                                  audioUrl={mensagem.midia_url}
+                                  duration={mensagem.duracao_audio_segundos}
+                                />
+                              ) : (
+                                <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
+                              )}
                               <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                                 {new Date(mensagem.data_envio).toLocaleTimeString('pt-BR', {
                                   hour: '2-digit', minute: '2-digit'
