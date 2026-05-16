@@ -4,8 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, MessageSquare, Send, Mic } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
 import { AssignmentModal } from "@/components/whatsapp/Assignment/AssignmentModal";
 import { AttendantBadge } from "@/components/whatsapp/Assignment/AttendantBadge";
@@ -109,6 +110,9 @@ export default function Conversas() {
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
+  const [usuarioDigitando, setUsuarioDigitando] = useState(false);
+  const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playNotification = useNotificationSound();
 
@@ -192,6 +196,19 @@ export default function Conversas() {
     };
   }, [socket, selectedLead?.sessao_ativa?.id, playNotification]);
 
+  // Listen lead_digitando
+  useEffect(() => {
+    if (!socket || !selectedLead?.sessao_ativa?.id) return;
+    const handler = (data: { digitando: boolean }) => {
+      setUsuarioDigitando(data.digitando);
+    };
+    socket.on('lead_digitando', handler);
+    return () => {
+      socket.off('lead_digitando', handler);
+      setUsuarioDigitando(false);
+    };
+  }, [socket, selectedLead?.sessao_ativa?.id]);
+
   // Fallback polling - leads (only if socket not connected)
   useEffect(() => {
     if (socket?.connected) return;
@@ -274,10 +291,11 @@ export default function Conversas() {
       setEnviando(true);
 
       // Mensagem otimista removida - Socket.io entrega em tempo real
+      const textoEnvio = novaMsg;
       setNovaMsg("");
 
       await api.post(`/conversas/leads/${selectedLead.id}/mensagens`, {
-        texto: novaMsg,
+        texto: textoEnvio,
       });
     } catch (err: any) {
       setMensagens(prev => prev.filter(m => !m.id.startsWith('temp-')));
@@ -287,8 +305,43 @@ export default function Conversas() {
         variant: "destructive",
       });
     } finally {
-      setEnviando(false);
+      setTimeout(() => setEnviando(false), 300);
     }
+  };
+
+  const handleMensagemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const texto = e.target.value;
+    setNovaMsg(texto);
+
+    if (socket && selectedLead?.sessao_ativa?.id && texto.length > 0) {
+      socket.emit('usuario_digitando', {
+        conversaId: selectedLead.sessao_ativa.id,
+        digitando: true,
+      });
+      if (timeoutDigitando.current) clearTimeout(timeoutDigitando.current);
+      timeoutDigitando.current = setTimeout(() => {
+        socket.emit('usuario_digitando', {
+          conversaId: selectedLead.sessao_ativa!.id,
+          digitando: false,
+        });
+      }, 3000);
+    }
+  };
+
+  const handleAnexarFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    console.log('Foto selecionada:', file.name);
+    sonnerToast.success(`Foto "${file.name}" selecionada`);
+    e.target.value = '';
+  };
+
+  const handleAnexarDocumento = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    console.log('Documento selecionado:', file.name);
+    sonnerToast.success(`Documento "${file.name}" selecionado`);
+    e.target.value = '';
   };
 
   const blobToBase64 = (blob: Blob): Promise<string> => {
