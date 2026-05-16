@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,31 @@ import { ConversationFilters } from "@/components/whatsapp/Assignment/Conversati
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 import { io, Socket } from "socket.io-client";
+
+// Hook para tocar som de notificação ao receber mensagens
+const useNotificationSound = () => {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio('/sounds/notification.mp3');
+    audioRef.current.volume = 0.5;
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  return useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch((err) => {
+        console.log('Autoplay bloqueado pelo navegador:', err);
+      });
+    }
+  }, []);
+};
 
 const whatsappStyles = {
   headerBg: 'bg-[#075E54]',
