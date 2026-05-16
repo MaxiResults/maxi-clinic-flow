@@ -575,7 +575,7 @@ export default function Conversas() {
                   )}
                 </div>
 
-                <div className="border-t p-4 bg-card">
+                <div className="border-t px-4 py-3 bg-[#F0F2F5]">
                   {showAudioRecorder ? (
                     <div className="flex items-center justify-center">
                       <AudioRecorder
@@ -585,26 +585,64 @@ export default function Conversas() {
                     </div>
                   ) : (
                     <form onSubmit={handleEnviarMensagem} className="flex items-center gap-2">
-                      <AudioRecorder
-                        onAudioReady={handleEnviarAudio}
-                        onCancel={() => setShowAudioRecorder(false)}
-                      />
-                      <Input
-                        value={novaMsg}
-                        onChange={(e) => setNovaMsg(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleEnviarMensagem(e as any);
-                          }
-                        }}
-                        placeholder="Digite uma mensagem..."
-                        disabled={enviando}
-                        className="flex-1"
-                      />
-                      <Button type="submit" disabled={!novaMsg.trim() || enviando} size="icon">
-                        {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      </Button>
+                      {/* Input arredondado estilo WhatsApp */}
+                      <div className="flex-1 flex items-center gap-3 bg-white rounded-[24px] border border-[#E9EDEF] px-4 py-2.5 transition-all hover:border-[#D1D7DB] shadow-sm">
+                        {/* Ícone emoji */}
+                        <button
+                          type="button"
+                          className="text-[#54656F] hover:text-[#25D366] transition-colors duration-200 flex-shrink-0"
+                          title="Emoji"
+                        >
+                          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9c.83 0 1.5-.67 1.5-1.5S7.83 8 7 8s-1.5.67-1.5 1.5S6.17 11 7 11zm5 0c.83 0 1.5-.67 1.5-1.5S12.83 8 12 8s-1.5.67-1.5 1.5.67 1.5 1.5 1.5zm5 0c.83 0 1.5-.67 1.5-1.5S17.83 8 17 8s-1.5.67-1.5 1.5.67 1.5 1.5 1.5zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+                          </svg>
+                        </button>
+
+                        {/* Input de texto */}
+                        <input
+                          type="text"
+                          placeholder="Digite uma mensagem"
+                          value={novaMsg}
+                          onChange={(e) => setNovaMsg(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              if (novaMsg.trim()) {
+                                handleEnviarMensagem(e as any);
+                              }
+                            }
+                          }}
+                          disabled={enviando}
+                          autoComplete="off"
+                          className="flex-1 bg-transparent outline-none text-[15px] text-gray-800 placeholder:text-[#8696A0] min-w-0 disabled:opacity-50"
+                        />
+                      </div>
+
+                      {/* Botão microfone circular com hover verde */}
+                      <button
+                        type="button"
+                        onClick={() => setShowAudioRecorder(true)}
+                        className="group w-12 h-12 flex items-center justify-center rounded-full bg-[#F0F2F5] hover:bg-[#25D366] transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0"
+                        title="Gravar áudio"
+                      >
+                        <Mic className="w-6 h-6 text-[#54656F] group-hover:text-white transition-colors duration-200" />
+                      </button>
+
+                      {/* Botão enviar - aparece quando há texto */}
+                      {novaMsg.trim() && (
+                        <button
+                          type="submit"
+                          disabled={enviando}
+                          className="w-12 h-12 flex items-center justify-center rounded-full bg-[#25D366] hover:bg-[#1DA851] transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0 disabled:opacity-50"
+                          title="Enviar mensagem"
+                        >
+                          {enviando ? (
+                            <Loader2 className="w-5 h-5 text-white animate-spin" />
+                          ) : (
+                            <Send className="w-5 h-5 text-white" />
+                          )}
+                        </button>
+                      )}
                     </form>
                   )}
                 </div>
