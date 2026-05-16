@@ -248,11 +248,6 @@ export default function Conversas() {
       await api.post(`/conversas/leads/${selectedLead.id}/mensagens`, {
         texto: novaMsg,
       });
-
-      toast({
-        title: "✅ Mensagem enviada",
-        description: "Sua mensagem foi enviada com sucesso",
-      });
     } catch (err: any) {
       setMensagens(prev => prev.filter(m => !m.id.startsWith('temp-')));
       toast({
