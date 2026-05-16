@@ -13,6 +13,17 @@ import { ConversationFilters } from "@/components/whatsapp/Assignment/Conversati
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 
+const whatsappStyles = {
+  headerBg: 'bg-[#075E54]',
+  sentBubble: 'bg-[#DCF8C6] text-[#303030]',
+  receivedBubble: 'bg-white text-[#303030] border border-gray-200',
+  chatBg: 'bg-[#ECE5DD]',
+  actionGreen: 'text-[#25D366]',
+  textSecondary: 'text-[#667781]',
+};
+
+const chatBgPattern = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d9d9d9' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`;
+
 interface Atendente {
   id: string;
   nome: string;
@@ -389,17 +400,17 @@ export default function Conversas() {
           <div className="flex h-full flex-col">
             {selectedLead ? (
               <>
-                <div className="border-b p-4 bg-muted/30">
+                <div className={`border-b p-4 ${whatsappStyles.headerBg} text-white`}>
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarFallback className="bg-primary text-primary-foreground">
+                        <AvatarFallback className="bg-white/20 text-white">
                           {selectedLead.nome.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <h3 className="font-semibold">{selectedLead.nome}</h3>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-white/80">
                           {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
                         </p>
                       </div>
@@ -422,14 +433,17 @@ export default function Conversas() {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 bg-muted/20">
+                <div
+                  className="flex-1 overflow-y-auto p-4"
+                  style={{ backgroundImage: chatBgPattern, backgroundColor: '#ECE5DD' }}
+                >
                   {loadingMensagens ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
                   ) : mensagens.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                      <p className="text-sm text-muted-foreground">Nenhuma mensagem ainda</p>
+                      <p className="text-sm text-[#667781]">Nenhuma mensagem ainda</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -440,14 +454,31 @@ export default function Conversas() {
                           <div key={mensagem.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                             {!isOwn && (
                               <Avatar className="h-8 w-8 mr-2 mt-1">
-                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                <AvatarFallback className="bg-[#075E54] text-white text-xs">
                                   {selectedLead?.nome?.[0] || 'L'}
                                 </AvatarFallback>
                               </Avatar>
                             )}
-                            <div className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                              isOwn ? 'bg-primary text-primary-foreground' : 'bg-card border'
-                            }`}>
+                            <div
+                              className={`max-w-[70%] px-4 py-2 shadow-sm relative ${
+                                isOwn ? whatsappStyles.sentBubble : whatsappStyles.receivedBubble
+                              }`}
+                              style={{
+                                borderRadius: isOwn ? '8px 8px 0px 8px' : '8px 8px 8px 0px',
+                              }}
+                            >
+                              <div
+                                className={`absolute bottom-0 ${isOwn ? '-right-2' : '-left-2'}`}
+                                style={{
+                                  width: 0,
+                                  height: 0,
+                                  borderStyle: 'solid',
+                                  borderWidth: isOwn ? '0 10px 10px 0' : '0 0 10px 10px',
+                                  borderColor: isOwn
+                                    ? 'transparent #DCF8C6 transparent transparent'
+                                    : 'transparent transparent transparent #ffffff',
+                                }}
+                              />
                               {isAudio && mensagem.midia_url ? (
                                 <AudioPlayer
                                   audioUrl={mensagem.midia_url}
@@ -456,11 +487,20 @@ export default function Conversas() {
                               ) : (
                                 <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
                               )}
-                              <p className={`text-xs mt-1 ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                              <span className="text-xs text-[#667781] mt-1 flex items-center gap-1 justify-end">
                                 {new Date(mensagem.data_envio).toLocaleTimeString('pt-BR', {
                                   hour: '2-digit', minute: '2-digit'
                                 })}
-                              </p>
+                                {isOwn && (
+                                  <span className={
+                                    mensagem.status_entrega === 'lido' ? 'text-blue-500' : 'text-[#667781]'
+                                  }>
+                                    {mensagem.status_entrega === 'lido' ? '✓✓' :
+                                     mensagem.status_entrega === 'entregue' ? '✓✓' :
+                                     mensagem.status_entrega === 'enviado' ? '✓' : '🕐'}
+                                  </span>
+                                )}
+                              </span>
                             </div>
                           </div>
                         );
