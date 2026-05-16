@@ -110,6 +110,8 @@ export default function Conversas() {
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
 
+  const playNotification = useNotificationSound();
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -177,6 +179,10 @@ export default function Conversas() {
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
+        // Tocar som apenas para mensagens recebidas (não enviadas por mim)
+        if (data.mensagem?.is_from_me === false) {
+          playNotification();
+        }
       }
     };
 
@@ -184,7 +190,7 @@ export default function Conversas() {
     return () => {
       socket.off('nova_mensagem', handleNovaMensagem);
     };
-  }, [socket, selectedLead?.sessao_ativa?.id]);
+  }, [socket, selectedLead?.sessao_ativa?.id, playNotification]);
 
   // Fallback polling - leads (only if socket not connected)
   useEffect(() => {
@@ -586,6 +592,12 @@ export default function Conversas() {
                       <Input
                         value={novaMsg}
                         onChange={(e) => setNovaMsg(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleEnviarMensagem(e as any);
+                          }
+                        }}
                         placeholder="Digite uma mensagem..."
                         disabled={enviando}
                         className="flex-1"
