@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -177,12 +177,70 @@ export default function Conversas() {
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
   const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [emojiPickerAberto, setEmojiPickerAberto] = useState(false);
+  const [lightboxAberto, setLightboxAberto] = useState(false);
+  const [todasImagens, setTodasImagens] = useState<string[]>([]);
+  const [indiceAtual, setIndiceAtual] = useState(0);
+  const [zoomLightbox, setZoomLightbox] = useState(1);
 
   const playNotification = useNotificationSound();
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setNovaMsg((prev) => prev + emojiData.emoji);
   };
+
+  const isImagemUrl = (url?: string) => {
+    if (!url) return false;
+    return /\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i.test(url);
+  };
+
+  const abrirLightbox = (urlImagem: string) => {
+    const imagens = mensagens
+      .filter((m) => (m.tipo_mensagem === 'image' || isImagemUrl(m.midia_url)) && m.midia_url)
+      .map((m) => m.midia_url as string);
+    const indice = imagens.indexOf(urlImagem);
+    setTodasImagens(imagens.length ? imagens : [urlImagem]);
+    setIndiceAtual(indice >= 0 ? indice : 0);
+    setZoomLightbox(1);
+    setLightboxAberto(true);
+  };
+
+  const fecharLightbox = useCallback(() => {
+    setLightboxAberto(false);
+    setTodasImagens([]);
+    setIndiceAtual(0);
+    setZoomLightbox(1);
+  }, []);
+
+  const proximaImagem = useCallback(() => {
+    setZoomLightbox(1);
+    setIndiceAtual((i) => (i + 1) % Math.max(todasImagens.length, 1));
+  }, [todasImagens.length]);
+
+  const imagemAnterior = useCallback(() => {
+    setZoomLightbox(1);
+    setIndiceAtual((i) => (i - 1 + todasImagens.length) % Math.max(todasImagens.length, 1));
+  }, [todasImagens.length]);
+
+  const downloadImagem = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `imagem-${Date.now()}.jpg`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  useEffect(() => {
+    if (!lightboxAberto) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') fecharLightbox();
+      else if (e.key === 'ArrowRight') proximaImagem();
+      else if (e.key === 'ArrowLeft') imagemAnterior();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [lightboxAberto, fecharLightbox, proximaImagem, imagemAnterior]);
 
   useEffect(() => {
     if (!emojiPickerAberto) return;
@@ -683,6 +741,21 @@ export default function Conversas() {
                                   audioUrl={mensagem.midia_url}
                                   duration={mensagem.duracao_audio_segundos}
                                 />
+                              ) : (mensagem.tipo_mensagem === 'image' || isImagemUrl(mensagem.midia_url)) && mensagem.midia_url ? (
+                                <div className="relative group cursor-pointer" onClick={() => abrirLightbox(mensagem.midia_url!)}>
+                                  <img
+                                    src={mensagem.midia_url}
+                                    alt="Imagem"
+                                    className="max-w-[300px] max-h-[300px] rounded-lg object-cover transition-opacity hover:opacity-90"
+                                    loading="lazy"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors">
+                                    <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                  {mensagem.mensagem && (
+                                    <p className="text-sm whitespace-pre-wrap break-words mt-2">{mensagem.mensagem}</p>
+                                  )}
+                                </div>
                               ) : (
                                 <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
                               )}
