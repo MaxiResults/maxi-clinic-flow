@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { EmpresaBadge } from "@/components/EmpresaBadge";
 
 interface TopBarProps {
   title?: string;
@@ -36,6 +37,7 @@ export function TopBar({ title }: TopBarProps) {
       )}
 
       <div className="ml-auto flex items-center gap-2">
+        <EmpresaBadge />
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute right-1 top-1 flex h-2 w-2">
