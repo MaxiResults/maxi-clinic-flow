@@ -1004,6 +1004,82 @@ export default function Conversas() {
           onSuccess={handleAssignSuccess}
         />
       )}
+
+      {/* Lightbox de imagem */}
+      {lightboxAberto && todasImagens.length > 0 && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center animate-fade-in"
+          onClick={fecharLightbox}
+          onWheel={(e) => {
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            setZoomLightbox((z) => Math.min(5, Math.max(0.5, z + delta)));
+          }}
+        >
+          {/* Toolbar */}
+          <div
+            className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-black/60 to-transparent text-white z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-sm font-medium">
+              Imagem {indiceAtual + 1} de {todasImagens.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => downloadImagem(todasImagens[indiceAtual])}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                title="Download"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <button
+                onClick={fecharLightbox}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                title="Fechar (ESC)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Navegação anterior */}
+          {todasImagens.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); imagemAnterior(); }}
+              className="absolute left-4 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              title="Anterior (←)"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Imagem */}
+          <img
+            src={todasImagens[indiceAtual]}
+            alt={`Imagem ${indiceAtual + 1}`}
+            className="max-w-[90vw] max-h-[85vh] object-contain transition-transform duration-200 select-none"
+            style={{ transform: `scale(${zoomLightbox})` }}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={() => setZoomLightbox((z) => (z === 1 ? 2 : 1))}
+            draggable={false}
+          />
+
+          {/* Navegação próxima */}
+          {todasImagens.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); proximaImagem(); }}
+              className="absolute right-4 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              title="Próxima (→)"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Caption */}
+          <div className="absolute bottom-0 left-0 right-0 text-center py-4 text-white/70 text-xs bg-gradient-to-t from-black/60 to-transparent">
+            Use ← → para navegar • Scroll para zoom • Duplo clique para zoom 2x • ESC para fechar
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
