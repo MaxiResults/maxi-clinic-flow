@@ -17,6 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import api from '@/lib/api';
 
 interface HorarioDia {
@@ -79,6 +80,7 @@ export default function ProfissionalForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -188,8 +190,8 @@ export default function ProfissionalForm() {
 
     const timestamp = Date.now();
     const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const clienteId = 2;
-    const empresaId = 2;
+    const clienteId = user!.cliente_id;
+    const empresaId = user!.empresa_id;
     const filePath = `${clienteId}/${empresaId}/${fileName}`;
 
     const { data, error } = await supabase.storage

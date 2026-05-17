@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,12 +25,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "@/hooks/use-toast";
-
-// Configuração do Supabase
-const supabase = createClient(
-  "https://sunccjukvrximjiqzdkm.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1bmNjanVrdnJ4aW1qaXF6ZGttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNzMyODUsImV4cCI6MjA3NDg0OTI4NX0.Xt68Jol4GQ-GeL7g4z_wmm6ui81BIpTNJmNO7WhR_7E"
-);
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import api from '@/lib/api';
 
 interface Produto {
@@ -114,6 +109,7 @@ const produtoSchema = z.object({
 });
 
 export default function Produtos() {
+  const { user } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [grupos, setGrupos] = useState<Grupo[]>([]);
@@ -229,8 +225,8 @@ export default function Produtos() {
     
     const timestamp = Date.now();
     const fileName = `${timestamp}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const clienteId = 2;
-    const empresaId = 2;
+    const clienteId = user!.cliente_id;
+    const empresaId = user!.empresa_id;
     const filePath = `${clienteId}/${empresaId}/${fileName}`;
     
     const { data, error } = await supabase.storage
