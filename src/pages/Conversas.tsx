@@ -852,6 +852,25 @@ export default function Conversas() {
                                     <p className="text-sm whitespace-pre-wrap break-words mt-2">{mensagem.mensagem}</p>
                                   )}
                                 </div>
+                              ) : mensagem.tipo_mensagem === 'document' && mensagem.midia_url ? (
+                                <a
+                                  href={mensagem.midia_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download
+                                  className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors max-w-[300px]"
+                                >
+                                  <div className="w-10 h-10 bg-[#5F66CD] rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <FileText className="w-6 h-6 text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {mensagem.mensagem || 'Documento'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">Clique para baixar</p>
+                                  </div>
+                                  <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                </a>
                               ) : (
                                 <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
                               )}
