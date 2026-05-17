@@ -93,7 +93,7 @@ export function Footer() {
           <div className="space-y-6 py-2">
             <section className="rounded-lg border bg-muted/30 p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Badge className="bg-status-active text-white hover:bg-status-active">ATUAL</Badge>
+                <Badge>ATUAL</Badge>
                 <h3 className="text-base font-semibold">v{currentEntry.version}</h3>
                 <span className="text-xs text-muted-foreground">{currentEntry.date}</span>
               </div>
