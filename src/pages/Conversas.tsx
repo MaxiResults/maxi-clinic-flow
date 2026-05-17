@@ -798,6 +798,7 @@ export default function Conversas() {
                           size="sm"
                           variant="outline"
                           onClick={() => setAssignModalOpen(true)}
+                          className="bg-white text-[#075E54] border-white hover:bg-[#F0F2F5] hover:text-[#075E54]"
                         >
                           Atribuir
                         </Button>
