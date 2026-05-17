@@ -147,7 +147,7 @@ interface Mensagem {
   id: string;
   sessao_id: string;
   remetente: 'cliente' | 'atendente' | 'bot';
-  tipo_mensagem: 'text' | 'image' | 'audio' | 'video';
+  tipo_mensagem: 'text' | 'image' | 'audio' | 'video' | 'document';
   mensagem: string;
   message_id?: string;
   data_envio: string;
@@ -181,6 +181,11 @@ export default function Conversas() {
   const [todasImagens, setTodasImagens] = useState<string[]>([]);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [zoomLightbox, setZoomLightbox] = useState(1);
+
+  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadando, setUploadando] = useState(false);
+  const [progressoUpload, setProgressoUpload] = useState(0);
 
   const playNotification = useNotificationSound();
 
@@ -463,20 +468,111 @@ export default function Conversas() {
     }
   };
 
+  const validarArquivo = (
+    file: File,
+    tipo: 'foto' | 'documento'
+  ): { valido: boolean; erro?: string } => {
+    const limiteBytes = tipo === 'foto' ? 10 * 1024 * 1024 : 20 * 1024 * 1024;
+    if (file.size > limiteBytes) {
+      return { valido: false, erro: `Arquivo muito grande! Máximo ${tipo === 'foto' ? '10MB' : '20MB'}` };
+    }
+    const formatosPermitidos = tipo === 'foto'
+      ? ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+      : [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+    if (!formatosPermitidos.includes(file.type)) {
+      return {
+        valido: false,
+        erro: `Formato não permitido! Use ${tipo === 'foto' ? 'JPG, PNG, GIF ou WEBP' : 'PDF, DOC, DOCX, XLS ou XLSX'}`,
+      };
+    }
+    return { valido: true };
+  };
+
+  const criarPreview = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviewUrl(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
   const handleAnexarFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    console.log('Foto selecionada:', file.name);
-    sonnerToast.success(`Foto "${file.name}" selecionada`);
+    const validacao = validarArquivo(file, 'foto');
+    if (!validacao.valido) {
+      sonnerToast.error(validacao.erro);
+      e.target.value = '';
+      return;
+    }
+    setArquivoSelecionado(file);
+    criarPreview(file);
+    setMenuAnexoAberto(false);
     e.target.value = '';
   };
 
   const handleAnexarDocumento = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    console.log('Documento selecionado:', file.name);
-    sonnerToast.success(`Documento "${file.name}" selecionado`);
+    const validacao = validarArquivo(file, 'documento');
+    if (!validacao.valido) {
+      sonnerToast.error(validacao.erro);
+      e.target.value = '';
+      return;
+    }
+    setArquivoSelecionado(file);
+    criarPreview(file);
+    setMenuAnexoAberto(false);
     e.target.value = '';
+  };
+
+  const enviarArquivo = async () => {
+    if (!arquivoSelecionado || !selectedLead) return;
+    try {
+      setUploadando(true);
+      setProgressoUpload(0);
+
+      const formData = new FormData();
+      formData.append('arquivo', arquivoSelecionado);
+      formData.append('leadId', String(selectedLead.id));
+      formData.append('tipoArquivo', arquivoSelecionado.type.startsWith('image/') ? 'image' : 'document');
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${import.meta.env.VITE_API_URL}/conversas/upload`);
+        const token = localStorage.getItem('token');
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable) {
+            setProgressoUpload(Math.round((evt.loaded / evt.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error('Erro ao enviar arquivo'));
+        };
+        xhr.onerror = () => reject(new Error('Erro ao enviar arquivo'));
+        xhr.send(formData);
+      });
+
+      setArquivoSelecionado(null);
+      setPreviewUrl(null);
+      setProgressoUpload(0);
+      sonnerToast.success('Arquivo enviado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar arquivo:', error);
+      sonnerToast.error('Erro ao enviar arquivo');
+    } finally {
+      setUploadando(false);
+    }
   };
 
   const blobToBase64 = (blob: Blob): Promise<string> => {
