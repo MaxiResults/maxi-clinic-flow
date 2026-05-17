@@ -13,6 +13,7 @@ import { ConversationFilters } from "@/components/whatsapp/Assignment/Conversati
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 import { io, Socket } from "socket.io-client";
+import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from "emoji-picker-react";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -175,8 +176,22 @@ export default function Conversas() {
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
   const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [emojiPickerAberto, setEmojiPickerAberto] = useState(false);
 
   const playNotification = useNotificationSound();
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setNovaMsg((prev) => prev + emojiData.emoji);
+  };
+
+  useEffect(() => {
+    if (!emojiPickerAberto) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEmojiPickerAberto(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [emojiPickerAberto]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -788,16 +803,41 @@ export default function Conversas() {
                           />
                         </div>
 
-                        {/* Ícone emoji */}
-                        <button
-                          type="button"
-                          className="text-[#54656F] hover:text-[#25D366] transition-colors duration-200 flex-shrink-0"
-                          title="Emoji"
-                        >
-                          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9c.83 0 1.5-.67 1.5-1.5S7.83 8 7 8s-1.5.67-1.5 1.5S6.17 11 7 11zm5 0c.83 0 1.5-.67 1.5-1.5S12.83 8 12 8s-1.5.67-1.5 1.5.67 1.5 1.5 1.5zm5 0c.83 0 1.5-.67 1.5-1.5S17.83 8 17 8s-1.5.67-1.5 1.5.67 1.5 1.5 1.5zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-                          </svg>
-                        </button>
+                        {/* Botão emoji com picker */}
+                        <div className="relative flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setEmojiPickerAberto((v) => !v)}
+                            className={`transition-colors duration-200 ${
+                              emojiPickerAberto ? 'text-[#25D366]' : 'text-[#54656F] hover:text-[#25D366]'
+                            }`}
+                            title="Emoji"
+                          >
+                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9c.83 0 1.5-.67 1.5-1.5S7.83 8 7 8s-1.5.67-1.5 1.5S6.17 11 7 11zm5 0c.83 0 1.5-.67 1.5-1.5S12.83 8 12 8s-1.5.67-1.5 1.5.67 1.5 1.5 1.5zm5 0c.83 0 1.5-.67 1.5-1.5S17.83 8 17 8s-1.5.67-1.5 1.5.67 1.5 1.5 1.5zM12 17.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+                            </svg>
+                          </button>
+                          {emojiPickerAberto && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setEmojiPickerAberto(false)}
+                              />
+                              <div className="absolute bottom-10 left-0 z-20 shadow-2xl rounded-lg overflow-hidden animate-fade-in">
+                                <EmojiPicker
+                                  onEmojiClick={handleEmojiClick}
+                                  theme={Theme.LIGHT}
+                                  emojiStyle={EmojiStyle.NATIVE}
+                                  searchPlaceholder="Buscar emoji..."
+                                  width={350}
+                                  height={400}
+                                  lazyLoadEmojis
+                                  previewConfig={{ showPreview: false }}
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
 
                         {/* Input de texto */}
                         <input
