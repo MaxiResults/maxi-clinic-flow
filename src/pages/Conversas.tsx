@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -542,11 +542,11 @@ export default function Conversas() {
                     onClick={() => handleSelectLead(lead)}
                   >
                     <div className="flex items-start gap-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {lead.nome.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ContactAvatar
+                        nome={lead.nome}
+                        avatarUrl={lead.avatar_url}
+                        size="md"
+                      />
                       <div className="flex-1 overflow-hidden">
                         <div className="flex items-center justify-between mb-1">
                           <p className="font-medium truncate">{lead.nome}</p>
@@ -583,11 +583,11 @@ export default function Conversas() {
                 <div className={`border-b p-4 ${whatsappStyles.headerBg} text-white`}>
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-white/20 text-white">
-                          {selectedLead.nome.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ContactAvatar
+                        nome={selectedLead.nome}
+                        avatarUrl={selectedLead.avatar_url}
+                        size="lg"
+                      />
                       <div>
                         <h3 className="font-semibold">{selectedLead.nome}</h3>
                         <p className="text-xs text-white/80">
@@ -636,11 +636,12 @@ export default function Conversas() {
                             className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
                           >
                             {!isOwn && (
-                              <Avatar className="h-8 w-8 mr-2 mt-1">
-                                <AvatarFallback className="bg-[#075E54] text-white text-xs">
-                                  {selectedLead?.nome?.[0] || 'L'}
-                                </AvatarFallback>
-                              </Avatar>
+                              <ContactAvatar
+                                nome={selectedLead?.nome || 'Usuário'}
+                                avatarUrl={selectedLead?.avatar_url}
+                                size="sm"
+                                className="mr-2 mt-1"
+                              />
                             )}
                             <div
                               className={`max-w-[70%] px-4 py-2 shadow-sm relative ${
