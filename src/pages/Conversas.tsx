@@ -1099,28 +1099,30 @@ export default function Conversas() {
                       )}
                       </div>
 
-                      {/* Contador de caracteres */}
-                      {novaMsg.length > 0 && (
-                        <div className="flex items-center gap-2 px-3 text-[11px] mt-0.5">
-                          <span
-                            className={
-                              novaMsg.length > 1000
-                                ? 'text-red-500 font-medium'
-                                : novaMsg.length > 500
-                                ? 'text-orange-500'
-                                : 'text-[#8696A0]'
-                            }
-                          >
-                            {novaMsg.length} caracteres
-                          </span>
-                          {novaMsg.length > 500 && novaMsg.length <= 1000 && (
-                            <span className="text-orange-500">• Mensagem longa</span>
-                          )}
-                          {novaMsg.length > 1000 && (
-                            <span className="text-red-500">• Limite atingido</span>
-                          )}
-                        </div>
-                      )}
+                      {/* Contador de caracteres (espaço sempre reservado para evitar shift de layout) */}
+                      <div className="flex items-center gap-2 px-3 text-[11px] mt-0.5 h-4">
+                        {novaMsg.length > 0 && (
+                          <>
+                            <span
+                              className={
+                                novaMsg.length > 1000
+                                  ? 'text-red-500 font-medium'
+                                  : novaMsg.length > 500
+                                  ? 'text-orange-500'
+                                  : 'text-[#8696A0]'
+                              }
+                            >
+                              {novaMsg.length} caracteres
+                            </span>
+                            {novaMsg.length > 500 && novaMsg.length <= 1000 && (
+                              <span className="text-orange-500">• Mensagem longa</span>
+                            )}
+                            {novaMsg.length > 1000 && (
+                              <span className="text-red-500">• Limite atingido</span>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </form>
                   )}
                 </div>
