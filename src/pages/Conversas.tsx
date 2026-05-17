@@ -147,7 +147,7 @@ interface Mensagem {
   id: string;
   sessao_id: string;
   remetente: 'cliente' | 'atendente' | 'bot';
-  tipo_mensagem: 'text' | 'image' | 'audio' | 'video';
+  tipo_mensagem: 'text' | 'image' | 'audio' | 'video' | 'document';
   mensagem: string;
   message_id?: string;
   data_envio: string;
@@ -181,6 +181,11 @@ export default function Conversas() {
   const [todasImagens, setTodasImagens] = useState<string[]>([]);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [zoomLightbox, setZoomLightbox] = useState(1);
+
+  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadando, setUploadando] = useState(false);
+  const [progressoUpload, setProgressoUpload] = useState(0);
 
   const playNotification = useNotificationSound();
 
@@ -463,20 +468,111 @@ export default function Conversas() {
     }
   };
 
+  const validarArquivo = (
+    file: File,
+    tipo: 'foto' | 'documento'
+  ): { valido: boolean; erro?: string } => {
+    const limiteBytes = tipo === 'foto' ? 10 * 1024 * 1024 : 20 * 1024 * 1024;
+    if (file.size > limiteBytes) {
+      return { valido: false, erro: `Arquivo muito grande! Máximo ${tipo === 'foto' ? '10MB' : '20MB'}` };
+    }
+    const formatosPermitidos = tipo === 'foto'
+      ? ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+      : [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ];
+    if (!formatosPermitidos.includes(file.type)) {
+      return {
+        valido: false,
+        erro: `Formato não permitido! Use ${tipo === 'foto' ? 'JPG, PNG, GIF ou WEBP' : 'PDF, DOC, DOCX, XLS ou XLSX'}`,
+      };
+    }
+    return { valido: true };
+  };
+
+  const criarPreview = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviewUrl(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
   const handleAnexarFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    console.log('Foto selecionada:', file.name);
-    sonnerToast.success(`Foto "${file.name}" selecionada`);
+    const validacao = validarArquivo(file, 'foto');
+    if (!validacao.valido) {
+      sonnerToast.error(validacao.erro);
+      e.target.value = '';
+      return;
+    }
+    setArquivoSelecionado(file);
+    criarPreview(file);
+    setMenuAnexoAberto(false);
     e.target.value = '';
   };
 
   const handleAnexarDocumento = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    console.log('Documento selecionado:', file.name);
-    sonnerToast.success(`Documento "${file.name}" selecionado`);
+    const validacao = validarArquivo(file, 'documento');
+    if (!validacao.valido) {
+      sonnerToast.error(validacao.erro);
+      e.target.value = '';
+      return;
+    }
+    setArquivoSelecionado(file);
+    criarPreview(file);
+    setMenuAnexoAberto(false);
     e.target.value = '';
+  };
+
+  const enviarArquivo = async () => {
+    if (!arquivoSelecionado || !selectedLead) return;
+    try {
+      setUploadando(true);
+      setProgressoUpload(0);
+
+      const formData = new FormData();
+      formData.append('arquivo', arquivoSelecionado);
+      formData.append('leadId', String(selectedLead.id));
+      formData.append('tipoArquivo', arquivoSelecionado.type.startsWith('image/') ? 'image' : 'document');
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${import.meta.env.VITE_API_URL}/conversas/upload`);
+        const token = localStorage.getItem('token');
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable) {
+            setProgressoUpload(Math.round((evt.loaded / evt.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error('Erro ao enviar arquivo'));
+        };
+        xhr.onerror = () => reject(new Error('Erro ao enviar arquivo'));
+        xhr.send(formData);
+      });
+
+      setArquivoSelecionado(null);
+      setPreviewUrl(null);
+      setProgressoUpload(0);
+      sonnerToast.success('Arquivo enviado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao enviar arquivo:', error);
+      sonnerToast.error('Erro ao enviar arquivo');
+    } finally {
+      setUploadando(false);
+    }
   };
 
   const blobToBase64 = (blob: Blob): Promise<string> => {
@@ -756,6 +852,25 @@ export default function Conversas() {
                                     <p className="text-sm whitespace-pre-wrap break-words mt-2">{mensagem.mensagem}</p>
                                   )}
                                 </div>
+                              ) : mensagem.tipo_mensagem === 'document' && mensagem.midia_url ? (
+                                <a
+                                  href={mensagem.midia_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  download
+                                  className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors max-w-[300px]"
+                                >
+                                  <div className="w-10 h-10 bg-[#5F66CD] rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <FileText className="w-6 h-6 text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {mensagem.mensagem || 'Documento'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">Clique para baixar</p>
+                                  </div>
+                                  <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                </a>
                               ) : (
                                 <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
                               )}
@@ -1077,6 +1192,82 @@ export default function Conversas() {
           {/* Caption */}
           <div className="absolute bottom-0 left-0 right-0 text-center py-4 text-white/70 text-xs bg-gradient-to-t from-black/60 to-transparent">
             Use ← → para navegar • Scroll para zoom • Duplo clique para zoom 2x • ESC para fechar
+          </div>
+        </div>
+      )}
+
+      {arquivoSelecionado && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Enviar Arquivo</h3>
+              <button
+                onClick={() => { setArquivoSelecionado(null); setPreviewUrl(null); }}
+                disabled={uploadando}
+                className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="mb-4">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-auto max-h-[300px] object-contain rounded-lg border"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 bg-gray-50 rounded-lg border-2 border-dashed">
+                  <FileText className="w-16 h-16 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600">{arquivoSelecionado.name}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(arquivoSelecionado.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="mb-4 p-3 bg-gray-50 rounded space-y-1">
+              <p className="text-sm text-gray-700"><span className="font-medium">Nome:</span> {arquivoSelecionado.name}</p>
+              <p className="text-sm text-gray-700"><span className="font-medium">Tamanho:</span> {(arquivoSelecionado.size / 1024 / 1024).toFixed(2)} MB</p>
+              <p className="text-sm text-gray-700"><span className="font-medium">Tipo:</span> {arquivoSelecionado.type}</p>
+            </div>
+            {uploadando && (
+              <div className="mb-4">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-[#25D366] h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progressoUpload}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600 text-center mt-1">{progressoUpload}% enviado...</p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setArquivoSelecionado(null); setPreviewUrl(null); }}
+                disabled={uploadando}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={enviarArquivo}
+                disabled={uploadando}
+                className="flex-1 px-4 py-2 bg-[#25D366] text-white rounded-lg hover:bg-[#20BD5F] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {uploadando ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Enviar
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
