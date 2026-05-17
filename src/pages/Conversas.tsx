@@ -327,6 +327,32 @@ export default function Conversas() {
         if (data.mensagem?.is_from_me === false) {
           playNotification();
         }
+
+        // Atualiza preview da última mensagem na sidebar
+        setLeads(prev => prev.map(lead => {
+          if (!lead.sessao_ativa) return lead;
+          if (lead.sessao_ativa.id !== data.conversaId) return lead;
+          return {
+            ...lead,
+            ultima_mensagem: {
+              mensagem: data.mensagem.mensagem || '',
+              data_envio: data.mensagem.data_envio,
+              tipo_mensagem: data.mensagem.tipo_mensagem || 'text',
+            },
+            ultima_interacao: data.mensagem.data_envio,
+            total_mensagens: (lead.total_mensagens || 0) + 1,
+          };
+        }));
+
+        // Reordena a lista para o lead com nova mensagem aparecer primeiro
+        setLeads(prev => {
+          const atualizado = prev.find(l => l.sessao_ativa?.id === data.conversaId);
+          if (!atualizado) return prev;
+          return [
+            atualizado,
+            ...prev.filter(l => l.sessao_ativa?.id !== data.conversaId)
+          ];
+        });
       }
     };
 
@@ -542,12 +568,11 @@ export default function Conversas() {
 
       const formData = new FormData();
       formData.append('arquivo', arquivoSelecionado);
-      formData.append('leadId', String(selectedLead.id));
       formData.append('tipoArquivo', arquivoSelecionado.type.startsWith('image/') ? 'image' : 'document');
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${import.meta.env.VITE_API_URL}/conversas/upload`);
+        xhr.open('POST', `${import.meta.env.VITE_API_URL}/conversas/leads/${selectedLead.id}/upload`);
         const token = localStorage.getItem('token');
         if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         xhr.upload.onprogress = (evt) => {
@@ -1114,7 +1139,7 @@ export default function Conversas() {
         <AssignmentModal
           open={assignModalOpen}
           onOpenChange={setAssignModalOpen}
-          conversationId={selectedLead.id}
+          conversationId={selectedLead.sessao_ativa?.id ?? ''}
           currentAtendente={selectedLead.sessao_ativa?.atendente || undefined}
           onSuccess={handleAssignSuccess}
         />
