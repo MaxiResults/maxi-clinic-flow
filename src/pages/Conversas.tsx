@@ -3,7 +3,6 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
@@ -14,6 +13,68 @@ import { ConversationFilters } from "@/components/whatsapp/Assignment/Conversati
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 import { io, Socket } from "socket.io-client";
+
+// Componente de Avatar com foto do contato ou iniciais coloridas
+const ContactAvatar = ({
+  nome,
+  avatarUrl,
+  size = 'md',
+  className = '',
+}: {
+  nome: string;
+  avatarUrl?: string | null;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) => {
+  const sizes = {
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-12 h-12 text-base',
+  };
+
+  const safeNome = nome || 'Usuário';
+  const iniciais = safeNome
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n.charAt(0).toUpperCase())
+    .join('');
+
+  const colors = [
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-purple-500',
+    'bg-pink-500',
+    'bg-indigo-500',
+    'bg-red-500',
+    'bg-yellow-500',
+    'bg-teal-500',
+  ];
+  const hash = safeNome.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
+  const bgColor = colors[Math.abs(hash) % colors.length];
+
+  const [imgError, setImgError] = React.useState(false);
+  const showImage = !!avatarUrl && !imgError;
+
+  return (
+    <div
+      className={`${sizes[size]} rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${className}`}
+    >
+      {showImage ? (
+        <img
+          src={avatarUrl!}
+          alt={safeNome}
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className={`${bgColor} w-full h-full flex items-center justify-center text-white font-semibold`}>
+          {iniciais || '?'}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Hook para tocar som de notificação ao receber mensagens
 const useNotificationSound = () => {
@@ -64,6 +125,7 @@ interface Lead {
   whatsapp_id: string;
   status: string;
   canal_origem: string;
+  avatar_url?: string | null;
   sessao_ativa: {
     id: string;
     status_sessao: string;
