@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -177,12 +177,70 @@ export default function Conversas() {
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
   const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [emojiPickerAberto, setEmojiPickerAberto] = useState(false);
+  const [lightboxAberto, setLightboxAberto] = useState(false);
+  const [todasImagens, setTodasImagens] = useState<string[]>([]);
+  const [indiceAtual, setIndiceAtual] = useState(0);
+  const [zoomLightbox, setZoomLightbox] = useState(1);
 
   const playNotification = useNotificationSound();
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setNovaMsg((prev) => prev + emojiData.emoji);
   };
+
+  const isImagemUrl = (url?: string) => {
+    if (!url) return false;
+    return /\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i.test(url);
+  };
+
+  const abrirLightbox = (urlImagem: string) => {
+    const imagens = mensagens
+      .filter((m) => (m.tipo_mensagem === 'image' || isImagemUrl(m.midia_url)) && m.midia_url)
+      .map((m) => m.midia_url as string);
+    const indice = imagens.indexOf(urlImagem);
+    setTodasImagens(imagens.length ? imagens : [urlImagem]);
+    setIndiceAtual(indice >= 0 ? indice : 0);
+    setZoomLightbox(1);
+    setLightboxAberto(true);
+  };
+
+  const fecharLightbox = useCallback(() => {
+    setLightboxAberto(false);
+    setTodasImagens([]);
+    setIndiceAtual(0);
+    setZoomLightbox(1);
+  }, []);
+
+  const proximaImagem = useCallback(() => {
+    setZoomLightbox(1);
+    setIndiceAtual((i) => (i + 1) % Math.max(todasImagens.length, 1));
+  }, [todasImagens.length]);
+
+  const imagemAnterior = useCallback(() => {
+    setZoomLightbox(1);
+    setIndiceAtual((i) => (i - 1 + todasImagens.length) % Math.max(todasImagens.length, 1));
+  }, [todasImagens.length]);
+
+  const downloadImagem = (url: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `imagem-${Date.now()}.jpg`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  useEffect(() => {
+    if (!lightboxAberto) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') fecharLightbox();
+      else if (e.key === 'ArrowRight') proximaImagem();
+      else if (e.key === 'ArrowLeft') imagemAnterior();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [lightboxAberto, fecharLightbox, proximaImagem, imagemAnterior]);
 
   useEffect(() => {
     if (!emojiPickerAberto) return;
@@ -683,6 +741,21 @@ export default function Conversas() {
                                   audioUrl={mensagem.midia_url}
                                   duration={mensagem.duracao_audio_segundos}
                                 />
+                              ) : (mensagem.tipo_mensagem === 'image' || isImagemUrl(mensagem.midia_url)) && mensagem.midia_url ? (
+                                <div className="relative group cursor-pointer" onClick={() => abrirLightbox(mensagem.midia_url!)}>
+                                  <img
+                                    src={mensagem.midia_url}
+                                    alt="Imagem"
+                                    className="max-w-[300px] max-h-[300px] rounded-lg object-cover transition-opacity hover:opacity-90"
+                                    loading="lazy"
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors">
+                                    <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  </div>
+                                  {mensagem.mensagem && (
+                                    <p className="text-sm whitespace-pre-wrap break-words mt-2">{mensagem.mensagem}</p>
+                                  )}
+                                </div>
                               ) : (
                                 <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
                               )}
@@ -930,6 +1003,82 @@ export default function Conversas() {
           currentAtendente={selectedLead.sessao_ativa?.atendente || undefined}
           onSuccess={handleAssignSuccess}
         />
+      )}
+
+      {/* Lightbox de imagem */}
+      {lightboxAberto && todasImagens.length > 0 && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center animate-fade-in"
+          onClick={fecharLightbox}
+          onWheel={(e) => {
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            setZoomLightbox((z) => Math.min(5, Math.max(0.5, z + delta)));
+          }}
+        >
+          {/* Toolbar */}
+          <div
+            className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-black/60 to-transparent text-white z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-sm font-medium">
+              Imagem {indiceAtual + 1} de {todasImagens.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => downloadImagem(todasImagens[indiceAtual])}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                title="Download"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <button
+                onClick={fecharLightbox}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                title="Fechar (ESC)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Navegação anterior */}
+          {todasImagens.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); imagemAnterior(); }}
+              className="absolute left-4 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              title="Anterior (←)"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Imagem */}
+          <img
+            src={todasImagens[indiceAtual]}
+            alt={`Imagem ${indiceAtual + 1}`}
+            className="max-w-[90vw] max-h-[85vh] object-contain transition-transform duration-200 select-none"
+            style={{ transform: `scale(${zoomLightbox})` }}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={() => setZoomLightbox((z) => (z === 1 ? 2 : 1))}
+            draggable={false}
+          />
+
+          {/* Navegação próxima */}
+          {todasImagens.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); proximaImagem(); }}
+              className="absolute right-4 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+              title="Próxima (→)"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+
+          {/* Caption */}
+          <div className="absolute bottom-0 left-0 right-0 text-center py-4 text-white/70 text-xs bg-gradient-to-t from-black/60 to-transparent">
+            Use ← → para navegar • Scroll para zoom • Duplo clique para zoom 2x • ESC para fechar
+          </div>
+        </div>
       )}
     </DashboardLayout>
   );
