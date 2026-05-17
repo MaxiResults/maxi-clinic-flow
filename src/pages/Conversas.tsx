@@ -13,6 +13,7 @@ import { ConversationFilters } from "@/components/whatsapp/Assignment/Conversati
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 import { io, Socket } from "socket.io-client";
+import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from "emoji-picker-react";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -175,8 +176,22 @@ export default function Conversas() {
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
   const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [emojiPickerAberto, setEmojiPickerAberto] = useState(false);
 
   const playNotification = useNotificationSound();
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setNovaMsg((prev) => prev + emojiData.emoji);
+  };
+
+  useEffect(() => {
+    if (!emojiPickerAberto) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEmojiPickerAberto(false);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [emojiPickerAberto]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
