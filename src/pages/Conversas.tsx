@@ -796,8 +796,8 @@ export default function Conversas() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                       {mensagens.map((mensagem, idx) => {
-                        const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
+                        {mensagens.map((mensagem: any, idx) => {
+                         const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
                         const isAudio = mensagem.tipo_mensagem === 'audio';
                         return (
                           <div
