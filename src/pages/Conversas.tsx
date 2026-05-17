@@ -1195,6 +1195,82 @@ export default function Conversas() {
           </div>
         </div>
       )}
+
+      {arquivoSelecionado && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Enviar Arquivo</h3>
+              <button
+                onClick={() => { setArquivoSelecionado(null); setPreviewUrl(null); }}
+                disabled={uploadando}
+                className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="mb-4">
+              {previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-auto max-h-[300px] object-contain rounded-lg border"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 bg-gray-50 rounded-lg border-2 border-dashed">
+                  <FileText className="w-16 h-16 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600">{arquivoSelecionado.name}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(arquivoSelecionado.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="mb-4 p-3 bg-gray-50 rounded space-y-1">
+              <p className="text-sm text-gray-700"><span className="font-medium">Nome:</span> {arquivoSelecionado.name}</p>
+              <p className="text-sm text-gray-700"><span className="font-medium">Tamanho:</span> {(arquivoSelecionado.size / 1024 / 1024).toFixed(2)} MB</p>
+              <p className="text-sm text-gray-700"><span className="font-medium">Tipo:</span> {arquivoSelecionado.type}</p>
+            </div>
+            {uploadando && (
+              <div className="mb-4">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-[#25D366] h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${progressoUpload}%` }}
+                  />
+                </div>
+                <p className="text-sm text-gray-600 text-center mt-1">{progressoUpload}% enviado...</p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setArquivoSelecionado(null); setPreviewUrl(null); }}
+                disabled={uploadando}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={enviarArquivo}
+                disabled={uploadando}
+                className="flex-1 px-4 py-2 bg-[#25D366] text-white rounded-lg hover:bg-[#20BD5F] disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {uploadando ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Enviar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
