@@ -10,6 +10,7 @@ export interface AuthUser {
   cliente_id: number;
   empresa_id: number;
   empresa_nome?: string | null;
+  cliente_nome?: string | null;
   profissional_id: string | null;
   empresas_acesso: number[];
 }
