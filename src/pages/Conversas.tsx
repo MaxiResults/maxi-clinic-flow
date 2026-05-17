@@ -353,6 +353,21 @@ export default function Conversas() {
             ...prev.filter(l => l.sessao_ativa?.id !== data.conversaId)
           ];
         });
+
+        // Atualiza avatar do lead se vier no evento
+        if (data.lead_id && data.avatar_url) {
+          setLeads(prev => prev.map(lead =>
+            lead.id === data.lead_id && !lead.avatar_url
+              ? { ...lead, avatar_url: data.avatar_url }
+              : lead
+          ));
+          // Atualiza selectedLead se for o mesmo
+          setSelectedLead(prev =>
+            prev?.id === data.lead_id && !prev.avatar_url
+              ? { ...prev, avatar_url: data.avatar_url }
+              : prev
+          );
+        }
       }
     };
 
