@@ -438,7 +438,7 @@ export default function Conversas() {
         texto: textoEnvio,
       });
     } catch (err: any) {
-      setMensagens(prev => prev.filter(m => !m.id.startsWith('temp-')));
+      setMensagens(prev => prev.filter(m => !m.id?.startsWith('temp-')));
       toast({
         title: "❌ Erro ao enviar",
         description: err.message || "Não foi possível enviar a mensagem",
@@ -605,7 +605,7 @@ export default function Conversas() {
         description: "Seu áudio foi enviado com sucesso",
       });
     } catch (err: any) {
-      setMensagens(prev => prev.filter(m => !m.id.startsWith('temp-audio-')));
+      setMensagens(prev => prev.filter(m => !m.id?.startsWith('temp-audio-')));
       toast({
         title: "❌ Erro ao enviar áudio",
         description: err.message || "Não foi possível enviar o áudio",
@@ -796,12 +796,12 @@ export default function Conversas() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                       {mensagens.map((mensagem) => {
-                        const isOwn = mensagem.remetente === 'atendente';
+                       {mensagens.map((mensagem, idx) => {
+                        const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
                         const isAudio = mensagem.tipo_mensagem === 'audio';
                         return (
                           <div
-                            key={mensagem.id}
+                            key={mensagem.id ?? idx}
                             className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
                           >
                             {!isOwn && (
