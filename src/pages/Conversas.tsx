@@ -562,31 +562,30 @@ export default function Conversas() {
 
   const enviarArquivo = async () => {
     if (!arquivoSelecionado || !selectedLead) return;
+
     try {
       setUploadando(true);
       setProgressoUpload(0);
 
       const formData = new FormData();
       formData.append('arquivo', arquivoSelecionado);
-      formData.append('tipoArquivo', arquivoSelecionado.type.startsWith('image/') ? 'image' : 'document');
+      formData.append(
+        'tipoArquivo',
+        arquivoSelecionado.type.startsWith('image/') ? 'image' : 'document'
+      );
 
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${import.meta.env.VITE_API_URL}/conversas/leads/${selectedLead.id}/upload`);
-        const token = localStorage.getItem('token');
-        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        xhr.upload.onprogress = (evt) => {
-          if (evt.lengthComputable) {
-            setProgressoUpload(Math.round((evt.loaded / evt.total) * 100));
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error('Erro ao enviar arquivo'));
-        };
-        xhr.onerror = () => reject(new Error('Erro ao enviar arquivo'));
-        xhr.send(formData);
-      });
+      await api.post(
+        `/conversas/leads/${selectedLead.id}/upload`,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: (evt) => {
+            if (evt.total) {
+              setProgressoUpload(Math.round((evt.loaded / evt.total) * 100));
+            }
+          },
+        }
+      );
 
       setArquivoSelecionado(null);
       setPreviewUrl(null);
