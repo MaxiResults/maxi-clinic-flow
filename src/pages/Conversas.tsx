@@ -14,7 +14,6 @@ import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from "emoji-picker-react";
 import { useUnread } from "@/contexts/UnreadContext";
-import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/contexts/SocketContext";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
