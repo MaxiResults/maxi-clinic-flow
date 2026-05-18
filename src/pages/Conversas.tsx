@@ -167,6 +167,13 @@ interface Mensagem {
   duracao_audio_segundos?: number;
 }
 
+interface RespostaRapida {
+  id: string;
+  titulo: string;
+  atalho: string;
+  conteudo: string;
+}
+
 export default function Conversas() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
