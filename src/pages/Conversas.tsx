@@ -570,6 +570,11 @@ export default function Conversas() {
     e.preventDefault();
     if (!novaMsg.trim() || !selectedLead || enviando) return;
 
+    if (modoNota) {
+      handleEnviarNota();
+      return;
+    }
+
     try {
       setEnviando(true);
 
