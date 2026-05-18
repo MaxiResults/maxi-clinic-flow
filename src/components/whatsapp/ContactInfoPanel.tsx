@@ -56,39 +56,24 @@ const formatDateBR = (iso?: string) => {
   return `${dd}/${mo}/${d.getFullYear()} às ${hh}:${mm}`;
 };
 
-const Avatar = ({ nome, avatarUrl }: { nome: string; avatarUrl?: string | null }) => {
-  const safeNome = nome || 'Usuário';
-  const iniciais = safeNome
+const getInitials = (nome: string) =>
+  (nome || 'U')
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map((n) => n.charAt(0).toUpperCase())
     .join('');
+
+const getAvatarColor = (nome: string) => {
   const colors = [
     'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500',
     'bg-indigo-500', 'bg-red-500', 'bg-yellow-500', 'bg-teal-500',
   ];
-  const hash = safeNome.split('').reduce((acc, c) => c.charCodeAt(0) + ((acc << 5) - acc), 0);
-  const bg = colors[Math.abs(hash) % colors.length];
-  const [imgError, setImgError] = useState(false);
-  const showImage = !!avatarUrl && !imgError;
-
-  return (
-    <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center shadow-md">
-      {showImage ? (
-        <img
-          src={avatarUrl!}
-          alt={safeNome}
-          className="w-full h-full object-cover"
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <div className={`${bg} w-full h-full flex items-center justify-center text-white text-3xl font-semibold`}>
-          {iniciais || '?'}
-        </div>
-      )}
-    </div>
+  const hash = (nome || '').split('').reduce(
+    (acc, char) => char.charCodeAt(0) + ((acc << 5) - acc),
+    0
   );
+  return colors[Math.abs(hash) % colors.length];
 };
 
 const InfoRow = ({
@@ -114,29 +99,40 @@ const InfoRow = ({
 );
 
 export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClose, lead }) => {
-  const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(lead.avatar_url);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(lead.avatar_url || null);
+  const [imgError, setImgError] = useState(false);
+  const [loadingAvatar, setLoadingAvatar] = useState(false);
 
   useEffect(() => {
-    setAvatarUrl(lead.avatar_url);
-    if (!lead.whatsapp_id || !lead.id) return;
-    let cancelled = false;
-    (async () => {
+    setAvatarUrl(lead.avatar_url || null);
+    setImgError(false);
+  }, [lead.id, lead.avatar_url]);
+
+  useEffect(() => {
+    if (!open || !lead.id) return;
+
+    const buscarFoto = async () => {
       try {
-        const res = await api.get(`/evolution/profile-picture/${lead.whatsapp_id}`, {
-          params: { leadId: lead.id },
-        });
-        const url = (res.data as any)?.url || (res.data as any)?.profilePictureUrl;
-        if (!cancelled && url && url !== lead.avatar_url) {
-          setAvatarUrl(url);
+        setLoadingAvatar(true);
+        const response = await api.get(
+          `/evolution/profile-picture/${lead.whatsapp_id || 'placeholder'}`,
+          { params: { leadId: lead.id } }
+        );
+        const novaUrl = (response.data as any)?.url;
+        if (novaUrl && novaUrl !== avatarUrl) {
+          setAvatarUrl(novaUrl);
+          setImgError(false);
         }
-      } catch {
-        /* silencioso */
+      } catch (err) {
+        console.log('[ContactInfoPanel] Foto não encontrada');
+      } finally {
+        setLoadingAvatar(false);
       }
-    })();
-    return () => {
-      cancelled = true;
     };
-  }, [lead.id, lead.whatsapp_id, lead.avatar_url]);
+
+    buscarFoto();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, lead.id]);
 
   const statusFmt = lead.status
     ? lead.status.charAt(0).toUpperCase() + lead.status.slice(1).toLowerCase()
@@ -179,7 +175,31 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
         <div className="flex-1 overflow-y-auto">
           {/* Avatar section */}
           <div className="bg-[#F0F2F5] flex flex-col items-center py-6 px-4">
-            <Avatar nome={lead.nome} avatarUrl={avatarUrl} />
+            <div className="relative w-24 h-24">
+              <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center shadow-md bg-gray-200">
+                {loadingAvatar && !avatarUrl ? (
+                  <div className="w-full h-full animate-pulse bg-gray-300" />
+                ) : avatarUrl && !imgError ? (
+                  <img
+                    src={avatarUrl}
+                    alt={lead.nome}
+                    className="w-full h-full object-cover"
+                    onError={() => setImgError(true)}
+                  />
+                ) : (
+                  <div
+                    className={`${getAvatarColor(lead.nome)} w-full h-full flex items-center justify-center text-white text-3xl font-semibold`}
+                  >
+                    {getInitials(lead.nome)}
+                  </div>
+                )}
+              </div>
+              {loadingAvatar && (
+                <div className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow">
+                  <div className="w-3 h-3 border-2 border-gray-300 border-t-[#075E54] rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
             <h3 className="text-xl font-semibold mt-4 text-center text-gray-900">
               {lead.nome}
             </h3>
