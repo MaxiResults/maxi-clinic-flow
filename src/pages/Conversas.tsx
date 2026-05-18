@@ -382,6 +382,14 @@ export default function Conversas() {
         // Tocar som apenas para mensagens recebidas (não enviadas por mim)
         if (data.mensagem?.is_from_me === false) {
           playNotification();
+
+          // Atualiza janela 24h ao receber mensagem do cliente
+          const sessaoId = selectedLeadRef.current?.sessao_ativa?.id;
+          if (sessaoId) {
+            api.get(`/conversas/sessoes/${sessaoId}/janela`)
+              .then(r => setJanela(r.data))
+              .catch(() => {});
+          }
         }
 
         // Atualiza preview da última mensagem na sidebar
