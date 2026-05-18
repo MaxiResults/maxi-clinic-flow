@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Phone, MessageCircle, Clock, User, CircleDot, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
