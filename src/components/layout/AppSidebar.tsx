@@ -13,6 +13,7 @@ import {
   LogOut,
   KanbanSquare,
   CalendarCheck,
+  FileText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ const menuItems = [
   { title: "Leads", url: "/leads", icon: Users },
   { title: "Pipeline CRM", url: "/pipeline", icon: KanbanSquare },
   { title: "Agendamentos", url: "/agendamentos", icon: Calendar },
+  { title: "Anamnese", url: "/anamneses", icon: FileText },
   { title: "Conversas", url: "/conversas", icon: MessageSquare },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
