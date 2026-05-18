@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Phone, MessageCircle, Clock, User, CircleDot, Smartphone } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Phone, MessageCircle, Clock, User, CircleDot, Smartphone, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
 
@@ -105,6 +105,10 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
   const [imgError, setImgError] = useState(false);
   const [loadingAvatar, setLoadingAvatar] = useState(false);
 
+  const [photoLightboxOpen, setPhotoLightboxOpen] = useState(false);
+  const [photoLightboxUrl, setPhotoLightboxUrl] = useState<string | null>(null);
+  const [loadingLightbox, setLoadingLightbox] = useState(false);
+
   useEffect(() => {
     setAvatarUrl(lead.avatar_url || null);
     setImgError(false);
@@ -143,6 +147,31 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
   const telefoneIgualWpp =
     (lead.telefone || '').replace(/\D/g, '') === (lead.whatsapp_id || '').replace(/\D/g, '');
 
+  const handleAvatarClick = async () => {
+    setPhotoLightboxOpen(true);
+    setPhotoLightboxUrl(avatarUrl);
+
+    try {
+      setLoadingLightbox(true);
+      const response = await api.get(
+        `/evolution/profile-picture/${lead.whatsapp_id || 'placeholder'}`,
+        { params: { leadId: lead.id } }
+      );
+      const novaUrl = response.data?.url;
+      if (novaUrl) {
+        setPhotoLightboxUrl(novaUrl);
+        setAvatarUrl(novaUrl);
+        setImgError(false);
+      } else {
+        setPhotoLightboxUrl(null);
+      }
+    } catch {
+      setPhotoLightboxUrl(avatarUrl);
+    } finally {
+      setLoadingLightbox(false);
+    }
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -177,31 +206,42 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
         <div className="flex-1 overflow-y-auto">
           {/* Avatar section */}
           <div className="bg-[#F0F2F5] flex flex-col items-center py-6 px-4">
-            <div className="relative w-24 h-24">
-              <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center shadow-md bg-gray-200">
-                {loadingAvatar && !avatarUrl ? (
-                  <div className="w-full h-full animate-pulse bg-gray-300" />
-                ) : avatarUrl && !imgError ? (
-                  <img
-                    src={avatarUrl}
-                    alt={lead.nome}
-                    className="w-full h-full object-cover"
-                    onError={() => setImgError(true)}
-                  />
-                ) : (
-                  <div
-                    className={`${getAvatarColor(lead.nome)} w-full h-full flex items-center justify-center text-white text-3xl font-semibold`}
-                  >
-                    {getInitials(lead.nome)}
+            <button
+              onClick={handleAvatarClick}
+              className="relative cursor-pointer group focus:outline-none"
+              title="Ver foto do contato"
+            >
+              <div className="relative w-24 h-24">
+                <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center shadow-md bg-gray-200">
+                  {loadingAvatar && !avatarUrl ? (
+                    <div className="w-full h-full animate-pulse bg-gray-300" />
+                  ) : avatarUrl && !imgError ? (
+                    <img
+                      src={avatarUrl}
+                      alt={lead.nome}
+                      className="w-full h-full object-cover"
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    <div
+                      className={`${getAvatarColor(lead.nome)} w-full h-full flex items-center justify-center text-white text-3xl font-semibold`}
+                    >
+                      {getInitials(lead.nome)}
+                    </div>
+                  )}
+                </div>
+                {loadingAvatar && (
+                  <div className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow">
+                    <div className="w-3 h-3 border-2 border-gray-300 border-t-[#075E54] rounded-full animate-spin" />
                   </div>
                 )}
               </div>
-              {loadingAvatar && (
-                <div className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow">
-                  <div className="w-3 h-3 border-2 border-gray-300 border-t-[#075E54] rounded-full animate-spin" />
-                </div>
-              )}
-            </div>
+              <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/20 transition-colors duration-200 flex items-center justify-center">
+                <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium transition-opacity">
+                  Ver foto
+                </span>
+              </div>
+            </button>
             <h3 className="text-xl font-semibold mt-4 text-center text-gray-900">
               {lead.nome}
             </h3>
@@ -252,6 +292,73 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
           </div>
         </div>
       </aside>
+
+      {/* Lightbox */}
+      {photoLightboxOpen && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center animate-fade-in"
+          onClick={() => setPhotoLightboxOpen(false)}
+        >
+          {/* Botão fechar */}
+          <button
+            onClick={() => setPhotoLightboxOpen(false)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Conteúdo */}
+          <div
+            className="flex flex-col items-center gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {loadingLightbox ? (
+              <div className="w-48 h-48 rounded-full bg-gray-700 animate-pulse flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+              </div>
+            ) : photoLightboxUrl ? (
+              <img
+                src={photoLightboxUrl}
+                alt={lead.nome}
+                className="w-64 h-64 rounded-full object-cover shadow-2xl ring-4 ring-white/20"
+                onError={() => setPhotoLightboxUrl(null)}
+              />
+            ) : (
+              <div
+                className={`w-64 h-64 rounded-full flex items-center justify-center text-white text-7xl font-bold shadow-2xl ring-4 ring-white/20 ${getAvatarColor(lead.nome)}`}
+              >
+                {getInitials(lead.nome)}
+              </div>
+            )}
+
+            <div className="text-center">
+              <p className="text-white text-xl font-semibold">{lead.nome}</p>
+              <p className="text-white/60 text-sm mt-1">
+                {lead.telefone || lead.whatsapp_id}
+              </p>
+              {!loadingLightbox && !photoLightboxUrl && (
+                <p className="text-white/40 text-xs mt-2 italic">Foto não disponível</p>
+              )}
+            </div>
+
+            {photoLightboxUrl && !loadingLightbox && (
+              <a
+                href={photoLightboxUrl}
+                download={`foto-${lead.nome}.jpg`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm rounded-full transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Download className="w-4 h-4" />
+                Salvar foto
+              </a>
+            )}
+          </div>
+
+          <p className="absolute bottom-6 text-white/30 text-xs">Clique fora para fechar</p>
+        </div>
+      )}
     </>
   );
 };
