@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -17,6 +17,7 @@ import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from "emoji-picker-rea
 import { useUnread } from "@/contexts/UnreadContext";
 import { useSocket } from "@/contexts/SocketContext";
 import { ContactInfoPanel } from "@/components/whatsapp/ContactInfoPanel";
+import { AgendarFromConversaModal } from "@/components/whatsapp/AgendarFromConversaModal";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -192,6 +193,7 @@ export default function Conversas() {
   const [novaMsg, setNovaMsg] = useState("");
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
+  const [agendarOpen, setAgendarOpen] = useState(false);
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'resolvidas'>('todas');
   const [modalFecharOpen, setModalFecharOpen] = useState(false);
   const [motivoFechamento, setMotivoFechamento] = useState('');
@@ -1156,6 +1158,16 @@ export default function Conversas() {
                           <span className="hidden sm:inline text-xs">Encerrar</span>
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAgendarOpen(true)}
+                        className="text-white/80 hover:text-white hover:bg-white/10 gap-1.5"
+                        title="Agendar consulta"
+                      >
+                        <CalendarPlus className="h-4 w-4" />
+                        <span className="hidden sm:inline text-xs">Agendar</span>
+                      </Button>
                       <AttendantBadge
                         atendente={selectedLead.sessao_ativa?.atendente || undefined}
                         onTransfer={() => setAssignModalOpen(true)}
@@ -1628,6 +1640,12 @@ export default function Conversas() {
           onSuccess={handleAssignSuccess}
         />
       )}
+
+      <AgendarFromConversaModal
+        open={agendarOpen}
+        onOpenChange={setAgendarOpen}
+        lead={selectedLead ? { id: selectedLead.id, nome: selectedLead.nome, telefone: selectedLead.telefone, whatsapp_id: selectedLead.whatsapp_id } : null}
+      />
 
       <Dialog open={modalFecharOpen} onOpenChange={setModalFecharOpen}>
         <DialogContent className="max-w-sm rounded-xl">
