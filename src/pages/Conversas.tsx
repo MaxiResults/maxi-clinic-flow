@@ -821,6 +821,68 @@ export default function Conversas() {
   }
 
   const JanelaBadge = () => {
+    return _JanelaBadgeImpl();
+  };
+
+  const handleFecharConversa = async () => {
+    if (!selectedLead?.sessao_ativa?.id) return;
+    setFechandoConversa(true);
+    try {
+      await api.patch(
+        `/conversas/sessoes/${selectedLead.sessao_ativa.id}/status`,
+        {
+          status: 'fechada',
+          motivo_fechamento: motivoFechamento || undefined,
+        }
+      );
+      sonnerToast.success('Conversa encerrada');
+      setModalFecharOpen(false);
+      setMotivoFechamento('');
+      setLeads(prev => prev.map(l =>
+        l.id === selectedLead.id
+          ? {
+              ...l,
+              sessao_ativa: l.sessao_ativa
+                ? { ...l.sessao_ativa, status_sessao: 'encerrada' }
+                : null,
+            }
+          : l
+      ));
+      if (conversationFilter === 'todas' || (conversationFilter as string) === 'abertas') {
+        setLeads(prev => prev.filter(l => l.id !== selectedLead.id));
+        setSelectedLead(null);
+      }
+    } catch {
+      sonnerToast.error('Erro ao encerrar conversa');
+    } finally {
+      setFechandoConversa(false);
+    }
+  };
+
+  const handleReabrirConversa = async () => {
+    if (!selectedLead?.sessao_ativa?.id) return;
+    try {
+      await api.patch(
+        `/conversas/sessoes/${selectedLead.sessao_ativa.id}/status`,
+        { status: 'ativa' }
+      );
+      sonnerToast.success('Conversa reaberta');
+      setLeads(prev => prev.map(l =>
+        l.id === selectedLead.id
+          ? {
+              ...l,
+              sessao_ativa: l.sessao_ativa
+                ? { ...l.sessao_ativa, status_sessao: 'ativa' }
+                : null,
+            }
+          : l
+      ));
+    } catch {
+      sonnerToast.error('Erro ao reabrir conversa');
+    }
+  };
+
+  const _JanelaBadgeImpl = () => {
     if (loadingJanela) return null;
     if (!janela) return null;
 
