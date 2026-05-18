@@ -185,7 +185,10 @@ export default function Conversas() {
   const [novaMsg, setNovaMsg] = useState("");
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
-  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
+  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'resolvidas'>('todas');
+  const [modalFecharOpen, setModalFecharOpen] = useState(false);
+  const [motivoFechamento, setMotivoFechamento] = useState('');
+  const [fechandoConversa, setFechandoConversa] = useState(false);
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
@@ -496,7 +499,10 @@ export default function Conversas() {
         : '/conversas/leads';
 
       const response = await api.get(endpoint, {
-        params: { t: Date.now() }
+        params: {
+          t: Date.now(),
+          ...(conversationFilter === 'resolvidas' ? { status: 'encerrada' } : {}),
+        },
       });
 
       const leadsArray = response.data || [];
