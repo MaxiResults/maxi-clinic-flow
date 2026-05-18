@@ -12,10 +12,10 @@ import { AttendantBadge } from "@/components/whatsapp/Assignment/AttendantBadge"
 import { ConversationFilters } from "@/components/whatsapp/Assignment/ConversationFilters";
 import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
-import { io, Socket } from "socket.io-client";
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from "emoji-picker-react";
 import { useUnread } from "@/contexts/UnreadContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useSocket } from "@/contexts/SocketContext";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -165,6 +165,7 @@ export default function Conversas() {
   const textInputRef = useRef<HTMLInputElement>(null);
   const { setTotalUnread } = useUnread();
   const { user } = useAuth();
+  const { socket, lastNovaConversa, lastConversaAtualizada } = useSocket();
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -178,7 +179,6 @@ export default function Conversas() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
   const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -275,36 +275,6 @@ export default function Conversas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationFilter]);
 
-  // Socket.io connection
-  useEffect(() => {
-    const socketConnection = io('https://api.maxiclinicas.com.br', {
-      transports: ['websocket', 'polling'],
-      withCredentials: true,
-    });
-
-    socketConnection.on('connect', () => {
-      console.log('[Socket.io] Conectado ao servidor:', socketConnection.id);
-      if (user?.cliente_id && user?.empresa_id) {
-        socketConnection.emit('join_clinic', {
-          clienteId: user.cliente_id,
-          empresaId: user.empresa_id,
-        });
-      }
-    });
-    socketConnection.on('disconnect', () => {
-      console.log('[Socket.io] Desconectado do servidor');
-    });
-    socketConnection.on('connect_error', (error) => {
-      console.error('[Socket.io] Erro de conexão:', error);
-    });
-
-    setSocket(socketConnection);
-
-    return () => {
-      socketConnection.disconnect();
-    };
-  }, [user?.cliente_id, user?.empresa_id]);
-
   // Sync totalUnread + browser title
   useEffect(() => {
     const total = Object.values(unreadCounts).reduce((sum, n) => sum + n, 0);
@@ -317,58 +287,45 @@ export default function Conversas() {
     };
   }, [unreadCounts, setTotalUnread]);
 
-  // Nova conversa
+  // Nova conversa (via SocketContext global)
   useEffect(() => {
-    if (!socket) return;
-    const handleNovaConversa = (data: { lead: Lead }) => {
-      console.log('[Socket.io] Nova conversa:', data);
-      setLeads(prev => {
-        const existe = prev.some(l => l.id === data.lead.id);
-        if (existe) return prev;
-        return [data.lead, ...prev];
-      });
-      setUnreadCounts(prev => ({ ...prev, [data.lead.id]: 1 }));
-    };
-    socket.on('nova_conversa', handleNovaConversa);
-    return () => {
-      socket.off('nova_conversa', handleNovaConversa);
-    };
-  }, [socket]);
+    if (!lastNovaConversa) return;
+    const { lead } = lastNovaConversa;
+    setLeads((prev) => {
+      const existe = prev.some((l) => l.id === lead.id);
+      if (existe) return prev;
+      return [lead, ...prev];
+    });
+    setUnreadCounts((prev) => ({
+      ...prev,
+      [lead.id]: (prev[lead.id] || 0) + 1,
+    }));
+  }, [lastNovaConversa]);
 
-  // Conversa atualizada
+  // Conversa atualizada (via SocketContext global)
   useEffect(() => {
-    if (!socket) return;
-    const handleConversaAtualizada = (data: {
-      leadId: string;
-      sessaoId: string;
-      ultima_mensagem: { mensagem: string; data_envio: string; tipo_mensagem: string };
-      ultima_interacao: string;
-    }) => {
-      setLeads(prev => {
-        const updated = prev.map(lead => {
-          if (lead.id !== data.leadId) return lead;
-          return {
-            ...lead,
-            ultima_mensagem: data.ultima_mensagem,
-            ultima_interacao: data.ultima_interacao,
-          };
-        });
-        const alvo = updated.find(l => l.id === data.leadId);
-        if (!alvo) return updated;
-        return [alvo, ...updated.filter(l => l.id !== data.leadId)];
+    if (!lastConversaAtualizada) return;
+    const data = lastConversaAtualizada;
+    setLeads((prev) => {
+      const updated = prev.map((lead) => {
+        if (lead.id !== data.leadId) return lead;
+        return {
+          ...lead,
+          ultima_mensagem: data.ultima_mensagem,
+          ultima_interacao: data.ultima_interacao,
+        };
       });
-      if (data.leadId !== selectedLead?.id) {
-        setUnreadCounts(prev => ({
-          ...prev,
-          [data.leadId]: (prev[data.leadId] || 0) + 1,
-        }));
-      }
-    };
-    socket.on('conversa_atualizada', handleConversaAtualizada);
-    return () => {
-      socket.off('conversa_atualizada', handleConversaAtualizada);
-    };
-  }, [socket, selectedLead?.id]);
+      const alvo = updated.find((l) => l.id === data.leadId);
+      if (!alvo) return updated;
+      return [alvo, ...updated.filter((l) => l.id !== data.leadId)];
+    });
+    if (data.leadId !== selectedLead?.id) {
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [data.leadId]: (prev[data.leadId] || 0) + 1,
+      }));
+    }
+  }, [lastConversaAtualizada, selectedLead?.id]);
 
   // Join/Leave conversation rooms
   useEffect(() => {
