@@ -14,6 +14,8 @@ import { AudioRecorder } from "@/components/whatsapp/AudioRecorder";
 import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 import { io, Socket } from "socket.io-client";
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from "emoji-picker-react";
+import { useUnread } from "@/contexts/UnreadContext";
+import { useAuth } from "@/hooks/useAuth";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -161,6 +163,9 @@ export default function Conversas() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const { setTotalUnread } = useUnread();
+  const { user } = useAuth();
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
@@ -279,6 +284,12 @@ export default function Conversas() {
 
     socketConnection.on('connect', () => {
       console.log('[Socket.io] Conectado ao servidor:', socketConnection.id);
+      if (user?.cliente_id && user?.empresa_id) {
+        socketConnection.emit('join_clinic', {
+          clienteId: user.cliente_id,
+          empresaId: user.empresa_id,
+        });
+      }
     });
     socketConnection.on('disconnect', () => {
       console.log('[Socket.io] Desconectado do servidor');
@@ -292,7 +303,72 @@ export default function Conversas() {
     return () => {
       socketConnection.disconnect();
     };
-  }, []);
+  }, [user?.cliente_id, user?.empresa_id]);
+
+  // Sync totalUnread + browser title
+  useEffect(() => {
+    const total = Object.values(unreadCounts).reduce((sum, n) => sum + n, 0);
+    setTotalUnread(total);
+    document.title = total > 0
+      ? `(${total}) Conversas — MaxiClínicas`
+      : 'MaxiClínicas';
+    return () => {
+      document.title = 'MaxiClínicas';
+    };
+  }, [unreadCounts, setTotalUnread]);
+
+  // Nova conversa
+  useEffect(() => {
+    if (!socket) return;
+    const handleNovaConversa = (data: { lead: Lead }) => {
+      console.log('[Socket.io] Nova conversa:', data);
+      setLeads(prev => {
+        const existe = prev.some(l => l.id === data.lead.id);
+        if (existe) return prev;
+        return [data.lead, ...prev];
+      });
+      setUnreadCounts(prev => ({ ...prev, [data.lead.id]: 1 }));
+    };
+    socket.on('nova_conversa', handleNovaConversa);
+    return () => {
+      socket.off('nova_conversa', handleNovaConversa);
+    };
+  }, [socket]);
+
+  // Conversa atualizada
+  useEffect(() => {
+    if (!socket) return;
+    const handleConversaAtualizada = (data: {
+      leadId: string;
+      sessaoId: string;
+      ultima_mensagem: { mensagem: string; data_envio: string; tipo_mensagem: string };
+      ultima_interacao: string;
+    }) => {
+      setLeads(prev => {
+        const updated = prev.map(lead => {
+          if (lead.id !== data.leadId) return lead;
+          return {
+            ...lead,
+            ultima_mensagem: data.ultima_mensagem,
+            ultima_interacao: data.ultima_interacao,
+          };
+        });
+        const alvo = updated.find(l => l.id === data.leadId);
+        if (!alvo) return updated;
+        return [alvo, ...updated.filter(l => l.id !== data.leadId)];
+      });
+      if (data.leadId !== selectedLead?.id) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          [data.leadId]: (prev[data.leadId] || 0) + 1,
+        }));
+      }
+    };
+    socket.on('conversa_atualizada', handleConversaAtualizada);
+    return () => {
+      socket.off('conversa_atualizada', handleConversaAtualizada);
+    };
+  }, [socket, selectedLead?.id]);
 
   // Join/Leave conversation rooms
   useEffect(() => {
@@ -368,6 +444,16 @@ export default function Conversas() {
               ? { ...prev, avatar_url: data.avatar_url }
               : prev
           );
+        }
+
+        // Incrementa não lidas se não for a conversa ativa
+        if (data.mensagem?.is_from_me === false &&
+            data.conversaId !== selectedLead?.sessao_ativa?.id) {
+          setUnreadCounts(prev => ({
+            ...prev,
+            [selectedLead?.id || '']:
+              (prev[selectedLead?.id || ''] || 0) + 1,
+          }));
         }
       }
     };
@@ -463,6 +549,12 @@ export default function Conversas() {
     setSelectedLead(lead);
     setMensagens([]);
     fetchMensagens(lead.id);
+    setUnreadCounts(prev => {
+      const next = { ...prev, [lead.id]: 0 };
+      const total = Object.values(next).reduce((sum, n) => sum + n, 0);
+      setTotalUnread(total);
+      return next;
+    });
   };
 
   const handleEnviarMensagem = async (e: React.FormEvent) => {
@@ -761,7 +853,7 @@ export default function Conversas() {
                       />
                       <div className="flex-1 overflow-hidden">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="font-medium truncate">{lead.nome}</p>
+                          <p className={`truncate ${(unreadCounts[lead.id] || 0) > 0 ? 'font-bold text-foreground' : 'font-medium'}`}>{lead.nome}</p>
                           <span className="text-xs text-muted-foreground">
                             {formatTime(lead.ultima_interacao)}
                           </span>
@@ -773,6 +865,11 @@ export default function Conversas() {
                           <p className="text-xs text-muted-foreground">
                             💬 {lead.total_mensagens} mensagens
                           </p>
+                          {(unreadCounts[lead.id] || 0) > 0 && (
+                            <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center ml-2">
+                              {unreadCounts[lead.id] > 99 ? '99+' : unreadCounts[lead.id]}
+                            </span>
+                          )}
                           {lead.sessao_ativa?.atendente && (
                             <span className="text-xs text-muted-foreground truncate ml-2">
                               👤 {lead.sessao_ativa.atendente.nome}
