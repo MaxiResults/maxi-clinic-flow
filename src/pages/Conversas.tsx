@@ -1127,6 +1127,27 @@ export default function Conversas() {
                         {mensagens.map((mensagem: any, idx) => {
                          const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
                         const isAudio = mensagem.tipo_mensagem === 'audio';
+                         if (mensagem.is_nota_interna) {
+                           return (
+                             <div key={mensagem.id ?? idx} className="flex justify-center my-2 animate-fade-in">
+                               <div className="max-w-[85%] px-4 py-2.5 rounded-xl bg-yellow-50 border border-yellow-200 shadow-sm">
+                                 <div className="flex items-center gap-2 mb-1">
+                                   <StickyNote className="h-3 w-3 text-yellow-600" />
+                                   <span className="text-xs font-medium text-yellow-700">Nota interna</span>
+                                   {mensagem.nota_autor_nome && (
+                                     <span className="text-xs text-yellow-600">• {mensagem.nota_autor_nome}</span>
+                                   )}
+                                 </div>
+                                 <p className="text-sm text-yellow-900 whitespace-pre-wrap break-words">
+                                   {mensagem.conteudo || mensagem.mensagem}
+                                 </p>
+                                 <p className="text-xs text-yellow-500 text-right mt-1">
+                                   {formatTime(mensagem.data_envio || mensagem.created_at)}
+                                 </p>
+                               </div>
+                             </div>
+                           );
+                         }
                         return (
                           <div
                             key={mensagem.id ?? idx}
