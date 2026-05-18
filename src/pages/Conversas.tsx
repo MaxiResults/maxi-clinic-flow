@@ -1408,6 +1408,43 @@ export default function Conversas() {
         />
       )}
 
+      <Dialog open={modalFecharOpen} onOpenChange={setModalFecharOpen}>
+        <DialogContent className="max-w-sm rounded-xl">
+          <DialogHeader>
+            <DialogTitle>Encerrar conversa</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Deseja encerrar o atendimento com{' '}
+            <strong>{selectedLead?.nome}</strong>? A conversa será movida para "Resolvidas".
+          </p>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motivo (opcional)</label>
+            <textarea
+              className="w-full text-sm border rounded-lg px-3 py-2 bg-background resize-none"
+              rows={3}
+              placeholder="Ex: Agendamento confirmado, dúvida resolvida..."
+              value={motivoFechamento}
+              onChange={(e) => setMotivoFechamento(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setModalFecharOpen(false);
+                setMotivoFechamento('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleFecharConversa} disabled={fechandoConversa}>
+              {fechandoConversa && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Encerrar atendimento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Lightbox de imagem */}
       {lightboxAberto && todasImagens.length > 0 && (
         <div
