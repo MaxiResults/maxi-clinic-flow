@@ -84,7 +84,7 @@ export function AppSidebar() {
                         <span className="flex items-center gap-2 flex-1">
                           {item.title}
                           {item.url === "/conversas" && totalUnread > 0 && (
-                            <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                            <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
                               {totalUnread > 99 ? '99+' : totalUnread}
                             </span>
                           )}
