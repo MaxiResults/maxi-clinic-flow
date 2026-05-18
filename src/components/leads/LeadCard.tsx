@@ -2,13 +2,14 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FormattedDate } from '@/components/ui/FormattedDate';
-import { Edit, Trash2, Mail, Phone } from 'lucide-react';
+import { Edit, Trash2, Mail, Phone, Eye } from 'lucide-react';
 import type { Lead } from '@/hooks/useLeadsData';
 
 interface LeadCardProps {
   lead: Lead;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  onView: (id: string) => void;
 }
 
 const statusConfig = {
@@ -29,7 +30,7 @@ const formatPhone = (phone: string) => {
   return phone;
 };
 
-export function LeadCard({ lead, onEdit, onDelete }: LeadCardProps) {
+export function LeadCard({ lead, onEdit, onDelete, onView }: LeadCardProps) {
   const config = statusConfig[lead.status] || statusConfig.novo;
 
   return (
@@ -46,8 +47,18 @@ export function LeadCard({ lead, onEdit, onDelete }: LeadCardProps) {
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => onView(lead.id)}
+              className="h-8 w-8"
+              title="Exibir"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => onEdit(lead.id)}
               className="h-8 w-8"
+              title="Editar"
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -56,6 +67,7 @@ export function LeadCard({ lead, onEdit, onDelete }: LeadCardProps) {
               size="icon"
               onClick={() => onDelete(lead.id)}
               className="h-8 w-8 text-destructive hover:text-destructive"
+              title="Excluir"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
