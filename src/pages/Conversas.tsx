@@ -805,6 +805,43 @@ export default function Conversas() {
     );
   }
 
+  const JanelaBadge = () => {
+    if (loadingJanela) return null;
+    if (!janela) return null;
+
+    if (!janela.ativa) {
+      return (
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          🔒 Janela expirada — use templates
+        </div>
+      );
+    }
+
+    const minutos = janela.minutos_restantes;
+    const horas = janela.horas_restantes;
+    const critico = minutos <= 60;
+    const atencao = horas < 6;
+    const texto = horas >= 1
+      ? `⏰ Expira em ${horas}h ${minutos % 60}min`
+      : `⚠️ Expira em ${minutos}min`;
+
+    return (
+      <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all ${
+        critico
+          ? 'bg-red-50 text-red-700 border-red-200 animate-pulse'
+          : atencao
+            ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+            : 'bg-green-50 text-green-700 border-green-200'
+      }`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${
+          critico ? 'bg-red-500' : atencao ? 'bg-yellow-500' : 'bg-green-500'
+        }`} />
+        {texto}
+      </div>
+    );
+  };
+
   return (
     <DashboardLayout title="Conversas WhatsApp">
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
