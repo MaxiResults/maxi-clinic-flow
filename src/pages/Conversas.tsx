@@ -3,10 +3,11 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2 } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AssignmentModal } from "@/components/whatsapp/Assignment/AssignmentModal";
 import { AttendantBadge } from "@/components/whatsapp/Assignment/AttendantBadge";
 import { ConversationFilters } from "@/components/whatsapp/Assignment/ConversationFilters";
@@ -184,7 +185,10 @@ export default function Conversas() {
   const [novaMsg, setNovaMsg] = useState("");
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
-  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
+  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'resolvidas'>('todas');
+  const [modalFecharOpen, setModalFecharOpen] = useState(false);
+  const [motivoFechamento, setMotivoFechamento] = useState('');
+  const [fechandoConversa, setFechandoConversa] = useState(false);
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
@@ -495,7 +499,10 @@ export default function Conversas() {
         : '/conversas/leads';
 
       const response = await api.get(endpoint, {
-        params: { t: Date.now() }
+        params: {
+          t: Date.now(),
+          ...(conversationFilter === 'resolvidas' ? { status: 'encerrada' } : {}),
+        },
       });
 
       const leadsArray = response.data || [];
@@ -813,6 +820,64 @@ export default function Conversas() {
     );
   }
 
+  const handleFecharConversa = async () => {
+    if (!selectedLead?.sessao_ativa?.id) return;
+    setFechandoConversa(true);
+    try {
+      await api.patch(
+        `/conversas/sessoes/${selectedLead.sessao_ativa.id}/status`,
+        {
+          status: 'fechada',
+          motivo_fechamento: motivoFechamento || undefined,
+        }
+      );
+      sonnerToast.success('Conversa encerrada');
+      setModalFecharOpen(false);
+      setMotivoFechamento('');
+      setLeads(prev => prev.map(l =>
+        l.id === selectedLead.id
+          ? {
+              ...l,
+              sessao_ativa: l.sessao_ativa
+                ? { ...l.sessao_ativa, status_sessao: 'encerrada' }
+                : null,
+            }
+          : l
+      ));
+      if (conversationFilter === 'todas' || (conversationFilter as string) === 'abertas') {
+        setLeads(prev => prev.filter(l => l.id !== selectedLead.id));
+        setSelectedLead(null);
+      }
+    } catch {
+      sonnerToast.error('Erro ao encerrar conversa');
+    } finally {
+      setFechandoConversa(false);
+    }
+  };
+
+  const handleReabrirConversa = async () => {
+    if (!selectedLead?.sessao_ativa?.id) return;
+    try {
+      await api.patch(
+        `/conversas/sessoes/${selectedLead.sessao_ativa.id}/status`,
+        { status: 'ativa' }
+      );
+      sonnerToast.success('Conversa reaberta');
+      setLeads(prev => prev.map(l =>
+        l.id === selectedLead.id
+          ? {
+              ...l,
+              sessao_ativa: l.sessao_ativa
+                ? { ...l.sessao_ativa, status_sessao: 'ativa' }
+                : null,
+            }
+          : l
+      ));
+    } catch {
+      sonnerToast.error('Erro ao reabrir conversa');
+    }
+  };
+
   const JanelaBadge = () => {
     if (loadingJanela) return null;
     if (!janela) return null;
@@ -954,6 +1019,29 @@ export default function Conversas() {
                       </div>
                     </button>
                     <div className="flex items-center gap-2">
+                      {selectedLead?.sessao_ativa?.status_sessao === 'encerrada' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleReabrirConversa}
+                          className="text-green-300 hover:text-green-200 hover:bg-white/10 gap-1.5"
+                          title="Reabrir conversa"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">Reabrir</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setModalFecharOpen(true)}
+                          className="text-white/80 hover:text-white hover:bg-white/10 gap-1.5"
+                          title="Encerrar conversa"
+                        >
+                          <CheckCheck className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">Encerrar</span>
+                        </Button>
+                      )}
                       <AttendantBadge
                         atendente={selectedLead.sessao_ativa?.atendente || undefined}
                         onTransfer={() => setAssignModalOpen(true)}
@@ -1319,6 +1407,43 @@ export default function Conversas() {
           onSuccess={handleAssignSuccess}
         />
       )}
+
+      <Dialog open={modalFecharOpen} onOpenChange={setModalFecharOpen}>
+        <DialogContent className="max-w-sm rounded-xl">
+          <DialogHeader>
+            <DialogTitle>Encerrar conversa</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Deseja encerrar o atendimento com{' '}
+            <strong>{selectedLead?.nome}</strong>? A conversa será movida para "Resolvidas".
+          </p>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motivo (opcional)</label>
+            <textarea
+              className="w-full text-sm border rounded-lg px-3 py-2 bg-background resize-none"
+              rows={3}
+              placeholder="Ex: Agendamento confirmado, dúvida resolvida..."
+              value={motivoFechamento}
+              onChange={(e) => setMotivoFechamento(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setModalFecharOpen(false);
+                setMotivoFechamento('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleFecharConversa} disabled={fechandoConversa}>
+              {fechandoConversa && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Encerrar atendimento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Lightbox de imagem */}
       {lightboxAberto && todasImagens.length > 0 && (
