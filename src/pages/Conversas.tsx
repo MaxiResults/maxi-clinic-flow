@@ -525,6 +525,7 @@ export default function Conversas() {
   };
 
   const handleSelectLead = (lead: Lead) => {
+    setJanela(null);
     setSelectedLead(lead);
     setMensagens([]);
     fetchMensagens(lead.id);
@@ -534,6 +535,18 @@ export default function Conversas() {
       setTotalUnread(total);
       return next;
     });
+
+    // Busca info da janela 24h
+    const sessaoId = lead.sessao_ativa?.id;
+    if (sessaoId) {
+      setLoadingJanela(true);
+      api.get(`/conversas/sessoes/${sessaoId}/janela`)
+        .then(r => setJanela(r.data))
+        .catch(() => setJanela(null))
+        .finally(() => setLoadingJanela(false));
+    } else {
+      setJanela(null);
+    }
   };
 
   const handleEnviarMensagem = async (e: React.FormEvent) => {
