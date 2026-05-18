@@ -581,7 +581,12 @@ export default function Conversas() {
     } finally {
       setTimeout(() => {
         setEnviando(false);
-        textInputRef.current?.focus();
+        // Aguarda o re-render (input deixa de estar disabled) antes de focar
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            textInputRef.current?.focus();
+          });
+        });
       }, 300);
     }
   };
