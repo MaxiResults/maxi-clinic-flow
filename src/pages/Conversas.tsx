@@ -1641,6 +1641,12 @@ export default function Conversas() {
         />
       )}
 
+      <AgendarFromConversaModal
+        open={agendarOpen}
+        onOpenChange={setAgendarOpen}
+        lead={selectedLead ? { id: selectedLead.id, nome: selectedLead.nome, telefone: selectedLead.telefone, whatsapp_id: selectedLead.whatsapp_id } : null}
+      />
+
       <Dialog open={modalFecharOpen} onOpenChange={setModalFecharOpen}>
         <DialogContent className="max-w-sm rounded-xl">
           <DialogHeader>
