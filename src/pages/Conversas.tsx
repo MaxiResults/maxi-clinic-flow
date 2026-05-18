@@ -355,10 +355,11 @@ export default function Conversas() {
 
   // Listen to nova_mensagem event
   useEffect(() => {
-    if (!socket || !selectedLead?.sessao_ativa?.id) return;
-    const conversaId = selectedLead.sessao_ativa.id;
+    if (!socket) return;
 
     const handleNovaMensagem = (data: any) => {
+      const current = selectedLeadRef.current;
+      const conversaId = current?.sessao_ativa?.id;
       console.log('[Socket.io] Nova mensagem recebida:', data);
       if (data.conversaId === conversaId) {
         setMensagens((prev) => {
@@ -417,11 +418,11 @@ export default function Conversas() {
 
         // Incrementa não lidas se não for a conversa ativa
         if (data.mensagem?.is_from_me === false &&
-            data.conversaId !== selectedLead?.sessao_ativa?.id) {
+            data.conversaId !== current?.sessao_ativa?.id) {
           setUnreadCounts(prev => ({
             ...prev,
-            [selectedLead?.id || '']:
-              (prev[selectedLead?.id || ''] || 0) + 1,
+            [current?.id || '']:
+              (prev[current?.id || ''] || 0) + 1,
           }));
         }
       }
@@ -431,7 +432,7 @@ export default function Conversas() {
     return () => {
       socket.off('nova_mensagem', handleNovaMensagem);
     };
-  }, [socket, selectedLead?.sessao_ativa?.id, playNotification]);
+  }, [socket, playNotification]);
 
   // Listen lead_digitando
   useEffect(() => {
