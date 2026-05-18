@@ -160,6 +160,7 @@ interface Mensagem {
 export default function Conversas() {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
@@ -486,7 +487,10 @@ export default function Conversas() {
         variant: "destructive",
       });
     } finally {
-      setTimeout(() => setEnviando(false), 300);
+      setTimeout(() => {
+        setEnviando(false);
+        textInputRef.current?.focus();
+      }, 300);
     }
   };
 
@@ -605,7 +609,7 @@ export default function Conversas() {
       setArquivoSelecionado(null);
       setPreviewUrl(null);
       setProgressoUpload(0);
-      sonnerToast.success('Arquivo enviado com sucesso!');
+      
     } catch (error) {
       console.error('Erro ao enviar arquivo:', error);
       sonnerToast.error('Erro ao enviar arquivo');
@@ -1069,6 +1073,7 @@ export default function Conversas() {
 
                         {/* Input de texto */}
                         <input
+                          ref={textInputRef}
                           type="text"
                           placeholder="Digite uma mensagem"
                           value={novaMsg}
