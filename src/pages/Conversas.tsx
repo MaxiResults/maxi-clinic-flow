@@ -195,6 +195,14 @@ export default function Conversas() {
 
   const playNotification = useNotificationSound();
 
+  // Refs to avoid re-running effects on selectedLead changes
+  const selectedLeadRef = useRef<Lead | null>(null);
+  const processedEvents = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    selectedLeadRef.current = selectedLead;
+  }, [selectedLead]);
+
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setNovaMsg((prev) => prev + emojiData.emoji);
   };
@@ -290,6 +298,8 @@ export default function Conversas() {
   // Nova conversa (via SocketContext global)
   useEffect(() => {
     if (!lastNovaConversa) return;
+    if (processedEvents.current.has(lastNovaConversa.timestamp)) return;
+    processedEvents.current.add(lastNovaConversa.timestamp);
     const { lead } = lastNovaConversa;
     setLeads((prev) => {
       const existe = prev.some((l) => l.id === lead.id);
@@ -305,6 +315,8 @@ export default function Conversas() {
   // Conversa atualizada (via SocketContext global)
   useEffect(() => {
     if (!lastConversaAtualizada) return;
+    if (processedEvents.current.has(lastConversaAtualizada.timestamp)) return;
+    processedEvents.current.add(lastConversaAtualizada.timestamp);
     const data = lastConversaAtualizada;
     setLeads((prev) => {
       const updated = prev.map((lead) => {
@@ -319,13 +331,13 @@ export default function Conversas() {
       if (!alvo) return updated;
       return [alvo, ...updated.filter((l) => l.id !== data.leadId)];
     });
-    if (data.leadId !== selectedLead?.id) {
+    if (data.leadId !== selectedLeadRef.current?.id) {
       setUnreadCounts((prev) => ({
         ...prev,
         [data.leadId]: (prev[data.leadId] || 0) + 1,
       }));
     }
-  }, [lastConversaAtualizada, selectedLead?.id]);
+  }, [lastConversaAtualizada]);
 
   // Join/Leave conversation rooms
   useEffect(() => {
