@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState } from 'react';
 
 interface UnreadContextType {
   totalUnread: number;
-  setTotalUnread: (count: number) => void;
+  setTotalUnread: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const UnreadContext = createContext<UnreadContextType>({
