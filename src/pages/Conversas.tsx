@@ -1271,7 +1271,11 @@ export default function Conversas() {
                     <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                       {/* Input arredondado estilo WhatsApp */}
-                      <div className="flex-1 flex items-center gap-3 bg-white rounded-[24px] border border-[#E9EDEF] px-4 py-2.5 transition-all hover:border-[#D1D7DB] shadow-sm">
+                      <div className={`flex-1 flex items-center gap-3 rounded-[24px] border px-4 py-2.5 transition-all shadow-sm ${
+                        modoNota
+                          ? 'bg-yellow-50 border-yellow-300'
+                          : 'bg-white border-[#E9EDEF] hover:border-[#D1D7DB]'
+                      }`}>
                         {/* Botão de anexo */}
                         <div className="relative flex-shrink-0">
                           <button
@@ -1380,7 +1384,7 @@ export default function Conversas() {
                         <input
                           ref={textInputRef}
                           type="text"
-                          placeholder="Digite uma mensagem"
+                          placeholder={modoNota ? '📝 Nota interna — visível apenas para a equipe...' : 'Digite uma mensagem'}
                           value={novaMsg}
                           onChange={handleMensagemChange}
                           onKeyDown={(e) => {
@@ -1392,10 +1396,27 @@ export default function Conversas() {
                             }
                           }}
                           maxLength={1000}
-                          disabled={enviando}
+                          disabled={enviando || enviandoNota}
                           autoComplete="off"
-                          className="flex-1 bg-transparent outline-none text-[15px] text-gray-800 placeholder:text-[#8696A0] min-w-0 disabled:opacity-50"
+                          className={`flex-1 bg-transparent outline-none text-[15px] min-w-0 disabled:opacity-50 ${
+                            modoNota
+                              ? 'text-yellow-900 placeholder:text-yellow-600'
+                              : 'text-gray-800 placeholder:text-[#8696A0]'
+                          }`}
                         />
+                        {/* Botão alternar nota interna */}
+                        <button
+                          type="button"
+                          onClick={() => setModoNota((v) => !v)}
+                          className={`flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all ${
+                            modoNota
+                              ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                              : 'text-[#54656F] hover:text-yellow-600'
+                          }`}
+                          title={modoNota ? 'Modo nota ativo — clique para desativar' : 'Adicionar nota interna'}
+                        >
+                          <StickyNote className="h-4 w-4" />
+                        </button>
                       </div>
 
                       {/* Botão microfone circular com hover verde */}
@@ -1412,11 +1433,15 @@ export default function Conversas() {
                       {novaMsg.trim() && (
                         <button
                           type="submit"
-                          disabled={enviando}
-                          className="w-12 h-12 flex items-center justify-center rounded-full bg-[#25D366] hover:bg-[#1DA851] transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0 disabled:opacity-50 animate-scale-in"
-                          title="Enviar mensagem"
+                          disabled={enviando || enviandoNota}
+                          className={`w-12 h-12 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0 disabled:opacity-50 animate-scale-in ${
+                            modoNota
+                              ? 'bg-yellow-500 hover:bg-yellow-600'
+                              : 'bg-[#25D366] hover:bg-[#1DA851]'
+                          }`}
+                          title={modoNota ? 'Salvar nota interna' : 'Enviar mensagem'}
                         >
-                          {enviando ? (
+                          {enviando || enviandoNota ? (
                             <Loader2 className="w-5 h-5 text-white animate-spin" />
                           ) : (
                             <Send className="w-5 h-5 text-white" />
