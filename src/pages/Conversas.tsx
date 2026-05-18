@@ -605,6 +605,32 @@ export default function Conversas() {
     }
   };
 
+  const handleEnviarNota = async () => {
+    if (!novaMsg.trim()) return;
+    if (!selectedLead?.sessao_ativa?.id) return;
+    setEnviandoNota(true);
+    try {
+      const response = await api.post(
+        `/conversas/sessoes/${selectedLead.sessao_ativa.id}/notas`,
+        { conteudo: novaMsg.trim() }
+      );
+      const nota = {
+        ...(response.data || {}),
+        is_nota_interna: true,
+      };
+      setMensagens((prev) => [...prev, nota]);
+      setNovaMsg('');
+      setModoNota(false);
+    } catch {
+      toast({
+        title: 'Erro ao salvar nota interna',
+        variant: 'destructive',
+      });
+    } finally {
+      setEnviandoNota(false);
+    }
+  };
+
   const handleMensagemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const texto = e.target.value;
     setNovaMsg(texto);
