@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Phone, MessageCircle, Clock, User, CircleDot, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
@@ -99,6 +100,7 @@ const InfoRow = ({
 );
 
 export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClose, lead }) => {
+  const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(lead.avatar_url || null);
   const [imgError, setImgError] = useState(false);
   const [loadingAvatar, setLoadingAvatar] = useState(false);
@@ -242,7 +244,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
             <Button
               variant="outline"
               className="w-full border-[#075E54] text-[#075E54] hover:bg-[#075E54]/10 hover:text-[#075E54]"
-              onClick={() => window.open(`/leads/${lead.id}`, '_self')}
+              onClick={() => navigate(`/leads?leadId=${lead.id}`)}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               Ver perfil completo
