@@ -195,6 +195,14 @@ export default function Conversas() {
 
   const playNotification = useNotificationSound();
 
+  // Refs to avoid re-running effects on selectedLead changes
+  const selectedLeadRef = useRef<Lead | null>(null);
+  const processedEvents = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    selectedLeadRef.current = selectedLead;
+  }, [selectedLead]);
+
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setNovaMsg((prev) => prev + emojiData.emoji);
   };
@@ -290,6 +298,8 @@ export default function Conversas() {
   // Nova conversa (via SocketContext global)
   useEffect(() => {
     if (!lastNovaConversa) return;
+    if (processedEvents.current.has(lastNovaConversa.timestamp)) return;
+    processedEvents.current.add(lastNovaConversa.timestamp);
     const { lead } = lastNovaConversa;
     setLeads((prev) => {
       const existe = prev.some((l) => l.id === lead.id);
@@ -305,6 +315,8 @@ export default function Conversas() {
   // Conversa atualizada (via SocketContext global)
   useEffect(() => {
     if (!lastConversaAtualizada) return;
+    if (processedEvents.current.has(lastConversaAtualizada.timestamp)) return;
+    processedEvents.current.add(lastConversaAtualizada.timestamp);
     const data = lastConversaAtualizada;
     setLeads((prev) => {
       const updated = prev.map((lead) => {
@@ -319,13 +331,13 @@ export default function Conversas() {
       if (!alvo) return updated;
       return [alvo, ...updated.filter((l) => l.id !== data.leadId)];
     });
-    if (data.leadId !== selectedLead?.id) {
+    if (data.leadId !== selectedLeadRef.current?.id) {
       setUnreadCounts((prev) => ({
         ...prev,
         [data.leadId]: (prev[data.leadId] || 0) + 1,
       }));
     }
-  }, [lastConversaAtualizada, selectedLead?.id]);
+  }, [lastConversaAtualizada]);
 
   // Join/Leave conversation rooms
   useEffect(() => {
@@ -343,10 +355,11 @@ export default function Conversas() {
 
   // Listen to nova_mensagem event
   useEffect(() => {
-    if (!socket || !selectedLead?.sessao_ativa?.id) return;
-    const conversaId = selectedLead.sessao_ativa.id;
+    if (!socket) return;
 
     const handleNovaMensagem = (data: any) => {
+      const current = selectedLeadRef.current;
+      const conversaId = current?.sessao_ativa?.id;
       console.log('[Socket.io] Nova mensagem recebida:', data);
       if (data.conversaId === conversaId) {
         setMensagens((prev) => {
@@ -405,11 +418,11 @@ export default function Conversas() {
 
         // Incrementa não lidas se não for a conversa ativa
         if (data.mensagem?.is_from_me === false &&
-            data.conversaId !== selectedLead?.sessao_ativa?.id) {
+            data.conversaId !== current?.sessao_ativa?.id) {
           setUnreadCounts(prev => ({
             ...prev,
-            [selectedLead?.id || '']:
-              (prev[selectedLead?.id || ''] || 0) + 1,
+            [current?.id || '']:
+              (prev[current?.id || ''] || 0) + 1,
           }));
         }
       }
@@ -419,7 +432,7 @@ export default function Conversas() {
     return () => {
       socket.off('nova_mensagem', handleNovaMensagem);
     };
-  }, [socket, selectedLead?.sessao_ativa?.id, playNotification]);
+  }, [socket, playNotification]);
 
   // Listen lead_digitando
   useEffect(() => {
