@@ -13,6 +13,7 @@ import {
   LogOut,
   KanbanSquare,
   CalendarCheck,
+  FileText,
 } from "lucide-react";
 import {
   Sidebar,
