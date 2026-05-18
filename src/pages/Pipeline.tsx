@@ -6,6 +6,7 @@ import {
   ArrowLeft, ArrowRight, Check, ChevronRight, MessageCircle,
   Pencil, Phone, Plus, Search, Trash2, TrendingUp, X, Eye,
   DollarSign, Users, Trophy, Loader2, Clock,
+  Settings2, GripVertical, Palette,
 } from 'lucide-react';
 
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -770,6 +771,11 @@ function ModalDetalhes({ oportunidade, onClose, onEditar }: ModalDetalhesProps) 
 // Página principal: Pipeline
 // ─────────────────────────────────────────
 
+const CORES_ETAPA = [
+  '#6366F1', '#8B5CF6', '#EC4899', '#EF4444', '#F97316',
+  '#EAB308', '#22C55E', '#14B8A6', '#3B82F6', '#64748B',
+];
+
 export default function Pipeline() {
   const { user } = useAuth();
 
@@ -790,6 +796,14 @@ export default function Pipeline() {
   const [oportunidadeDetalhes, setOportunidadeDetalhes] = useState<Oportunidade | null>(null);
   const [oportunidadePerder, setOportunidadePerder] = useState<Oportunidade | null>(null);
   const [loadingPerder, setLoadingPerder] = useState(false);
+
+  // Modal de gerenciamento de etapas
+  const [modalEtapasOpen, setModalEtapasOpen] = useState(false);
+  const [etapaEditando, setEtapaEditando] = useState<WorkflowEtapa | null>(null);
+  const [novaEtapaNome, setNovaEtapaNome] = useState('');
+  const [novaEtapaCor, setNovaEtapaCor] = useState('#6366F1');
+  const [salvandoEtapa, setSalvandoEtapa] = useState(false);
+  const [excluindoEtapaId, setExcluindoEtapaId] = useState<number | null>(null);
 
   // ── Carregamento ──────────────────────
 
@@ -923,6 +937,69 @@ export default function Pipeline() {
     }
   }
 
+  // ── Gerenciamento de etapas ───────────
+
+  async function handleCriarEtapa() {
+    if (!novaEtapaNome.trim()) {
+      return toast.error('Informe o nome da etapa');
+    }
+    setSalvandoEtapa(true);
+    try {
+      await api.post('/workflow-etapas', {
+        nome: novaEtapaNome.trim(),
+        cor: novaEtapaCor,
+        ordem: etapas.length + 1,
+      });
+      toast.success('Etapa criada!');
+      setNovaEtapaNome('');
+      setNovaEtapaCor('#6366F1');
+      carregarEtapas();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao criar etapa');
+    } finally {
+      setSalvandoEtapa(false);
+    }
+  }
+
+  async function handleAtualizarEtapa() {
+    if (!etapaEditando) return;
+    setSalvandoEtapa(true);
+    try {
+      await api.patch(`/workflow-etapas/${etapaEditando.id}`, {
+        nome: etapaEditando.nome,
+        cor: etapaEditando.cor,
+      });
+      toast.success('Etapa atualizada!');
+      setEtapaEditando(null);
+      carregarEtapas();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar');
+    } finally {
+      setSalvandoEtapa(false);
+    }
+  }
+
+  async function handleExcluirEtapa(id: number) {
+    if (!window.confirm(
+      'Excluir esta etapa? Só é possível se não houver oportunidades em aberto nela.'
+    )) return;
+
+    setExcluindoEtapaId(id);
+    try {
+      await api.delete(`/workflow-etapas/${id}`);
+      toast.success('Etapa excluída!');
+      carregarEtapas();
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.error ||
+        err.message ||
+        'Erro ao excluir etapa'
+      );
+    } finally {
+      setExcluindoEtapaId(null);
+    }
+  }
+
   // ── Render ────────────────────────────
 
   return (
@@ -937,10 +1014,20 @@ export default function Pipeline() {
               Gerencie o funil de vendas da clínica
             </p>
           </div>
-          <Button onClick={() => setModalCriarOpen(true)} className="rounded-lg shadow-sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Oportunidade
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setModalEtapasOpen(true)}
+              className="rounded-lg"
+            >
+              <Settings2 className="h-4 w-4 mr-2" />
+              Configurar Etapas
+            </Button>
+            <Button onClick={() => setModalCriarOpen(true)} className="rounded-lg shadow-sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Oportunidade
+            </Button>
+          </div>
         </div>
 
         {/* ── Stats globais ── */}
@@ -1157,6 +1244,143 @@ export default function Pipeline() {
         onConfirmado={handleConfirmarPerda}
         loading={loadingPerder}
       />
+
+      <Dialog open={modalEtapasOpen} onOpenChange={setModalEtapasOpen}>
+        <DialogContent className="max-w-lg rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Etapas do Pipeline</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-2">
+              {etapas.map((etapa) => (
+                <div
+                  key={etapa.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                >
+                  <div
+                    className="w-4 h-4 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: etapa.cor }}
+                  />
+                  {etapaEditando?.id === etapa.id ? (
+                    <div className="flex-1 flex items-center gap-2">
+                      <input
+                        className="flex-1 text-sm border rounded px-2 py-1 bg-background"
+                        value={etapaEditando.nome}
+                        onChange={(e) => setEtapaEditando({
+                          ...etapaEditando,
+                          nome: e.target.value,
+                        })}
+                        autoFocus
+                      />
+                      <div className="flex gap-1 flex-wrap max-w-[120px]">
+                        {CORES_ETAPA.map((cor) => (
+                          <button
+                            key={cor}
+                            className={`w-4 h-4 rounded-full transition-transform hover:scale-110 ${
+                              etapaEditando.cor === cor
+                                ? 'ring-2 ring-offset-1 ring-primary'
+                                : ''
+                            }`}
+                            style={{ backgroundColor: cor }}
+                            onClick={() => setEtapaEditando({
+                              ...etapaEditando,
+                              cor,
+                            })}
+                          />
+                        ))}
+                      </div>
+                      <button
+                        onClick={handleAtualizarEtapa}
+                        disabled={salvandoEtapa}
+                        className="text-green-600 hover:text-green-700 p-1"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setEtapaEditando(null)}
+                        className="text-muted-foreground hover:text-foreground p-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm font-medium">{etapa.nome}</span>
+                      <span className="text-xs text-muted-foreground">
+                        #{porEtapa(etapa.id).length} ops
+                      </span>
+                      <button
+                        onClick={() => setEtapaEditando(etapa)}
+                        className="text-muted-foreground hover:text-foreground p-1 transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleExcluirEtapa(etapa.id)}
+                        disabled={excluindoEtapaId === etapa.id}
+                        className="text-muted-foreground hover:text-destructive p-1 transition-colors"
+                        title="Excluir"
+                      >
+                        {excluindoEtapaId === etapa.id
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <Trash2 className="h-3.5 w-3.5" />}
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t pt-4">
+              <p className="text-sm font-medium mb-3">Nova Etapa</p>
+              <div className="space-y-3">
+                <input
+                  className="w-full text-sm border rounded-lg px-3 py-2 bg-background"
+                  placeholder="Nome da etapa..."
+                  value={novaEtapaNome}
+                  onChange={(e) => setNovaEtapaNome(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCriarEtapa();
+                  }}
+                />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Cor</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {CORES_ETAPA.map((cor) => (
+                      <button
+                        key={cor}
+                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${
+                          novaEtapaCor === cor
+                            ? 'ring-2 ring-offset-2 ring-primary'
+                            : ''
+                        }`}
+                        style={{ backgroundColor: cor }}
+                        onClick={() => setNovaEtapaCor(cor)}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  onClick={handleCriarEtapa}
+                  disabled={salvandoEtapa || !novaEtapaNome.trim()}
+                  className="w-full rounded-lg"
+                >
+                  {salvandoEtapa
+                    ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    : <Plus className="h-4 w-4 mr-2" />}
+                  Adicionar Etapa
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalEtapasOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
