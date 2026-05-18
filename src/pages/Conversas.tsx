@@ -820,10 +820,6 @@ export default function Conversas() {
     );
   }
 
-  const JanelaBadge = () => {
-    return _JanelaBadgeImpl();
-  };
-
   const handleFecharConversa = async () => {
     if (!selectedLead?.sessao_ativa?.id) return;
     setFechandoConversa(true);
@@ -882,7 +878,7 @@ export default function Conversas() {
     }
   };
 
-  const _JanelaBadgeImpl = () => {
+  const JanelaBadge = () => {
     if (loadingJanela) return null;
     if (!janela) return null;
 
