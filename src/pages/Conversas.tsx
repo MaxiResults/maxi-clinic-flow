@@ -470,6 +470,23 @@ export default function Conversas() {
     };
   }, [socket, selectedLead?.sessao_ativa?.id]);
 
+  // Listen nova_nota_interna
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (data: any) => {
+      if (data.conversaId !== selectedLeadRef.current?.sessao_ativa?.id) return;
+      setMensagens((prev) => {
+        const nota = { ...(data.nota || {}), is_nota_interna: true };
+        if (nota.id && prev.some((m: any) => m.id === nota.id)) return prev;
+        return [...prev, nota];
+      });
+    };
+    socket.on('nova_nota_interna', handler);
+    return () => {
+      socket.off('nova_nota_interna', handler);
+    };
+  }, [socket]);
+
   // Fallback polling - leads (only if socket not connected)
   useEffect(() => {
     if (socket?.connected) return;
