@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnread } from "@/contexts/UnreadContext";
 import { NavLink } from "@/components/NavLink";
 import {
   LayoutDashboard,
@@ -40,6 +41,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { totalUnread } = useUnread();
 
   const initials = user?.nome
     ? user.nome.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
@@ -79,7 +81,14 @@ export function AppSidebar() {
                         }`}
                       >
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span className="flex items-center gap-2 flex-1">
+                          {item.title}
+                          {item.url === "/conversas" && totalUnread > 0 && (
+                            <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                              {totalUnread > 99 ? '99+' : totalUnread}
+                            </span>
+                          )}
+                        </span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
