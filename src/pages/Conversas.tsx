@@ -203,6 +203,12 @@ export default function Conversas() {
   const [modoNota, setModoNota] = useState(false);
   const [enviandoNota, setEnviandoNota] = useState(false);
 
+  // Respostas rápidas
+  const [respostasRapidas, setRespostasRapidas] = useState<RespostaRapida[]>([]);
+  const [showRespostas, setShowRespostas] = useState(false);
+  const [respostasFiltradas, setRespostasFiltradas] = useState<RespostaRapida[]>([]);
+  const [respostaSelecionada, setRespostaSelecionada] = useState(0);
+
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadando, setUploadando] = useState(false);
