@@ -5,10 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
-import { Users, Calendar, MessageSquare, TrendingUp, Clock, RefreshCw, Loader2 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Users, Calendar, MessageSquare, TrendingUp, Clock, RefreshCw, Loader2, Send, Timer } from "lucide-react";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import api from '@/lib/api';
 import { DashboardSkeleton } from '@/components/skeletons/DashboardSkeleton';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -21,10 +24,21 @@ export default function Dashboard() {
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [analyticsWpp, setAnalyticsWpp] = useState<any>(null);
+  const [loadingWpp, setLoadingWpp] = useState(true);
+  const [periodoWpp, setPeriodoWpp] = useState('30');
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    setLoadingWpp(true);
+    api.get(`/analytics/conversas?periodo=${periodoWpp}`)
+      .then(r => setAnalyticsWpp(r.data))
+      .catch(() => setAnalyticsWpp(null))
+      .finally(() => setLoadingWpp(false));
+  }, [periodoWpp]);
 
   const fetchDashboardData = async (isRefresh = false) => {
     try {
