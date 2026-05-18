@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Phone, MessageCircle, Clock, User, CircleDot, Smartphone, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
+import { LeadViewModal } from '@/components/leads/LeadViewModal';
 
 interface ContactInfoPanelProps {
   open: boolean;
@@ -108,6 +109,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
   const [photoLightboxOpen, setPhotoLightboxOpen] = useState(false);
   const [photoLightboxUrl, setPhotoLightboxUrl] = useState<string | null>(null);
   const [loadingLightbox, setLoadingLightbox] = useState(false);
+  const [leadModalOpen, setLeadModalOpen] = useState(false);
 
   useEffect(() => {
     setAvatarUrl(lead.avatar_url || null);
@@ -171,6 +173,24 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
       setLoadingLightbox(false);
     }
   };
+
+  const leadParaModal = {
+    id: lead.id,
+    nome: lead.nome,
+    telefone: lead.telefone || '',
+    email: undefined,
+    cpf: undefined,
+    canal_origem: lead.canal_origem || '—',
+    status: lead.status || 'novo',
+    interesse: undefined,
+    observacoes: undefined,
+    whatsapp_id: lead.whatsapp_id || null,
+    whatsapp_nome: null,
+    primeira_mensagem_em: null,
+    avatar_url: avatarUrl || lead.avatar_url || null,
+    created_at: '',
+    updated_at: '',
+  } as any;
 
   return (
     <>
@@ -284,7 +304,7 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
             <Button
               variant="outline"
               className="w-full border-[#075E54] text-[#075E54] hover:bg-[#075E54]/10 hover:text-[#075E54]"
-              onClick={() => navigate(`/leads?leadId=${lead.id}`)}
+              onClick={() => setLeadModalOpen(true)}
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               Ver perfil completo
@@ -359,6 +379,17 @@ export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClos
           <p className="absolute bottom-6 text-white/30 text-xs">Clique fora para fechar</p>
         </div>
       )}
+
+      <LeadViewModal
+        open={leadModalOpen}
+        onClose={() => setLeadModalOpen(false)}
+        lead={leadParaModal}
+        onEdit={() => {
+          setLeadModalOpen(false);
+          onClose();
+          navigate(`/leads?leadId=${lead.id}`);
+        }}
+      />
     </>
   );
 };
