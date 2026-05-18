@@ -194,6 +194,8 @@ export default function Conversas() {
   const [todasImagens, setTodasImagens] = useState<string[]>([]);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [zoomLightbox, setZoomLightbox] = useState(1);
+  const [janela, setJanela] = useState<JanelaInfo | null>(null);
+  const [loadingJanela, setLoadingJanela] = useState(false);
 
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
