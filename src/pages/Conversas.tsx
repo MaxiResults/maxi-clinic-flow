@@ -121,6 +121,13 @@ interface Atendente {
   email?: string;
 }
 
+interface JanelaInfo {
+  ativa: boolean;
+  expira_em: string | null;
+  minutos_restantes: number;
+  horas_restantes: number;
+}
+
 interface Lead {
   id: string;
   nome: string;
@@ -187,6 +194,8 @@ export default function Conversas() {
   const [todasImagens, setTodasImagens] = useState<string[]>([]);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [zoomLightbox, setZoomLightbox] = useState(1);
+  const [janela, setJanela] = useState<JanelaInfo | null>(null);
+  const [loadingJanela, setLoadingJanela] = useState(false);
 
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -373,6 +382,14 @@ export default function Conversas() {
         // Tocar som apenas para mensagens recebidas (não enviadas por mim)
         if (data.mensagem?.is_from_me === false) {
           playNotification();
+
+          // Atualiza janela 24h ao receber mensagem do cliente
+          const sessaoId = selectedLeadRef.current?.sessao_ativa?.id;
+          if (sessaoId) {
+            api.get(`/conversas/sessoes/${sessaoId}/janela`)
+              .then(r => setJanela(r.data))
+              .catch(() => {});
+          }
         }
 
         // Atualiza preview da última mensagem na sidebar
@@ -516,6 +533,7 @@ export default function Conversas() {
   };
 
   const handleSelectLead = (lead: Lead) => {
+    setJanela(null);
     setSelectedLead(lead);
     setMensagens([]);
     fetchMensagens(lead.id);
@@ -525,6 +543,18 @@ export default function Conversas() {
       setTotalUnread(total);
       return next;
     });
+
+    // Busca info da janela 24h
+    const sessaoId = lead.sessao_ativa?.id;
+    if (sessaoId) {
+      setLoadingJanela(true);
+      api.get(`/conversas/sessoes/${sessaoId}/janela`)
+        .then(r => setJanela(r.data))
+        .catch(() => setJanela(null))
+        .finally(() => setLoadingJanela(false));
+    } else {
+      setJanela(null);
+    }
   };
 
   const handleEnviarMensagem = async (e: React.FormEvent) => {
@@ -783,6 +813,43 @@ export default function Conversas() {
     );
   }
 
+  const JanelaBadge = () => {
+    if (loadingJanela) return null;
+    if (!janela) return null;
+
+    if (!janela.ativa) {
+      return (
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          🔒 Janela expirada — use templates
+        </div>
+      );
+    }
+
+    const minutos = janela.minutos_restantes;
+    const horas = janela.horas_restantes;
+    const critico = minutos <= 60;
+    const atencao = horas < 6;
+    const texto = horas >= 1
+      ? `⏰ Expira em ${horas}h ${minutos % 60}min`
+      : `⚠️ Expira em ${minutos}min`;
+
+    return (
+      <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all ${
+        critico
+          ? 'bg-red-50 text-red-700 border-red-200 animate-pulse'
+          : atencao
+            ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+            : 'bg-green-50 text-green-700 border-green-200'
+      }`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${
+          critico ? 'bg-red-500' : atencao ? 'bg-yellow-500' : 'bg-green-500'
+        }`} />
+        {texto}
+      </div>
+    );
+  };
+
   return (
     <DashboardLayout title="Conversas WhatsApp">
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
@@ -881,6 +948,9 @@ export default function Conversas() {
                         <p className="text-xs text-white/80">
                           {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
                         </p>
+                        <div className="mt-1.5">
+                          <JanelaBadge />
+                        </div>
                       </div>
                     </button>
                     <div className="flex items-center gap-2">
