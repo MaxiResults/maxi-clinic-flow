@@ -1217,6 +1217,13 @@ export default function Conversas() {
               </div>
             )}
           </div>
+          {selectedLead && (
+            <ContactInfoPanel
+              open={contactInfoOpen}
+              onClose={() => setContactInfoOpen(false)}
+              lead={selectedLead}
+            />
+          )}
         </Card>
       </div>
 
