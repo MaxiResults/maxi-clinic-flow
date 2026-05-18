@@ -940,6 +940,9 @@ export default function Conversas() {
                         <p className="text-xs text-white/80">
                           {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
                         </p>
+                        <div className="mt-1.5">
+                          <JanelaBadge />
+                        </div>
                       </div>
                     </button>
                     <div className="flex items-center gap-2">
