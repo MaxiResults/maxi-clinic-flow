@@ -1019,6 +1019,29 @@ export default function Conversas() {
                       </div>
                     </button>
                     <div className="flex items-center gap-2">
+                      {selectedLead?.sessao_ativa?.status_sessao === 'encerrada' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleReabrirConversa}
+                          className="text-green-300 hover:text-green-200 hover:bg-white/10 gap-1.5"
+                          title="Reabrir conversa"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">Reabrir</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setModalFecharOpen(true)}
+                          className="text-white/80 hover:text-white hover:bg-white/10 gap-1.5"
+                          title="Encerrar conversa"
+                        >
+                          <CheckCheck className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">Encerrar</span>
+                        </Button>
+                      )}
                       <AttendantBadge
                         atendente={selectedLead.sessao_ativa?.atendente || undefined}
                         onTransfer={() => setAssignModalOpen(true)}
