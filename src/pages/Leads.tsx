@@ -11,6 +11,7 @@ import { LeadCard } from "@/components/leads/LeadCard";
 import { LeadFilters } from "@/components/leads/LeadFilters";
 import { LeadStats } from "@/components/leads/LeadStats";
 import { LeadDialog } from "@/components/leads/LeadDialog";
+import { LeadViewModal } from "@/components/leads/LeadViewModal";
 import { LeadViewToggle } from "@/components/leads/LeadViewToggle";
 import { FormattedDate } from "@/components/ui/FormattedDate";
 import type { Lead } from "@/hooks/useLeadsData";
@@ -27,6 +28,7 @@ export default function Leads() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('grid');
+  const [viewingLead, setViewingLead] = useState<Lead | null>(null);
 
   const handleCreate = () => {
     setDialogMode('create');
@@ -38,6 +40,11 @@ export default function Leads() {
     setDialogMode('edit');
     setSelectedLeadId(id);
     setDialogOpen(true);
+  };
+
+  const handleView = (id: string) => {
+    const lead = leads.find(l => l.id === id);
+    if (lead) setViewingLead(lead);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -137,7 +144,7 @@ export default function Leads() {
         {viewMode === 'grid' && filters.filteredLeads.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filters.filteredLeads.map(lead => (
-              <LeadCard key={lead.id} lead={lead} onEdit={handleEdit} onDelete={handleDeleteClick} />
+              <LeadCard key={lead.id} lead={lead} onView={handleView} onEdit={handleEdit} onDelete={handleDeleteClick} />
             ))}
           </div>
         )}
@@ -159,7 +166,8 @@ export default function Leads() {
                     <FormattedDate value={lead.created_at} format="short" className="text-sm text-muted-foreground" />
                   </div>
                   <div className="flex gap-2 ml-4">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleView(lead.id)} title="Exibir" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Plus className="h-4 w-4 rotate-45" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(lead.id)} className="h-8 w-8 text-destructive"><Plus className="h-4 w-4 rotate-45" /></Button>
                   </div>
                 </div>
@@ -197,7 +205,8 @@ export default function Leads() {
                         <td className="px-4 py-3 text-sm text-muted-foreground"><FormattedDate value={lead.created_at} format="short" /></td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleView(lead.id)} title="Exibir" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Plus className="h-4 w-4 rotate-45" /></Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(lead.id)} title="Excluir" className="h-8 w-8 text-destructive"><Plus className="h-4 w-4 rotate-45" /></Button>
                           </div>
                         </td>
@@ -212,6 +221,19 @@ export default function Leads() {
       </div>
 
       <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} mode={dialogMode} leadId={selectedLeadId} onSuccess={() => { setDialogOpen(false); refreshLeads(); }} />
+
+      {viewingLead && (
+        <LeadViewModal
+          open={!!viewingLead}
+          onClose={() => setViewingLead(null)}
+          lead={viewingLead}
+          onEdit={() => {
+            const lead = viewingLead;
+            setViewingLead(null);
+            handleEdit(lead.id);
+          }}
+        />
+      )}
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
