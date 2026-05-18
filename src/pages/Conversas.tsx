@@ -164,7 +164,6 @@ export default function Conversas() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const { setTotalUnread } = useUnread();
-  const { user } = useAuth();
   const { socket, lastNovaConversa, lastConversaAtualizada } = useSocket();
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
