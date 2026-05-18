@@ -1332,7 +1332,43 @@ export default function Conversas() {
                       />
                     </div>
                   ) : (
-                    <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1">
+                    <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1 relative">
+                      {/* Menu de respostas rápidas */}
+                      {showRespostas && respostasFiltradas.length > 0 && (
+                        <div
+                          data-respostas-menu
+                          className="absolute bottom-full left-0 right-0 mb-2 bg-background rounded-xl border shadow-xl overflow-hidden z-50 max-h-72 overflow-y-auto"
+                        >
+                          <div className="px-3 py-2 border-b bg-muted/50 sticky top-0">
+                            <p className="text-xs text-muted-foreground">
+                              ↑↓ navegar · Tab ou Enter para selecionar · Esc para fechar
+                            </p>
+                          </div>
+                          {respostasFiltradas.map((r, idx) => (
+                            <button
+                              type="button"
+                              key={r.id}
+                              className={`w-full text-left px-4 py-3 transition-colors border-b border-border/30 last:border-0 ${
+                                idx === respostaSelecionada ? 'bg-accent' : 'hover:bg-accent/50'
+                              }`}
+                              onClick={() => aplicarResposta(r)}
+                              onMouseEnter={() => setRespostaSelecionada(idx)}
+                            >
+                              <div className="flex items-start gap-3">
+                                <span className="shrink-0 font-mono text-xs bg-muted px-1.5 py-0.5 rounded text-muted-foreground mt-0.5">
+                                  /{r.atalho}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium">{r.titulo}</p>
+                                  <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                    {r.conteudo}
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                       {/* Input arredondado estilo WhatsApp */}
                       <div className={`flex-1 flex items-center gap-3 rounded-[24px] border px-4 py-2.5 transition-all shadow-sm ${
@@ -1448,10 +1484,35 @@ export default function Conversas() {
                         <input
                           ref={textInputRef}
                           type="text"
+                          data-chat-input
                           placeholder={modoNota ? '📝 Nota interna — visível apenas para a equipe...' : 'Digite uma mensagem'}
                           value={novaMsg}
                           onChange={handleMensagemChange}
                           onKeyDown={(e) => {
+                            if (showRespostas) {
+                              if (e.key === 'ArrowDown') {
+                                e.preventDefault();
+                                setRespostaSelecionada(prev => Math.min(prev + 1, respostasFiltradas.length - 1));
+                                return;
+                              }
+                              if (e.key === 'ArrowUp') {
+                                e.preventDefault();
+                                setRespostaSelecionada(prev => Math.max(prev - 1, 0));
+                                return;
+                              }
+                              if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                                e.preventDefault();
+                                if (respostasFiltradas[respostaSelecionada]) {
+                                  aplicarResposta(respostasFiltradas[respostaSelecionada]);
+                                }
+                                return;
+                              }
+                              if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setShowRespostas(false);
+                                return;
+                              }
+                            }
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
                               if (novaMsg.trim()) {
