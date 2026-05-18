@@ -231,6 +231,41 @@ export default function Conversas() {
     selectedLeadRef.current = selectedLead;
   }, [selectedLead]);
 
+  // Carrega respostas rápidas ao montar
+  useEffect(() => {
+    api.get('/respostas-rapidas')
+      .then(r => setRespostasRapidas(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {});
+  }, []);
+
+  // Fecha menu de respostas ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        !target.closest('[data-respostas-menu]') &&
+        !target.closest('[data-chat-input]')
+      ) {
+        setShowRespostas(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const aplicarResposta = (r: RespostaRapida) => {
+    setNovaMsg(r.conteudo);
+    setShowRespostas(false);
+    setRespostaSelecionada(0);
+    setTimeout(() => {
+      const el = textInputRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(r.conteudo.length, r.conteudo.length);
+      }
+    }, 0);
+  };
+
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setNovaMsg((prev) => prev + emojiData.emoji);
   };
