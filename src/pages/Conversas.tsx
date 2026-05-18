@@ -700,6 +700,22 @@ export default function Conversas() {
     const texto = e.target.value;
     setNovaMsg(texto);
 
+    // Detecta abertura do menu de respostas rápidas
+    if (texto.startsWith('/')) {
+      const busca = texto.slice(1).toLowerCase();
+      const filtradas = respostasRapidas.filter(r =>
+        busca === '' ||
+        r.atalho.includes(busca) ||
+        r.titulo.toLowerCase().includes(busca) ||
+        r.conteudo.toLowerCase().includes(busca)
+      );
+      setRespostasFiltradas(filtradas);
+      setShowRespostas(filtradas.length > 0);
+      setRespostaSelecionada(0);
+    } else if (showRespostas) {
+      setShowRespostas(false);
+    }
+
     if (socket && selectedLead?.sessao_ativa?.id && texto.length > 0) {
       socket.emit('usuario_digitando', {
         conversaId: selectedLead.sessao_ativa.id,
