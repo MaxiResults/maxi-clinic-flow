@@ -121,6 +121,13 @@ interface Atendente {
   email?: string;
 }
 
+interface JanelaInfo {
+  ativa: boolean;
+  expira_em: string | null;
+  minutos_restantes: number;
+  horas_restantes: number;
+}
+
 interface Lead {
   id: string;
   nome: string;
