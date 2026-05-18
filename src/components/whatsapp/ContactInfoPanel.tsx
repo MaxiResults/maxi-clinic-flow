@@ -1,0 +1,237 @@
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, ExternalLink, Phone, MessageCircle, Clock, User, CircleDot, Smartphone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import api from '@/lib/api';
+
+interface ContactInfoPanelProps {
+  open: boolean;
+  onClose: () => void;
+  lead: {
+    id: string;
+    nome: string;
+    telefone: string;
+    whatsapp_id: string;
+    avatar_url?: string | null;
+    status?: string;
+    canal_origem?: string;
+    total_mensagens?: number;
+    ultima_interacao?: string;
+    sessao_ativa?: {
+      id: string;
+      atendente?: { id: string; nome: string } | null;
+    } | null;
+  };
+}
+
+const formatPhone = (phone: string) => {
+  if (!phone) return '-';
+  const n = phone.replace(/\D/g, '');
+  if (n.length === 13) {
+    return `+${n.slice(0, 2)} (${n.slice(2, 4)}) ${n.slice(4, 9)}-${n.slice(9)}`;
+  }
+  return phone;
+};
+
+const formatDateBR = (iso?: string) => {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '-';
+  const now = new Date();
+  const sameDay =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    d.getDate() === yesterday.getDate() &&
+    d.getMonth() === yesterday.getMonth() &&
+    d.getFullYear() === yesterday.getFullYear();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  if (sameDay) return `Hoje às ${hh}:${mm}`;
+  if (isYesterday) return `Ontem às ${hh}:${mm}`;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mo}/${d.getFullYear()} às ${hh}:${mm}`;
+};
+
+const Avatar = ({ nome, avatarUrl }: { nome: string; avatarUrl?: string | null }) => {
+  const safeNome = nome || 'Usuário';
+  const iniciais = safeNome
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n.charAt(0).toUpperCase())
+    .join('');
+  const colors = [
+    'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500',
+    'bg-indigo-500', 'bg-red-500', 'bg-yellow-500', 'bg-teal-500',
+  ];
+  const hash = safeNome.split('').reduce((acc, c) => c.charCodeAt(0) + ((acc << 5) - acc), 0);
+  const bg = colors[Math.abs(hash) % colors.length];
+  const [imgError, setImgError] = useState(false);
+  const showImage = !!avatarUrl && !imgError;
+
+  return (
+    <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center shadow-md">
+      {showImage ? (
+        <img
+          src={avatarUrl!}
+          alt={safeNome}
+          className="w-full h-full object-cover"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className={`${bg} w-full h-full flex items-center justify-center text-white text-3xl font-semibold`}>
+          {iniciais || '?'}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const InfoRow = ({
+  icon: Icon,
+  label,
+  value,
+  italic,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: React.ReactNode;
+  italic?: boolean;
+}) => (
+  <div className="flex items-start gap-3 px-6 py-4 border-b border-gray-100">
+    <Icon className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+    <div className="flex-1 min-w-0">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`text-sm text-gray-800 break-words ${italic ? 'italic text-gray-400' : ''}`}>
+        {value}
+      </p>
+    </div>
+  </div>
+);
+
+export const ContactInfoPanel: React.FC<ContactInfoPanelProps> = ({ open, onClose, lead }) => {
+  const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(lead.avatar_url);
+
+  useEffect(() => {
+    setAvatarUrl(lead.avatar_url);
+    if (!lead.whatsapp_id || !lead.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get(`/evolution/profile-picture/${lead.whatsapp_id}`, {
+          params: { leadId: lead.id },
+        });
+        const url = (res.data as any)?.url || (res.data as any)?.profilePictureUrl;
+        if (!cancelled && url && url !== lead.avatar_url) {
+          setAvatarUrl(url);
+        }
+      } catch {
+        /* silencioso */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [lead.id, lead.whatsapp_id, lead.avatar_url]);
+
+  const statusFmt = lead.status
+    ? lead.status.charAt(0).toUpperCase() + lead.status.slice(1).toLowerCase()
+    : '-';
+
+  const telefoneIgualWpp =
+    (lead.telefone || '').replace(/\D/g, '') === (lead.whatsapp_id || '').replace(/\D/g, '');
+
+  return (
+    <>
+      {/* Backdrop */}
+      {open && (
+        <div
+          className="absolute inset-0 z-40 bg-black/20"
+          onClick={onClose}
+          aria-hidden
+        />
+      )}
+
+      {/* Panel */}
+      <aside
+        className={`absolute top-0 right-0 h-full w-full md:w-[320px] bg-white shadow-xl z-50 flex flex-col transform transition-transform duration-300 ${
+          open ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="bg-[#075E54] text-white flex items-center gap-4 px-4 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-white hover:opacity-80"
+            aria-label="Fechar"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <span className="font-medium">Informações do contato</span>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Avatar section */}
+          <div className="bg-[#F0F2F5] flex flex-col items-center py-6 px-4">
+            <Avatar nome={lead.nome} avatarUrl={avatarUrl} />
+            <h3 className="text-xl font-semibold mt-4 text-center text-gray-900">
+              {lead.nome}
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {formatPhone(lead.whatsapp_id || lead.telefone)}
+            </p>
+          </div>
+
+          {/* Details */}
+          <div className="bg-white">
+            <InfoRow
+              icon={Smartphone}
+              label="WhatsApp"
+              value={formatPhone(lead.whatsapp_id)}
+            />
+            {!telefoneIgualWpp && lead.telefone && (
+              <InfoRow icon={Phone} label="Telefone" value={formatPhone(lead.telefone)} />
+            )}
+            <InfoRow icon={CircleDot} label="Status no sistema" value={statusFmt} />
+            <InfoRow
+              icon={MessageCircle}
+              label="Mensagens trocadas"
+              value={`${lead.total_mensagens ?? 0} mensagens`}
+            />
+            <InfoRow
+              icon={Clock}
+              label="Última interação"
+              value={formatDateBR(lead.ultima_interacao)}
+            />
+            <InfoRow
+              icon={User}
+              label="Responsável"
+              value={lead.sessao_ativa?.atendente?.nome || 'Não atribuído'}
+              italic={!lead.sessao_ativa?.atendente}
+            />
+          </div>
+
+          {/* Footer button */}
+          <div className="mx-6 mb-6 mt-2">
+            <Button
+              variant="outline"
+              className="w-full border-[#075E54] text-[#075E54] hover:bg-[#075E54]/10 hover:text-[#075E54]"
+              onClick={() => window.open(`/leads/${lead.id}`, '_self')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Ver perfil completo
+            </Button>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+};
+
+export default ContactInfoPanel;

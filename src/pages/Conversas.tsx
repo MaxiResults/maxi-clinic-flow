@@ -15,6 +15,7 @@ import { AudioPlayer } from "@/components/whatsapp/AudioPlayer";
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from "emoji-picker-react";
 import { useUnread } from "@/contexts/UnreadContext";
 import { useSocket } from "@/contexts/SocketContext";
+import { ContactInfoPanel } from "@/components/whatsapp/ContactInfoPanel";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -175,6 +176,7 @@ export default function Conversas() {
   const [error, setError] = useState<string | null>(null);
   const [novaMsg, setNovaMsg] = useState("");
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [contactInfoOpen, setContactInfoOpen] = useState(false);
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas'>('todas');
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
@@ -845,13 +847,17 @@ export default function Conversas() {
           </div>
         </Card>
 
-        <Card className="col-span-1 md:col-span-2 overflow-hidden">
+        <Card className="col-span-1 md:col-span-2 overflow-hidden relative">
           <div className="flex h-full flex-col">
             {selectedLead ? (
               <>
                 <div className={`border-b p-4 ${whatsappStyles.headerBg} text-white`}>
                   <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setContactInfoOpen(true)}
+                      className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer text-left"
+                    >
                       <ContactAvatar
                         nome={selectedLead.nome}
                         avatarUrl={selectedLead.avatar_url}
@@ -863,7 +869,7 @@ export default function Conversas() {
                           {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
                         </p>
                       </div>
-                    </div>
+                    </button>
                     <div className="flex items-center gap-2">
                       <AttendantBadge
                         atendente={selectedLead.sessao_ativa?.atendente || undefined}
@@ -1211,6 +1217,13 @@ export default function Conversas() {
               </div>
             )}
           </div>
+          {selectedLead && (
+            <ContactInfoPanel
+              open={contactInfoOpen}
+              onClose={() => setContactInfoOpen(false)}
+              lead={selectedLead}
+            />
+          )}
         </Card>
       </div>
 
