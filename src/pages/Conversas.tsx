@@ -513,6 +513,26 @@ export default function Conversas() {
     };
   }, [socket, playNotification]);
 
+  // Listen conversa_fixada
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (data: { sessaoId: string; leadId: string; fixada: boolean }) => {
+      setLeads(prev => {
+        const atualizado = prev.map(l =>
+          l.id === data.leadId
+            ? { ...l, sessao_ativa: l.sessao_ativa ? { ...l.sessao_ativa, fixada: data.fixada } : null }
+            : l
+        );
+        return [
+          ...atualizado.filter(l => l.sessao_ativa?.fixada),
+          ...atualizado.filter(l => !l.sessao_ativa?.fixada),
+        ];
+      });
+    };
+    socket.on('conversa_fixada', handler);
+    return () => { socket.off('conversa_fixada', handler); };
+  }, [socket]);
+
   // Listen lead_digitando
   useEffect(() => {
     if (!socket || !selectedLead?.sessao_ativa?.id) return;
