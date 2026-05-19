@@ -707,6 +707,19 @@ export default function Conversas() {
       return;
     }
 
+    // Garante parar indicador "digitando" no Evolution
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      api.post('/evolution/typing', {
+        conversaId: selectedLead?.sessao_ativa?.id,
+        typing: false,
+      }).catch(() => {});
+    }
+
     try {
       setEnviando(true);
 
