@@ -1175,7 +1175,7 @@ export default function Conversas() {
           <div className="flex h-full flex-col">
             <div className="border-b p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Conversas ({leads.length})</h3>
+                 <h3 className="font-semibold">Conversas ({leadsOrdenados.length})</h3>
                 <Button onClick={() => fetchLeads()} variant="ghost" size="sm">🔄</Button>
               </div>
               <ConversationFilters
@@ -1186,7 +1186,7 @@ export default function Conversas() {
               />
             </div>
             <div className="flex-1 overflow-y-auto">
-              {leads.length === 0 ? (
+              {leadsOrdenados.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-sm font-medium">Nenhuma conversa</p>
@@ -1197,7 +1197,8 @@ export default function Conversas() {
                   </p>
                 </div>
               ) : (
-                leads.map((lead) => (
+                leadsOrdenados.map((lead, index) => (
+                  <React.Fragment key={lead.id}>
                   <div
                     key={lead.id}
                     className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
@@ -1214,9 +1215,22 @@ export default function Conversas() {
                       <div className="flex-1 overflow-hidden">
                         <div className="flex items-center justify-between mb-1">
                           <p className={`truncate ${(unreadCounts[lead.id] || 0) > 0 ? 'font-bold text-foreground' : 'font-medium'}`}>{lead.nome}</p>
-                          <span className="text-xs text-muted-foreground">
-                            {formatTime(lead.ultima_interacao)}
-                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={(e) => handleToggleFixar(lead, e)}
+                              className={`p-1 rounded transition-colors ${
+                                lead.sessao_ativa?.fixada
+                                  ? 'text-primary'
+                                  : 'text-muted-foreground/40 hover:text-muted-foreground'
+                              }`}
+                              title={lead.sessao_ativa?.fixada ? 'Desafixar conversa' : 'Fixar no topo'}
+                            >
+                              <Pin className={`h-3.5 w-3.5 ${lead.sessao_ativa?.fixada ? 'fill-current' : ''}`} />
+                            </button>
+                            <span className="text-xs text-muted-foreground">
+                              {formatTime(lead.ultima_interacao)}
+                            </span>
+                          </div>
                         </div>
                         <p className="truncate text-sm text-muted-foreground">
                           {lead.ultima_mensagem?.mensagem || 'Sem mensagens'}
@@ -1239,6 +1253,12 @@ export default function Conversas() {
                       </div>
                     </div>
                   </div>
+                  {temFixadas && indexPrimeiraNaoFixada > 0 && index === indexPrimeiraNaoFixada - 1 && (
+                    <div className="px-3 py-1">
+                      <div className="border-t border-dashed border-border/50" />
+                    </div>
+                  )}
+                  </React.Fragment>
                 ))
               )}
             </div>
