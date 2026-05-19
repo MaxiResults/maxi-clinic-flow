@@ -208,6 +208,9 @@ export default function Conversas() {
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
   const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [contatoDigitando, setContatoDigitando] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
   const [emojiPickerAberto, setEmojiPickerAberto] = useState(false);
   const [lightboxAberto, setLightboxAberto] = useState(false);
   const [todasImagens, setTodasImagens] = useState<string[]>([]);
@@ -546,6 +549,26 @@ export default function Conversas() {
     };
   }, [socket, selectedLead?.sessao_ativa?.id]);
 
+  // Listen contato_digitando (Paciente → Atendente)
+  useEffect(() => {
+    if (!socket) return;
+    let safetyTimeout: ReturnType<typeof setTimeout> | null = null;
+    const handler = (data: { conversaId: string; typing: boolean }) => {
+      if (data.conversaId !== selectedLeadRef.current?.sessao_ativa?.id) return;
+      setContatoDigitando(data.typing);
+      if (safetyTimeout) clearTimeout(safetyTimeout);
+      if (data.typing) {
+        safetyTimeout = setTimeout(() => setContatoDigitando(false), 5000);
+      }
+    };
+    socket.on('contato_digitando', handler);
+    return () => {
+      socket.off('contato_digitando', handler);
+      if (safetyTimeout) clearTimeout(safetyTimeout);
+      setContatoDigitando(false);
+    };
+  }, [socket]);
+
   // Listen nova_nota_interna
   useEffect(() => {
     if (!socket) return;
@@ -635,6 +658,22 @@ export default function Conversas() {
   };
 
   const handleSelectLead = (lead: Lead) => {
+    // Para indicador "digitando" da conversa anterior
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      if (selectedLead?.sessao_ativa?.id) {
+        api.post('/evolution/typing', {
+          conversaId: selectedLead.sessao_ativa.id,
+          typing: false,
+        }).catch(() => {});
+      }
+    }
+    setContatoDigitando(false);
+
     setJanela(null);
     setSelectedLead(lead);
     setMensagens([]);
@@ -666,6 +705,19 @@ export default function Conversas() {
     if (modoNota) {
       handleEnviarNota();
       return;
+    }
+
+    // Garante parar indicador "digitando" no Evolution
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      api.post('/evolution/typing', {
+        conversaId: selectedLead?.sessao_ativa?.id,
+        typing: false,
+      }).catch(() => {});
     }
 
     try {
@@ -755,6 +807,26 @@ export default function Conversas() {
           conversaId: selectedLead.sessao_ativa!.id,
           digitando: false,
         });
+      }, 3000);
+    }
+
+    // Envia indicador "digitando" ao paciente via Evolution (Atendente → Paciente)
+    const conversaIdEvo = selectedLead?.sessao_ativa?.id;
+    if (conversaIdEvo) {
+      if (!isTypingRef.current) {
+        isTypingRef.current = true;
+        api.post('/evolution/typing', {
+          conversaId: conversaIdEvo,
+          typing: true,
+        }).catch(() => {});
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        isTypingRef.current = false;
+        api.post('/evolution/typing', {
+          conversaId: conversaIdEvo,
+          typing: false,
+        }).catch(() => {});
       }, 3000);
     }
   };
@@ -1551,6 +1623,21 @@ export default function Conversas() {
                 </div>
 
                 <div className="border-t px-4 py-2 bg-[#F0F2F5]">
+                  {/* Indicador "digitando..." do contato (Paciente → Atendente) */}
+                  {contatoDigitando && (
+                    <div className="flex items-end gap-2 px-4 py-1">
+                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs shrink-0">
+                        {selectedLead?.nome?.charAt(0) || '?'}
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm border">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {/* Indicador "digitando..." */}
                   {usuarioDigitando && !showAudioRecorder && (
                     <div className="flex items-center gap-2 px-2 py-1 mb-1 animate-fade-in">
