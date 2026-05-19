@@ -195,6 +195,11 @@ export default function Conversas() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
   const [agendarOpen, setAgendarOpen] = useState(false);
+  // Busca dentro da conversa
+  const [buscaMensagem, setBuscaMensagem] = useState('');
+  const [buscaAtiva, setBuscaAtiva] = useState(false);
+  const [resultadosBusca, setResultadosBusca] = useState<number[]>([]);
+  const [resultadoAtual, setResultadoAtual] = useState(0);
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'resolvidas'>('todas');
   const [modalFecharOpen, setModalFecharOpen] = useState(false);
   const [motivoFechamento, setMotivoFechamento] = useState('');
