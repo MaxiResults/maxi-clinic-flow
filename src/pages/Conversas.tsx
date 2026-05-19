@@ -1200,7 +1200,6 @@ export default function Conversas() {
                 leadsOrdenados.map((lead, index) => (
                   <React.Fragment key={lead.id}>
                   <div
-                    key={lead.id}
                     className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
                       selectedLead?.id === lead.id ? "bg-muted" : ""
                     }`}
