@@ -549,6 +549,26 @@ export default function Conversas() {
     };
   }, [socket, selectedLead?.sessao_ativa?.id]);
 
+  // Listen contato_digitando (Paciente → Atendente)
+  useEffect(() => {
+    if (!socket) return;
+    let safetyTimeout: ReturnType<typeof setTimeout> | null = null;
+    const handler = (data: { conversaId: string; typing: boolean }) => {
+      if (data.conversaId !== selectedLeadRef.current?.sessao_ativa?.id) return;
+      setContatoDigitando(data.typing);
+      if (safetyTimeout) clearTimeout(safetyTimeout);
+      if (data.typing) {
+        safetyTimeout = setTimeout(() => setContatoDigitando(false), 5000);
+      }
+    };
+    socket.on('contato_digitando', handler);
+    return () => {
+      socket.off('contato_digitando', handler);
+      if (safetyTimeout) clearTimeout(safetyTimeout);
+      setContatoDigitando(false);
+    };
+  }, [socket]);
+
   // Listen nova_nota_interna
   useEffect(() => {
     if (!socket) return;
