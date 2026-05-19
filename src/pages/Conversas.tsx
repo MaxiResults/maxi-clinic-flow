@@ -1356,6 +1356,55 @@ export default function Conversas() {
                   </div>
                 </div>
 
+                {buscaAtiva && (
+                  <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 animate-slide-down">
+                    <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Buscar na conversa..."
+                      value={buscaMensagem}
+                      onChange={(e) => setBuscaMensagem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setBuscaAtiva(false);
+                          setBuscaMensagem('');
+                        }
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.shiftKey ? irParaAnterior() : irParaProximo();
+                        }
+                      }}
+                      className="flex-1 bg-transparent text-sm outline-none"
+                    />
+                    {buscaMensagem && (
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {resultadosBusca.length > 0
+                          ? `${resultadoAtual + 1} de ${resultadosBusca.length}`
+                          : 'Nenhum resultado'}
+                      </span>
+                    )}
+                    {resultadosBusca.length > 1 && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={irParaAnterior}>
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={irParaProximo}>
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => { setBuscaAtiva(false); setBuscaMensagem(''); }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+
                 <div
                   className="flex-1 overflow-y-auto p-4"
                   style={{ backgroundImage: chatBgPattern, backgroundColor: '#ECE5DD' }}
@@ -1375,7 +1424,7 @@ export default function Conversas() {
                         const isAudio = mensagem.tipo_mensagem === 'audio';
                          if (mensagem.is_nota_interna) {
                            return (
-                             <div key={mensagem.id ?? idx} className="flex justify-center my-2 animate-fade-in">
+                             <div id={`msg-${idx}`} key={mensagem.id ?? idx} className="flex justify-center my-2 animate-fade-in">
                                <div className="max-w-[85%] px-4 py-2.5 rounded-xl bg-yellow-50 border border-yellow-200 shadow-sm">
                                  <div className="flex items-center gap-2 mb-1">
                                    <StickyNote className="h-3 w-3 text-yellow-600" />
@@ -1396,6 +1445,7 @@ export default function Conversas() {
                          }
                         return (
                           <div
+                             id={`msg-${idx}`}
                             key={mensagem.id ?? idx}
                             className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
                           >
