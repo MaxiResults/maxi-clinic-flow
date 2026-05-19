@@ -1324,6 +1324,20 @@ export default function Conversas() {
                         <CalendarPlus className="h-4 w-4" />
                         <span className="hidden sm:inline text-xs">Agendar</span>
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
+                        onClick={() => {
+                          setBuscaAtiva(v => {
+                            if (v) setBuscaMensagem('');
+                            return !v;
+                          });
+                        }}
+                        title="Buscar na conversa (Ctrl+F)"
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
                       <AttendantBadge
                         atendente={selectedLead.sessao_ativa?.atendente || undefined}
                         onTransfer={() => setAssignModalOpen(true)}
