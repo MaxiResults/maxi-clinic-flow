@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -144,6 +144,7 @@ interface Lead {
     ultima_interacao: string;
     total_mensagens: number;
     atendente?: Atendente | null;
+    fixada?: boolean;
   } | null;
   ultima_mensagem: {
     mensagem: string;
@@ -194,6 +195,11 @@ export default function Conversas() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
   const [agendarOpen, setAgendarOpen] = useState(false);
+  // Busca dentro da conversa
+  const [buscaMensagem, setBuscaMensagem] = useState('');
+  const [buscaAtiva, setBuscaAtiva] = useState(false);
+  const [resultadosBusca, setResultadosBusca] = useState<number[]>([]);
+  const [resultadoAtual, setResultadoAtual] = useState(0);
   const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'resolvidas'>('todas');
   const [modalFecharOpen, setModalFecharOpen] = useState(false);
   const [motivoFechamento, setMotivoFechamento] = useState('');
@@ -506,6 +512,26 @@ export default function Conversas() {
       socket.off('nova_mensagem', handleNovaMensagem);
     };
   }, [socket, playNotification]);
+
+  // Listen conversa_fixada
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (data: { sessaoId: string; leadId: string; fixada: boolean }) => {
+      setLeads(prev => {
+        const atualizado = prev.map(l =>
+          l.id === data.leadId
+            ? { ...l, sessao_ativa: l.sessao_ativa ? { ...l.sessao_ativa, fixada: data.fixada } : null }
+            : l
+        );
+        return [
+          ...atualizado.filter(l => l.sessao_ativa?.fixada),
+          ...atualizado.filter(l => !l.sessao_ativa?.fixada),
+        ];
+      });
+    };
+    socket.on('conversa_fixada', handler);
+    return () => { socket.off('conversa_fixada', handler); };
+  }, [socket]);
 
   // Listen lead_digitando
   useEffect(() => {
@@ -1031,6 +1057,117 @@ export default function Conversas() {
     );
   };
 
+  // ============================================================
+  // BUSCA NA CONVERSA
+  // ============================================================
+  const mensagensFiltradas = useMemo(() => {
+    if (!buscaMensagem.trim()) return [];
+    const termo = buscaMensagem.toLowerCase();
+    return mensagens
+      .map((m: any, idx) => ({ m, idx }))
+      .filter(({ m }: any) =>
+        m.mensagem?.toLowerCase().includes(termo) && !m.is_nota_interna
+      )
+      .map(({ idx }) => idx);
+  }, [buscaMensagem, mensagens]);
+
+  const scrollParaMensagem = (idx: number) => {
+    const el = document.getElementById(`msg-${idx}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  useEffect(() => {
+    setResultadosBusca(mensagensFiltradas);
+    setResultadoAtual(0);
+    if (mensagensFiltradas.length > 0) {
+      scrollParaMensagem(mensagensFiltradas[0]);
+    }
+  }, [mensagensFiltradas]);
+
+  const irParaProximo = () => {
+    if (resultadosBusca.length === 0) return;
+    const next = (resultadoAtual + 1) % resultadosBusca.length;
+    setResultadoAtual(next);
+    scrollParaMensagem(resultadosBusca[next]);
+  };
+
+  const irParaAnterior = () => {
+    if (resultadosBusca.length === 0) return;
+    const prev = (resultadoAtual - 1 + resultadosBusca.length) % resultadosBusca.length;
+    setResultadoAtual(prev);
+    scrollParaMensagem(resultadosBusca[prev]);
+  };
+
+  const highlightTexto = (texto: string, termo: string): React.ReactNode => {
+    if (!termo.trim() || !texto) return texto;
+    const escaped = termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const partes = texto.split(regex);
+    return partes.map((parte, i) =>
+      regex.test(parte) ? (
+        <mark key={i} className="bg-yellow-300 text-yellow-900 rounded px-0.5">
+          {parte}
+        </mark>
+      ) : (
+        <React.Fragment key={i}>{parte}</React.Fragment>
+      )
+    );
+  };
+
+  // Ctrl+F para ativar busca
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && selectedLead) {
+        e.preventDefault();
+        setBuscaAtiva(true);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [selectedLead]);
+
+  // Limpa busca ao trocar de lead
+  useEffect(() => {
+    setBuscaAtiva(false);
+    setBuscaMensagem('');
+  }, [selectedLead?.id]);
+
+  // ============================================================
+  // FIXAR CONVERSA
+  // ============================================================
+  const reordenarFixadas = (lista: Lead[]) => [
+    ...lista.filter(l => l.sessao_ativa?.fixada),
+    ...lista.filter(l => !l.sessao_ativa?.fixada),
+  ];
+
+  const handleToggleFixar = async (lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const sessaoId = lead.sessao_ativa?.id;
+    if (!sessaoId) return;
+    try {
+      const response = await api.patch(`/conversas/sessoes/${sessaoId}/fixar`);
+      const fixada = response.data?.fixada;
+      setLeads(prev => reordenarFixadas(prev.map(l =>
+        l.id === lead.id
+          ? { ...l, sessao_ativa: l.sessao_ativa ? { ...l.sessao_ativa, fixada } : null }
+          : l
+      )));
+      sonnerToast.success(fixada ? 'Conversa fixada no topo' : 'Conversa desafixada');
+    } catch {
+      sonnerToast.error('Erro ao fixar conversa');
+    }
+  };
+
+  const leadsOrdenados = useMemo(() => reordenarFixadas(leads), [leads]);
+  const indexPrimeiraNaoFixada = useMemo(
+    () => leadsOrdenados.findIndex(l => !l.sessao_ativa?.fixada),
+    [leadsOrdenados]
+  );
+  const temFixadas = useMemo(
+    () => leads.some(l => l.sessao_ativa?.fixada),
+    [leads]
+  );
+
   return (
     <DashboardLayout title="Conversas WhatsApp">
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
@@ -1038,7 +1175,7 @@ export default function Conversas() {
           <div className="flex h-full flex-col">
             <div className="border-b p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Conversas ({leads.length})</h3>
+                 <h3 className="font-semibold">Conversas ({leadsOrdenados.length})</h3>
                 <Button onClick={() => fetchLeads()} variant="ghost" size="sm">🔄</Button>
               </div>
               <ConversationFilters
@@ -1049,7 +1186,7 @@ export default function Conversas() {
               />
             </div>
             <div className="flex-1 overflow-y-auto">
-              {leads.length === 0 ? (
+              {leadsOrdenados.length === 0 ? (
                 <div className="text-center py-12 px-4">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                   <p className="text-sm font-medium">Nenhuma conversa</p>
@@ -1060,9 +1197,9 @@ export default function Conversas() {
                   </p>
                 </div>
               ) : (
-                leads.map((lead) => (
+                leadsOrdenados.map((lead, index) => (
+                  <React.Fragment key={lead.id}>
                   <div
-                    key={lead.id}
                     className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
                       selectedLead?.id === lead.id ? "bg-muted" : ""
                     }`}
@@ -1077,9 +1214,22 @@ export default function Conversas() {
                       <div className="flex-1 overflow-hidden">
                         <div className="flex items-center justify-between mb-1">
                           <p className={`truncate ${(unreadCounts[lead.id] || 0) > 0 ? 'font-bold text-foreground' : 'font-medium'}`}>{lead.nome}</p>
-                          <span className="text-xs text-muted-foreground">
-                            {formatTime(lead.ultima_interacao)}
-                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={(e) => handleToggleFixar(lead, e)}
+                              className={`p-1 rounded transition-colors ${
+                                lead.sessao_ativa?.fixada
+                                  ? 'text-primary'
+                                  : 'text-muted-foreground/40 hover:text-muted-foreground'
+                              }`}
+                              title={lead.sessao_ativa?.fixada ? 'Desafixar conversa' : 'Fixar no topo'}
+                            >
+                              <Pin className={`h-3.5 w-3.5 ${lead.sessao_ativa?.fixada ? 'fill-current' : ''}`} />
+                            </button>
+                            <span className="text-xs text-muted-foreground">
+                              {formatTime(lead.ultima_interacao)}
+                            </span>
+                          </div>
                         </div>
                         <p className="truncate text-sm text-muted-foreground">
                           {lead.ultima_mensagem?.mensagem || 'Sem mensagens'}
@@ -1102,6 +1252,12 @@ export default function Conversas() {
                       </div>
                     </div>
                   </div>
+                  {temFixadas && indexPrimeiraNaoFixada > 0 && index === indexPrimeiraNaoFixada - 1 && (
+                    <div className="px-3 py-1">
+                      <div className="border-t border-dashed border-border/50" />
+                    </div>
+                  )}
+                  </React.Fragment>
                 ))
               )}
             </div>
@@ -1168,6 +1324,20 @@ export default function Conversas() {
                         <CalendarPlus className="h-4 w-4" />
                         <span className="hidden sm:inline text-xs">Agendar</span>
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
+                        onClick={() => {
+                          setBuscaAtiva(v => {
+                            if (v) setBuscaMensagem('');
+                            return !v;
+                          });
+                        }}
+                        title="Buscar na conversa (Ctrl+F)"
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
                       <AttendantBadge
                         atendente={selectedLead.sessao_ativa?.atendente || undefined}
                         onTransfer={() => setAssignModalOpen(true)}
@@ -1185,6 +1355,55 @@ export default function Conversas() {
                     </div>
                   </div>
                 </div>
+
+                {buscaAtiva && (
+                  <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/30 animate-slide-down">
+                    <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <input
+                      autoFocus
+                      type="text"
+                      placeholder="Buscar na conversa..."
+                      value={buscaMensagem}
+                      onChange={(e) => setBuscaMensagem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          setBuscaAtiva(false);
+                          setBuscaMensagem('');
+                        }
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.shiftKey ? irParaAnterior() : irParaProximo();
+                        }
+                      }}
+                      className="flex-1 bg-transparent text-sm outline-none"
+                    />
+                    {buscaMensagem && (
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {resultadosBusca.length > 0
+                          ? `${resultadoAtual + 1} de ${resultadosBusca.length}`
+                          : 'Nenhum resultado'}
+                      </span>
+                    )}
+                    {resultadosBusca.length > 1 && (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={irParaAnterior}>
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={irParaProximo}>
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => { setBuscaAtiva(false); setBuscaMensagem(''); }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
 
                 <div
                   className="flex-1 overflow-y-auto p-4"
@@ -1205,7 +1424,7 @@ export default function Conversas() {
                         const isAudio = mensagem.tipo_mensagem === 'audio';
                          if (mensagem.is_nota_interna) {
                            return (
-                             <div key={mensagem.id ?? idx} className="flex justify-center my-2 animate-fade-in">
+                             <div id={`msg-${idx}`} key={mensagem.id ?? idx} className="flex justify-center my-2 animate-fade-in">
                                <div className="max-w-[85%] px-4 py-2.5 rounded-xl bg-yellow-50 border border-yellow-200 shadow-sm">
                                  <div className="flex items-center gap-2 mb-1">
                                    <StickyNote className="h-3 w-3 text-yellow-600" />
@@ -1226,6 +1445,7 @@ export default function Conversas() {
                          }
                         return (
                           <div
+                             id={`msg-${idx}`}
                             key={mensagem.id ?? idx}
                             className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
                           >
@@ -1274,7 +1494,11 @@ export default function Conversas() {
                                     <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                   </div>
                                   {mensagem.mensagem && (
-                                    <p className="text-sm whitespace-pre-wrap break-words mt-2">{mensagem.mensagem}</p>
+                                    <p className="text-sm whitespace-pre-wrap break-words mt-2">
+                                      {buscaAtiva && buscaMensagem
+                                        ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                        : mensagem.mensagem}
+                                    </p>
                                   )}
                                 </div>
                               ) : mensagem.tipo_mensagem === 'document' && mensagem.midia_url ? (
@@ -1297,7 +1521,11 @@ export default function Conversas() {
                                   <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 </a>
                               ) : (
-                                <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
+                                <p className="text-sm whitespace-pre-wrap break-words">
+                                  {buscaAtiva && buscaMensagem
+                                    ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                    : mensagem.mensagem}
+                                </p>
                               )}
                               <span className="text-xs text-[#667781] mt-1 flex items-center gap-1 justify-end">
                                 {new Date(mensagem.data_envio).toLocaleTimeString('pt-BR', {
