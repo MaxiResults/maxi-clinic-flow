@@ -208,6 +208,9 @@ export default function Conversas() {
   const [menuAnexoAberto, setMenuAnexoAberto] = useState(false);
   const [usuarioDigitando, setUsuarioDigitando] = useState(false);
   const timeoutDigitando = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [contatoDigitando, setContatoDigitando] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
   const [emojiPickerAberto, setEmojiPickerAberto] = useState(false);
   const [lightboxAberto, setLightboxAberto] = useState(false);
   const [todasImagens, setTodasImagens] = useState<string[]>([]);
