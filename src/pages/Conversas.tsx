@@ -1037,6 +1037,117 @@ export default function Conversas() {
     );
   };
 
+  // ============================================================
+  // BUSCA NA CONVERSA
+  // ============================================================
+  const mensagensFiltradas = useMemo(() => {
+    if (!buscaMensagem.trim()) return [];
+    const termo = buscaMensagem.toLowerCase();
+    return mensagens
+      .map((m: any, idx) => ({ m, idx }))
+      .filter(({ m }: any) =>
+        m.mensagem?.toLowerCase().includes(termo) && !m.is_nota_interna
+      )
+      .map(({ idx }) => idx);
+  }, [buscaMensagem, mensagens]);
+
+  const scrollParaMensagem = (idx: number) => {
+    const el = document.getElementById(`msg-${idx}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  useEffect(() => {
+    setResultadosBusca(mensagensFiltradas);
+    setResultadoAtual(0);
+    if (mensagensFiltradas.length > 0) {
+      scrollParaMensagem(mensagensFiltradas[0]);
+    }
+  }, [mensagensFiltradas]);
+
+  const irParaProximo = () => {
+    if (resultadosBusca.length === 0) return;
+    const next = (resultadoAtual + 1) % resultadosBusca.length;
+    setResultadoAtual(next);
+    scrollParaMensagem(resultadosBusca[next]);
+  };
+
+  const irParaAnterior = () => {
+    if (resultadosBusca.length === 0) return;
+    const prev = (resultadoAtual - 1 + resultadosBusca.length) % resultadosBusca.length;
+    setResultadoAtual(prev);
+    scrollParaMensagem(resultadosBusca[prev]);
+  };
+
+  const highlightTexto = (texto: string, termo: string): React.ReactNode => {
+    if (!termo.trim() || !texto) return texto;
+    const escaped = termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const partes = texto.split(regex);
+    return partes.map((parte, i) =>
+      regex.test(parte) ? (
+        <mark key={i} className="bg-yellow-300 text-yellow-900 rounded px-0.5">
+          {parte}
+        </mark>
+      ) : (
+        <React.Fragment key={i}>{parte}</React.Fragment>
+      )
+    );
+  };
+
+  // Ctrl+F para ativar busca
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && selectedLead) {
+        e.preventDefault();
+        setBuscaAtiva(true);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [selectedLead]);
+
+  // Limpa busca ao trocar de lead
+  useEffect(() => {
+    setBuscaAtiva(false);
+    setBuscaMensagem('');
+  }, [selectedLead?.id]);
+
+  // ============================================================
+  // FIXAR CONVERSA
+  // ============================================================
+  const reordenarFixadas = (lista: Lead[]) => [
+    ...lista.filter(l => l.sessao_ativa?.fixada),
+    ...lista.filter(l => !l.sessao_ativa?.fixada),
+  ];
+
+  const handleToggleFixar = async (lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const sessaoId = lead.sessao_ativa?.id;
+    if (!sessaoId) return;
+    try {
+      const response = await api.patch(`/conversas/sessoes/${sessaoId}/fixar`);
+      const fixada = response.data?.fixada;
+      setLeads(prev => reordenarFixadas(prev.map(l =>
+        l.id === lead.id
+          ? { ...l, sessao_ativa: l.sessao_ativa ? { ...l.sessao_ativa, fixada } : null }
+          : l
+      )));
+      sonnerToast.success(fixada ? 'Conversa fixada no topo' : 'Conversa desafixada');
+    } catch {
+      sonnerToast.error('Erro ao fixar conversa');
+    }
+  };
+
+  const leadsOrdenados = useMemo(() => reordenarFixadas(leads), [leads]);
+  const indexPrimeiraNaoFixada = useMemo(
+    () => leadsOrdenados.findIndex(l => !l.sessao_ativa?.fixada),
+    [leadsOrdenados]
+  );
+  const temFixadas = useMemo(
+    () => leads.some(l => l.sessao_ativa?.fixada),
+    [leads]
+  );
+
   return (
     <DashboardLayout title="Conversas WhatsApp">
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
