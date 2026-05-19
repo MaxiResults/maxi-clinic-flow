@@ -1494,7 +1494,11 @@ export default function Conversas() {
                                     <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                   </div>
                                   {mensagem.mensagem && (
-                                    <p className="text-sm whitespace-pre-wrap break-words mt-2">{mensagem.mensagem}</p>
+                                    <p className="text-sm whitespace-pre-wrap break-words mt-2">
+                                      {buscaAtiva && buscaMensagem
+                                        ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                        : mensagem.mensagem}
+                                    </p>
                                   )}
                                 </div>
                               ) : mensagem.tipo_mensagem === 'document' && mensagem.midia_url ? (
@@ -1517,7 +1521,11 @@ export default function Conversas() {
                                   <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 </a>
                               ) : (
-                                <p className="text-sm whitespace-pre-wrap break-words">{mensagem.mensagem}</p>
+                                <p className="text-sm whitespace-pre-wrap break-words">
+                                  {buscaAtiva && buscaMensagem
+                                    ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                    : mensagem.mensagem}
+                                </p>
                               )}
                               <span className="text-xs text-[#667781] mt-1 flex items-center gap-1 justify-end">
                                 {new Date(mensagem.data_envio).toLocaleTimeString('pt-BR', {
