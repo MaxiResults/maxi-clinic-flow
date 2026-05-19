@@ -658,6 +658,22 @@ export default function Conversas() {
   };
 
   const handleSelectLead = (lead: Lead) => {
+    // Para indicador "digitando" da conversa anterior
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      if (selectedLead?.sessao_ativa?.id) {
+        api.post('/evolution/typing', {
+          conversaId: selectedLead.sessao_ativa.id,
+          typing: false,
+        }).catch(() => {});
+      }
+    }
+    setContatoDigitando(false);
+
     setJanela(null);
     setSelectedLead(lead);
     setMensagens([]);
