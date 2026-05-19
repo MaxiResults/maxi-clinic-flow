@@ -809,6 +809,26 @@ export default function Conversas() {
         });
       }, 3000);
     }
+
+    // Envia indicador "digitando" ao paciente via Evolution (Atendente → Paciente)
+    const conversaIdEvo = selectedLead?.sessao_ativa?.id;
+    if (conversaIdEvo) {
+      if (!isTypingRef.current) {
+        isTypingRef.current = true;
+        api.post('/evolution/typing', {
+          conversaId: conversaIdEvo,
+          typing: true,
+        }).catch(() => {});
+      }
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        isTypingRef.current = false;
+        api.post('/evolution/typing', {
+          conversaId: conversaIdEvo,
+          typing: false,
+        }).catch(() => {});
+      }, 3000);
+    }
   };
 
   const validarArquivo = (
