@@ -1007,6 +1007,81 @@ export default function Conversas() {
     }
   };
 
+  // ============================================================
+  // BUSCA NA CONVERSA (hooks devem ficar antes de returns condicionais)
+  // ============================================================
+  const mensagensFiltradas = useMemo(() => {
+    if (!buscaMensagem.trim()) return [];
+    const termo = buscaMensagem.toLowerCase();
+    return mensagens
+      .map((m: any, idx) => ({ m, idx }))
+      .filter(({ m }: any) =>
+        m.mensagem?.toLowerCase().includes(termo) && !m.is_nota_interna
+      )
+      .map(({ idx }) => idx);
+  }, [buscaMensagem, mensagens]);
+
+  const scrollParaMensagem = (idx: number) => {
+    const el = document.getElementById(`msg-${idx}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  useEffect(() => {
+    setResultadosBusca(mensagensFiltradas);
+    setResultadoAtual(0);
+    if (mensagensFiltradas.length > 0) {
+      scrollParaMensagem(mensagensFiltradas[0]);
+    }
+  }, [mensagensFiltradas]);
+
+  const irParaProximo = () => {
+    if (resultadosBusca.length === 0) return;
+    const next = (resultadoAtual + 1) % resultadosBusca.length;
+    setResultadoAtual(next);
+    scrollParaMensagem(resultadosBusca[next]);
+  };
+
+  const irParaAnterior = () => {
+    if (resultadosBusca.length === 0) return;
+    const prev = (resultadoAtual - 1 + resultadosBusca.length) % resultadosBusca.length;
+    setResultadoAtual(prev);
+    scrollParaMensagem(resultadosBusca[prev]);
+  };
+
+  const highlightTexto = (texto: string, termo: string): React.ReactNode => {
+    if (!termo.trim() || !texto) return texto;
+    const escaped = termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const partes = texto.split(regex);
+    return partes.map((parte, i) =>
+      regex.test(parte) ? (
+        <mark key={i} className="bg-yellow-300 text-yellow-900 rounded px-0.5">
+          {parte}
+        </mark>
+      ) : (
+        <React.Fragment key={i}>{parte}</React.Fragment>
+      )
+    );
+  };
+
+  // Ctrl+F para ativar busca
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && selectedLead) {
+        e.preventDefault();
+        setBuscaAtiva(true);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [selectedLead]);
+
+  // Limpa busca ao trocar de lead
+  useEffect(() => {
+    setBuscaAtiva(false);
+    setBuscaMensagem('');
+  }, [selectedLead?.id]);
+
   if (loading) {
     return (
       <DashboardLayout title="Conversas WhatsApp">
@@ -1128,81 +1203,6 @@ export default function Conversas() {
       </div>
     );
   };
-
-  // ============================================================
-  // BUSCA NA CONVERSA
-  // ============================================================
-  const mensagensFiltradas = useMemo(() => {
-    if (!buscaMensagem.trim()) return [];
-    const termo = buscaMensagem.toLowerCase();
-    return mensagens
-      .map((m: any, idx) => ({ m, idx }))
-      .filter(({ m }: any) =>
-        m.mensagem?.toLowerCase().includes(termo) && !m.is_nota_interna
-      )
-      .map(({ idx }) => idx);
-  }, [buscaMensagem, mensagens]);
-
-  const scrollParaMensagem = (idx: number) => {
-    const el = document.getElementById(`msg-${idx}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
-  useEffect(() => {
-    setResultadosBusca(mensagensFiltradas);
-    setResultadoAtual(0);
-    if (mensagensFiltradas.length > 0) {
-      scrollParaMensagem(mensagensFiltradas[0]);
-    }
-  }, [mensagensFiltradas]);
-
-  const irParaProximo = () => {
-    if (resultadosBusca.length === 0) return;
-    const next = (resultadoAtual + 1) % resultadosBusca.length;
-    setResultadoAtual(next);
-    scrollParaMensagem(resultadosBusca[next]);
-  };
-
-  const irParaAnterior = () => {
-    if (resultadosBusca.length === 0) return;
-    const prev = (resultadoAtual - 1 + resultadosBusca.length) % resultadosBusca.length;
-    setResultadoAtual(prev);
-    scrollParaMensagem(resultadosBusca[prev]);
-  };
-
-  const highlightTexto = (texto: string, termo: string): React.ReactNode => {
-    if (!termo.trim() || !texto) return texto;
-    const escaped = termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(${escaped})`, 'gi');
-    const partes = texto.split(regex);
-    return partes.map((parte, i) =>
-      regex.test(parte) ? (
-        <mark key={i} className="bg-yellow-300 text-yellow-900 rounded px-0.5">
-          {parte}
-        </mark>
-      ) : (
-        <React.Fragment key={i}>{parte}</React.Fragment>
-      )
-    );
-  };
-
-  // Ctrl+F para ativar busca
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && selectedLead) {
-        e.preventDefault();
-        setBuscaAtiva(true);
-      }
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [selectedLead]);
-
-  // Limpa busca ao trocar de lead
-  useEffect(() => {
-    setBuscaAtiva(false);
-    setBuscaMensagem('');
-  }, [selectedLead?.id]);
 
   // ============================================================
   // FIXAR CONVERSA
