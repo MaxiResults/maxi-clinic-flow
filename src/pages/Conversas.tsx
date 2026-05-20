@@ -1413,7 +1413,7 @@ export default function Conversas() {
                         className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
                         onClick={() => {
                           setBuscaAtiva(v => {
-                            if (v) setBuscaMensagem('');
+                            if (v) handleBuscaChange('');
                             return !v;
                           });
                         }}
@@ -1448,11 +1448,11 @@ export default function Conversas() {
                       placeholder="Buscar na conversa..."
                       value={buscaMensagem}
                       onChange={(e) => handleBuscaChange(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          setBuscaAtiva(false);
-                          setBuscaMensagem('');
-                        }
+                       onKeyDown={(e) => {
+                         if (e.key === 'Escape') {
+                           setBuscaAtiva(false);
+                           handleBuscaChange('');
+                         }
                         if (e.key === 'Enter') {
                           e.preventDefault();
                           e.shiftKey ? irParaAnterior() : irParaProximo();
