@@ -1091,6 +1091,8 @@ export default function Conversas() {
   useEffect(() => {
     setBuscaAtiva(false);
     setBuscaMensagem('');
+    setResultadosBusca([]);
+    setResultadoAtual(0);
   }, [selectedLead?.id]);
 
   if (loading) {
@@ -1481,7 +1483,7 @@ export default function Conversas() {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      onClick={() => { setBuscaAtiva(false); setBuscaMensagem(''); }}
+                      onClick={() => { setBuscaAtiva(false); handleBuscaChange(''); }}
                     >
                       <X className="h-3.5 w-3.5" />
                     </Button>
