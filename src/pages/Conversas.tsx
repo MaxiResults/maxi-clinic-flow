@@ -1010,29 +1010,40 @@ export default function Conversas() {
   // ============================================================
   // BUSCA NA CONVERSA (hooks devem ficar antes de returns condicionais)
   // ============================================================
-  const mensagensFiltradas = useMemo(() => {
-    if (!buscaMensagem.trim()) return [];
-    const termo = buscaMensagem.toLowerCase();
-    return mensagens
-      .map((m: any, idx) => ({ m, idx }))
-      .filter(({ m }: any) =>
-        m.mensagem?.toLowerCase().includes(termo) && !m.is_nota_interna
-      )
-      .map(({ idx }) => idx);
-  }, [buscaMensagem, mensagens]);
-
   const scrollParaMensagem = (idx: number) => {
     const el = document.getElementById(`msg-${idx}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  useEffect(() => {
-    setResultadosBusca(mensagensFiltradas);
-    setResultadoAtual(0);
-    if (mensagensFiltradas.length > 0) {
-      scrollParaMensagem(mensagensFiltradas[0]);
+  const handleBuscaChange = (termo: string) => {
+    setBuscaMensagem(termo);
+    if (!termo.trim()) {
+      setResultadosBusca([]);
+      setResultadoAtual(0);
+      return;
     }
-  }, [mensagensFiltradas]);
+    const termoLower = termo.toLowerCase();
+    const encontrados = mensagens
+      .map((m: any, idx) => ({ m, idx }))
+      .filter(({ m }: any) =>
+        !m.is_nota_interna &&
+        m.mensagem?.toLowerCase().includes(termoLower)
+      )
+      .map(({ idx }) => idx);
+    setResultadosBusca(encontrados);
+    setResultadoAtual(0);
+    if (encontrados.length > 0) {
+      scrollParaMensagem(encontrados[0]);
+    }
+  };
+
+  // Recalcula resultados quando mensagens carregam com busca ativa
+  useEffect(() => {
+    if (buscaMensagem.trim() && mensagens.length > 0) {
+      handleBuscaChange(buscaMensagem);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mensagens]);
 
   const irParaProximo = () => {
     if (resultadosBusca.length === 0) return;
@@ -1080,6 +1091,8 @@ export default function Conversas() {
   useEffect(() => {
     setBuscaAtiva(false);
     setBuscaMensagem('');
+    setResultadosBusca([]);
+    setResultadoAtual(0);
   }, [selectedLead?.id]);
 
   if (loading) {
@@ -1402,7 +1415,7 @@ export default function Conversas() {
                         className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
                         onClick={() => {
                           setBuscaAtiva(v => {
-                            if (v) setBuscaMensagem('');
+                            if (v) handleBuscaChange('');
                             return !v;
                           });
                         }}
@@ -1436,12 +1449,12 @@ export default function Conversas() {
                       type="text"
                       placeholder="Buscar na conversa..."
                       value={buscaMensagem}
-                      onChange={(e) => setBuscaMensagem(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          setBuscaAtiva(false);
-                          setBuscaMensagem('');
-                        }
+                      onChange={(e) => handleBuscaChange(e.target.value)}
+                       onKeyDown={(e) => {
+                         if (e.key === 'Escape') {
+                           setBuscaAtiva(false);
+                           handleBuscaChange('');
+                         }
                         if (e.key === 'Enter') {
                           e.preventDefault();
                           e.shiftKey ? irParaAnterior() : irParaProximo();
@@ -1470,7 +1483,7 @@ export default function Conversas() {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      onClick={() => { setBuscaAtiva(false); setBuscaMensagem(''); }}
+                      onClick={() => { setBuscaAtiva(false); handleBuscaChange(''); }}
                     >
                       <X className="h-3.5 w-3.5" />
                     </Button>
