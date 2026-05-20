@@ -1095,6 +1095,24 @@ export default function Conversas() {
     setResultadoAtual(0);
   }, [selectedLead?.id]);
 
+  // ============================================================
+  // FIXAR CONVERSA - reorder helper + memos (must run before any early return)
+  // ============================================================
+  const reordenarFixadas = (lista: Lead[]) => [
+    ...lista.filter(l => l.sessao_ativa?.fixada),
+    ...lista.filter(l => !l.sessao_ativa?.fixada),
+  ];
+
+  const leadsOrdenados = useMemo(() => reordenarFixadas(leads), [leads]);
+  const indexPrimeiraNaoFixada = useMemo(
+    () => leadsOrdenados.findIndex(l => !l.sessao_ativa?.fixada),
+    [leadsOrdenados]
+  );
+  const temFixadas = useMemo(
+    () => leads.some(l => l.sessao_ativa?.fixada),
+    [leads]
+  );
+
   if (loading) {
     return (
       <DashboardLayout title="Conversas WhatsApp">
