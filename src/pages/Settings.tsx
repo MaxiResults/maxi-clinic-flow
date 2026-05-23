@@ -14,6 +14,7 @@ import {
   Zap,
   MessageSquare,
   FileCode,
+  Tag as TagIcon,
 } from 'lucide-react';
 
 const configSections = [
@@ -77,6 +78,15 @@ const comunicacaoSections = [
     route: '/whatsapp/templates',
     color: 'text-green-500',
     bgColor: 'bg-green-500/10',
+  },
+  {
+    id: 'tags',
+    title: 'Tags e Categorias',
+    description: 'Organize conversas com tags personalizadas (Urgente, VIP, Orçamento, etc).',
+    icon: TagIcon,
+    route: '/configuracoes/tags',
+    color: 'text-pink-500',
+    bgColor: 'bg-pink-500/10',
   },
 ];
 
