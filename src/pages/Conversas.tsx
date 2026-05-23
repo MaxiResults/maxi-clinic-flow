@@ -1668,12 +1668,28 @@ export default function Conversas() {
                   style={{ backgroundImage: chatBgPattern, backgroundColor: '#ECE5DD' }}
                 >
                   {loadingMensagens ? (
-                    <div className="flex items-center justify-center h-full">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <div className="space-y-3">
+                      {[0, 1, 2, 3, 4, 5].map((i) => {
+                        const own = i % 2 === 1;
+                        return (
+                          <div key={i} className={`flex ${own ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[60%] rounded-lg p-3 ${own ? 'bg-[#DCF8C6]/60' : 'bg-white/70'} shadow-sm`}>
+                              <Skeleton className="h-3 w-40 mb-2" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : mensagens.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                      <p className="text-sm text-[#667781]">Nenhuma mensagem ainda</p>
+                      <div className="text-center max-w-xs">
+                        <MessageSquare className="h-10 w-10 text-[#667781]/60 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-[#3b4a54]">Nenhuma mensagem ainda</p>
+                        <p className="text-xs text-[#667781] mt-1">
+                          Envie a primeira mensagem para iniciar a conversa.
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-3">
