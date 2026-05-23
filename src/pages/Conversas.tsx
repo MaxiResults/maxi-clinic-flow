@@ -723,13 +723,51 @@ export default function Conversas() {
     try {
       setEnviando(true);
 
-      // Mensagem otimista removida - Socket.io entrega em tempo real
       const textoEnvio = novaMsg;
       setNovaMsg("");
 
-      await api.post(`/conversas/leads/${selectedLead.id}/mensagens`, {
-        texto: textoEnvio,
-      });
+      const response = await api.post(
+        `/conversas/leads/${selectedLead.id}/mensagens`,
+        { texto: textoEnvio }
+      );
+
+      // Adiciona imediatamente ao estado local (fallback caso o socket não entregue)
+      const msgRetornada: any = response?.data;
+      if (msgRetornada?.id) {
+        setMensagens(prev => {
+          const existe = prev.some(m => m.id === msgRetornada.id);
+          if (existe) return prev;
+          return [...prev, {
+            ...msgRetornada,
+            is_from_me: true,
+            remetente: 'atendente',
+            tipo_mensagem: msgRetornada.tipo_mensagem || 'text',
+            mensagem: textoEnvio,
+            data_envio: msgRetornada.data_envio || new Date().toISOString(),
+          }];
+        });
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+
+      // Se o backend criou uma nova sessão (lead sem sessao_ativa),
+      // atualiza o estado para que join_conversation passe a funcionar
+      const sessaoIdRetornado = msgRetornada?.sessao_id;
+      if (sessaoIdRetornado && !selectedLead.sessao_ativa?.id) {
+        const novaSessao = {
+          id: sessaoIdRetornado,
+          status_sessao: 'ativa' as const,
+          ultima_interacao: new Date().toISOString(),
+          total_mensagens: 1,
+        };
+        setSelectedLead(prev => prev ? { ...prev, sessao_ativa: novaSessao as any } : prev);
+        setLeads(prev => prev.map(l =>
+          l.id === selectedLead.id
+            ? { ...l, sessao_ativa: novaSessao as any }
+            : l
+        ));
+      }
     } catch (err: any) {
       setMensagens(prev => prev.filter(m => !m.id?.startsWith('temp-')));
       toast({
@@ -1094,6 +1132,32 @@ export default function Conversas() {
     setResultadosBusca([]);
     setResultadoAtual(0);
   }, [selectedLead?.id]);
+
+  // Busca avatares para leads sem foto, em background
+  useEffect(() => {
+    if (leads.length === 0) return;
+    const leadsSemAvatar = leads.filter(l =>
+      !l.avatar_url && l.sessao_ativa?.id && l.id
+    );
+    if (leadsSemAvatar.length === 0) return;
+    const lote = leadsSemAvatar.slice(0, 5);
+    lote.forEach((lead: any) => {
+      api.get(
+        `/evolution/profile-picture/${lead.whatsapp_id || 'placeholder'}`,
+        { params: { leadId: lead.id } }
+      ).then(r => {
+        const url = (r.data as any)?.url;
+        if (!url) return;
+        setLeads(prev => prev.map(l =>
+          l.id === lead.id ? { ...l, avatar_url: url } : l
+        ));
+        setSelectedLead(prev =>
+          prev?.id === lead.id ? { ...prev, avatar_url: url } : prev
+        );
+      }).catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads.length]);
 
   // ============================================================
   // FIXAR CONVERSA - reorder helper + memos (must run before any early return)
