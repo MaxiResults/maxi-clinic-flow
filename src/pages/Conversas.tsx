@@ -1441,14 +1441,18 @@ export default function Conversas() {
             </div>
             <div className="flex-1 overflow-y-auto">
               {leadsOrdenados.length === 0 ? (
-                <div className="text-center py-12 px-4">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm font-medium">Nenhuma conversa</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {conversationFilter === 'minhas'
-                      ? 'Você não tem conversas atribuídas'
-                      : 'Aguardando mensagens de clientes'}
-                  </p>
+                <div className="p-4">
+                  <EmptyState
+                    icon={MessageSquare}
+                    title="Nenhuma conversa ativa"
+                    description={
+                      conversationFilter === 'minhas'
+                        ? 'Você ainda não tem conversas atribuídas. Use o filtro "Todas" para ver outras.'
+                        : conversationFilter === 'resolvidas'
+                          ? 'Nenhuma conversa resolvida no momento.'
+                          : 'As conversas do WhatsApp aparecerão aqui. Aguarde uma mensagem ou inicie um atendimento.'
+                    }
+                  />
                 </div>
               ) : (
                 leadsOrdenados.map((lead, index) => (
