@@ -1,34 +1,19 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import api from '@/lib/api';
-import { 
-  UserCog, 
-  Package, 
-  FolderTree, 
-  Star, 
+  UserCog,
+  Package,
+  FolderTree,
+  Star,
   ArrowRight,
   Building2,
   Users,
   Settings as SettingsIcon,
   Zap,
-  Plus,
-  Pencil,
-  Trash2,
   MessageSquare,
+  FileCode,
 } from 'lucide-react';
 
 const configSections = [
