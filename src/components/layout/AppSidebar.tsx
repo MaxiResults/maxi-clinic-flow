@@ -14,6 +14,7 @@ import {
   KanbanSquare,
   CalendarCheck,
   FileText,
+  Zap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -36,6 +37,7 @@ const menuItems = [
   { title: "Agendamentos", url: "/agendamentos", icon: Calendar },
   { title: "Anamnese", url: "/anamneses", icon: FileText },
   { title: "Conversas", url: "/conversas", icon: MessageSquare },
+  { title: "Respostas Rápidas", url: "/respostas-rapidas", icon: Zap },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
