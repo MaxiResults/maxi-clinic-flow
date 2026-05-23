@@ -21,6 +21,8 @@ import { AgendarFromConversaModal } from "@/components/whatsapp/AgendarFromConve
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHotkeys } from "react-hotkeys-hook";
+import { AtendentesOnlinePanel } from "@/components/chat/AtendentesOnlinePanel";
+import { useConversasStats } from "@/hooks/useConversasStats";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -186,6 +188,7 @@ export default function Conversas() {
   const { setTotalUnread } = useUnread();
   const { socket, lastNovaConversa, lastConversaAtualizada } = useSocket();
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const { totalNaoLidas: statsNaoLidas } = useConversasStats();
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
@@ -418,14 +421,15 @@ export default function Conversas() {
   // Sync totalUnread + browser title
   useEffect(() => {
     const total = Object.values(unreadCounts).reduce((sum, n) => sum + n, 0);
-    setTotalUnread(total);
-    document.title = total > 0
-      ? `(${total}) Conversas — MaxiClínicas`
+    const finalTotal = Math.max(total, statsNaoLidas);
+    setTotalUnread(finalTotal);
+    document.title = finalTotal > 0
+      ? `(${finalTotal}) Conversas — MaxiClínicas`
       : 'MaxiClínicas';
     return () => {
       document.title = 'MaxiClínicas';
     };
-  }, [unreadCounts, setTotalUnread]);
+  }, [unreadCounts, statsNaoLidas, setTotalUnread]);
 
   // Nova conversa (via SocketContext global)
   useEffect(() => {
@@ -1439,6 +1443,7 @@ export default function Conversas() {
                 }}
               />
             </div>
+            <AtendentesOnlinePanel />
             <div className="flex-1 overflow-y-auto">
               {leadsOrdenados.length === 0 ? (
                 <div className="p-4">
