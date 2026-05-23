@@ -18,6 +18,9 @@ import { useUnread } from "@/contexts/UnreadContext";
 import { useSocket } from "@/contexts/SocketContext";
 import { ContactInfoPanel } from "@/components/whatsapp/ContactInfoPanel";
 import { AgendarFromConversaModal } from "@/components/whatsapp/AgendarFromConversaModal";
+import { EmptyState } from "@/components/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useHotkeys } from "react-hotkeys-hook";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -344,13 +347,68 @@ export default function Conversas() {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [emojiPickerAberto]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
+  // Scroll suave quando o tamanho da lista muda (nova mensagem)
   useEffect(() => {
-    scrollToBottom();
-  }, [mensagens]);
+    scrollToBottom("smooth");
+  }, [mensagens.length]);
+
+  // Scroll imediato ao abrir uma conversa
+  useEffect(() => {
+    if (!selectedLead?.id) return;
+    const t = setTimeout(() => scrollToBottom("auto"), 50);
+    return () => clearTimeout(t);
+  }, [selectedLead?.id]);
+
+  // Atalhos de teclado globais da página
+  useHotkeys(
+    "ctrl+f, meta+f",
+    (e) => {
+      if (!selectedLead) return;
+      e.preventDefault();
+      setBuscaAtiva(true);
+    },
+    { enableOnFormTags: true },
+    [selectedLead]
+  );
+  useHotkeys(
+    "escape",
+    () => {
+      if (buscaAtiva) {
+        setBuscaAtiva(false);
+        return;
+      }
+      if (emojiPickerAberto || showRespostas) return;
+      setSelectedLead(null);
+    },
+    { enableOnFormTags: false },
+    [buscaAtiva, emojiPickerAberto, showRespostas]
+  );
+  useHotkeys(
+    "ctrl+enter, meta+enter",
+    (e) => {
+      if (!selectedLead || !novaMsg.trim() || enviando) return;
+      e.preventDefault();
+      handleEnviarMensagem(e as any);
+    },
+    { enableOnFormTags: true },
+    [selectedLead, novaMsg, enviando]
+  );
+
+  // Copiar texto da mensagem (menu de contexto)
+  const copiarMensagem = useCallback(
+    (texto?: string) => {
+      if (!texto) return;
+      navigator.clipboard
+        .writeText(texto)
+        .then(() => sonnerToast.success("Mensagem copiada"))
+        .catch(() => sonnerToast.error("Não foi possível copiar"));
+    },
+    []
+  );
 
   useEffect(() => {
     fetchLeads();
