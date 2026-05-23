@@ -1133,6 +1133,32 @@ export default function Conversas() {
     setResultadoAtual(0);
   }, [selectedLead?.id]);
 
+  // Busca avatares para leads sem foto, em background
+  useEffect(() => {
+    if (leads.length === 0) return;
+    const leadsSemAvatar = leads.filter(l =>
+      !l.avatar_url && l.sessao_ativa?.id && l.id
+    );
+    if (leadsSemAvatar.length === 0) return;
+    const lote = leadsSemAvatar.slice(0, 5);
+    lote.forEach((lead: any) => {
+      api.get(
+        `/evolution/profile-picture/${lead.whatsapp_id || 'placeholder'}`,
+        { params: { leadId: lead.id } }
+      ).then(r => {
+        const url = (r.data as any)?.url;
+        if (!url) return;
+        setLeads(prev => prev.map(l =>
+          l.id === lead.id ? { ...l, avatar_url: url } : l
+        ));
+        setSelectedLead(prev =>
+          prev?.id === lead.id ? { ...prev, avatar_url: url } : prev
+        );
+      }).catch(() => {});
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leads.length]);
+
   // ============================================================
   // FIXAR CONVERSA - reorder helper + memos (must run before any early return)
   // ============================================================
