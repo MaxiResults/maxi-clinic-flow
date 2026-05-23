@@ -1738,6 +1738,13 @@ export default function Conversas() {
                               style={{
                                 borderRadius: isOwn ? '8px 8px 0px 8px' : '8px 8px 8px 0px',
                               }}
+                              onContextMenu={(e) => {
+                                const texto = mensagem.mensagem || mensagem.conteudo;
+                                if (!texto) return;
+                                e.preventDefault();
+                                copiarMensagem(texto);
+                              }}
+                              title="Clique com o botão direito para copiar"
                             >
                               <div
                                 className={`absolute bottom-0 ${isOwn ? '-right-2' : '-left-2'}`}
