@@ -21,6 +21,8 @@ import { AgendarFromConversaModal } from "@/components/whatsapp/AgendarFromConve
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHotkeys } from "react-hotkeys-hook";
+import { AtendentesOnlinePanel } from "@/components/chat/AtendentesOnlinePanel";
+import { useConversasStats } from "@/hooks/useConversasStats";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
