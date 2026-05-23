@@ -2140,8 +2140,12 @@ export default function Conversas() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">Selecione uma conversa</p>
+              <div className="flex items-center justify-center h-full p-8">
+                <EmptyState
+                  icon={MessageSquare}
+                  title="Selecione uma conversa"
+                  description="Escolha um contato na lista ao lado para visualizar o histórico e enviar mensagens. Dica: use Ctrl+F para buscar dentro da conversa."
+                />
               </div>
             )}
           </div>
