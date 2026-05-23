@@ -983,35 +983,79 @@ export default function Conversas() {
     });
   };
 
-  const handleEnviarAudio = async (audioBlob: Blob, duracao: number) => {
-    if (!selectedLead || enviando) return;
+  const handleEnviarAudio = async (
+    audioBlob: Blob,
+    duracao: number
+  ) => {
+    if (!selectedLead?.sessao_ativa?.id) return;
+
+    // URL temporária local para player imediato
+    const localUrl = URL.createObjectURL(audioBlob);
+    const tempId = `temp-audio-${Date.now()}`;
+
+    // Adiciona mensagem temporária com player
+    setMensagens(prev => [...prev, {
+      id: tempId,
+      sessao_id: selectedLead.sessao_ativa!.id,
+      tipo_mensagem: 'audio',
+      mensagem: '[Áudio]',
+      midia_url: localUrl,
+      midia_tipo: 'audio',
+      duracao_audio_segundos: duracao,
+      is_from_me: true,
+      remetente: 'atendente',
+      data_envio: new Date().toISOString(),
+      status_entrega: 'enviando',
+    }]);
+
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: 'smooth'
+      });
+    }, 100);
 
     try {
-      setEnviando(true);
       const audioBase64 = await blobToBase64(audioBlob);
+      const response = await api.post(
+        '/evolution/send-audio',
+        {
+          conversaId: selectedLead.sessao_ativa!.id,
+          audioBase64,
+          duracao,
+        }
+      );
 
-      // Mensagem otimista removida - Socket.io entrega em tempo real
-      setShowAudioRecorder(false);
+      const msgReal = response?.data;
 
-      await api.post('/evolution/send-audio', {
-        conversaId: selectedLead.sessao_ativa?.id,
-        audioBase64,
-        duracao,
-      });
-
-      toast({
-        title: "🎤 Áudio enviado",
-        description: "Seu áudio foi enviado com sucesso",
+      // Substitui mensagem temp pela real
+      setMensagens(prev => {
+        const filtered = prev.filter(
+          m => m.id !== tempId
+        );
+        if (msgReal?.id) {
+          return [...filtered, {
+            ...msgReal,
+            // Usa URL do Storage se disponível,
+            // senão mantém URL local do blob
+            midia_url: msgReal.midia_url || localUrl,
+            is_from_me: true,
+            tipo_mensagem: 'audio',
+          }];
+        }
+        // Se não retornou id, mantém a temp
+        return prev;
       });
     } catch (err: any) {
-      setMensagens(prev => prev.filter(m => !m.id?.startsWith('temp-audio-')));
+      // Remove mensagem temp em caso de erro
+      setMensagens(prev =>
+        prev.filter(m => m.id !== tempId)
+      );
+      URL.revokeObjectURL(localUrl);
       toast({
-        title: "❌ Erro ao enviar áudio",
-        description: err.message || "Não foi possível enviar o áudio",
-        variant: "destructive",
+        title: 'Erro ao enviar áudio',
+        description: err.message,
+        variant: 'destructive',
       });
-    } finally {
-      setEnviando(false);
     }
   };
 
