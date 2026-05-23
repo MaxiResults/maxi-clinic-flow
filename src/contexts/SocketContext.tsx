@@ -64,6 +64,13 @@ export const SocketProvider = ({
         clienteId: user.cliente_id,
         empresaId: user.empresa_id,
       });
+      // Presença: anunciar usuário online
+      socketConnection.emit('join_presence', {
+        userId: user.id,
+        clienteId: user.cliente_id,
+        empresaId: user.empresa_id,
+        nome: user.nome,
+      });
     });
 
     socketConnection.on('disconnect', () => {
