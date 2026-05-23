@@ -1443,6 +1443,7 @@ export default function Conversas() {
                 }}
               />
             </div>
+            <AtendentesOnlinePanel />
             <div className="flex-1 overflow-y-auto">
               {leadsOrdenados.length === 0 ? (
                 <div className="p-4">
