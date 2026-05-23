@@ -30,6 +30,7 @@ import Pipeline from './pages/Pipeline';
 import ConfiguracaoGoogleCalendar from '@/pages/ConfiguracaoGoogleCalendar';
 import RespostasRapidas from '@/pages/RespostasRapidas';
 import WhatsAppTemplates from '@/pages/WhatsAppTemplates';
+import TagsConfig from '@/pages/TagsConfig';
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const AppRoutes = () => (
     <Route path="/configuracoes/google-calendar" element={<PrivateRoute><ConfiguracaoGoogleCalendar /></PrivateRoute>} />
     <Route path="/respostas-rapidas" element={<PrivateRoute><RespostasRapidas /></PrivateRoute>} />
     <Route path="/whatsapp/templates" element={<PrivateRoute><WhatsAppTemplates /></PrivateRoute>} />
+    <Route path="/configuracoes/tags" element={<PrivateRoute><TagsConfig /></PrivateRoute>} />
   </Routes>
 );
 
