@@ -15,6 +15,7 @@ import {
   CalendarCheck,
   FileText,
   Zap,
+  FileCode,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,6 +39,7 @@ const menuItems = [
   { title: "Anamnese", url: "/anamneses", icon: FileText },
   { title: "Conversas", url: "/conversas", icon: MessageSquare },
   { title: "Respostas Rápidas", url: "/respostas-rapidas", icon: Zap },
+  { title: "Templates WhatsApp", url: "/whatsapp/templates", icon: FileCode },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
 
