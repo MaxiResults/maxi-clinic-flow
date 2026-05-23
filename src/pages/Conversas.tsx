@@ -18,6 +18,9 @@ import { useUnread } from "@/contexts/UnreadContext";
 import { useSocket } from "@/contexts/SocketContext";
 import { ContactInfoPanel } from "@/components/whatsapp/ContactInfoPanel";
 import { AgendarFromConversaModal } from "@/components/whatsapp/AgendarFromConversaModal";
+import { EmptyState } from "@/components/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useHotkeys } from "react-hotkeys-hook";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -344,13 +347,68 @@ export default function Conversas() {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [emojiPickerAberto]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
+  // Scroll suave quando o tamanho da lista muda (nova mensagem)
   useEffect(() => {
-    scrollToBottom();
-  }, [mensagens]);
+    scrollToBottom("smooth");
+  }, [mensagens.length]);
+
+  // Scroll imediato ao abrir uma conversa
+  useEffect(() => {
+    if (!selectedLead?.id) return;
+    const t = setTimeout(() => scrollToBottom("auto"), 50);
+    return () => clearTimeout(t);
+  }, [selectedLead?.id]);
+
+  // Atalhos de teclado globais da página
+  useHotkeys(
+    "ctrl+f, meta+f",
+    (e) => {
+      if (!selectedLead) return;
+      e.preventDefault();
+      setBuscaAtiva(true);
+    },
+    { enableOnFormTags: true },
+    [selectedLead]
+  );
+  useHotkeys(
+    "escape",
+    () => {
+      if (buscaAtiva) {
+        setBuscaAtiva(false);
+        return;
+      }
+      if (emojiPickerAberto || showRespostas) return;
+      setSelectedLead(null);
+    },
+    { enableOnFormTags: false },
+    [buscaAtiva, emojiPickerAberto, showRespostas]
+  );
+  useHotkeys(
+    "ctrl+enter, meta+enter",
+    (e) => {
+      if (!selectedLead || !novaMsg.trim() || enviando) return;
+      e.preventDefault();
+      handleEnviarMensagem(e as any);
+    },
+    { enableOnFormTags: true },
+    [selectedLead, novaMsg, enviando]
+  );
+
+  // Copiar texto da mensagem (menu de contexto)
+  const copiarMensagem = useCallback(
+    (texto?: string) => {
+      if (!texto) return;
+      navigator.clipboard
+        .writeText(texto)
+        .then(() => sonnerToast.success("Mensagem copiada"))
+        .catch(() => sonnerToast.error("Não foi possível copiar"));
+    },
+    []
+  );
 
   useEffect(() => {
     fetchLeads();
@@ -1383,14 +1441,18 @@ export default function Conversas() {
             </div>
             <div className="flex-1 overflow-y-auto">
               {leadsOrdenados.length === 0 ? (
-                <div className="text-center py-12 px-4">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm font-medium">Nenhuma conversa</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {conversationFilter === 'minhas'
-                      ? 'Você não tem conversas atribuídas'
-                      : 'Aguardando mensagens de clientes'}
-                  </p>
+                <div className="p-4">
+                  <EmptyState
+                    icon={MessageSquare}
+                    title="Nenhuma conversa ativa"
+                    description={
+                      conversationFilter === 'minhas'
+                        ? 'Você ainda não tem conversas atribuídas. Use o filtro "Todas" para ver outras.'
+                        : conversationFilter === 'resolvidas'
+                          ? 'Nenhuma conversa resolvida no momento.'
+                          : 'As conversas do WhatsApp aparecerão aqui. Aguarde uma mensagem ou inicie um atendimento.'
+                    }
+                  />
                 </div>
               ) : (
                 leadsOrdenados.map((lead, index) => (
@@ -1606,12 +1668,28 @@ export default function Conversas() {
                   style={{ backgroundImage: chatBgPattern, backgroundColor: '#ECE5DD' }}
                 >
                   {loadingMensagens ? (
-                    <div className="flex items-center justify-center h-full">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <div className="space-y-3">
+                      {[0, 1, 2, 3, 4, 5].map((i) => {
+                        const own = i % 2 === 1;
+                        return (
+                          <div key={i} className={`flex ${own ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[60%] rounded-lg p-3 ${own ? 'bg-[#DCF8C6]/60' : 'bg-white/70'} shadow-sm`}>
+                              <Skeleton className="h-3 w-40 mb-2" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : mensagens.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                      <p className="text-sm text-[#667781]">Nenhuma mensagem ainda</p>
+                      <div className="text-center max-w-xs">
+                        <MessageSquare className="h-10 w-10 text-[#667781]/60 mx-auto mb-2" />
+                        <p className="text-sm font-medium text-[#3b4a54]">Nenhuma mensagem ainda</p>
+                        <p className="text-xs text-[#667781] mt-1">
+                          Envie a primeira mensagem para iniciar a conversa.
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -1660,6 +1738,13 @@ export default function Conversas() {
                               style={{
                                 borderRadius: isOwn ? '8px 8px 0px 8px' : '8px 8px 8px 0px',
                               }}
+                              onContextMenu={(e) => {
+                                const texto = mensagem.mensagem || mensagem.conteudo;
+                                if (!texto) return;
+                                e.preventDefault();
+                                copiarMensagem(texto);
+                              }}
+                              title="Clique com o botão direito para copiar"
                             >
                               <div
                                 className={`absolute bottom-0 ${isOwn ? '-right-2' : '-left-2'}`}
@@ -2055,8 +2140,12 @@ export default function Conversas() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">Selecione uma conversa</p>
+              <div className="flex items-center justify-center h-full p-8">
+                <EmptyState
+                  icon={MessageSquare}
+                  title="Selecione uma conversa"
+                  description="Escolha um contato na lista ao lado para visualizar o histórico e enviar mensagens. Dica: use Ctrl+F para buscar dentro da conversa."
+                />
               </div>
             )}
           </div>
