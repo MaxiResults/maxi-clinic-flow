@@ -249,6 +249,12 @@ export default function Conversas() {
   const [uploadando, setUploadando] = useState(false);
   const [progressoUpload, setProgressoUpload] = useState(0);
 
+  // Tags
+  const [tagManagerOpen, setTagManagerOpen] = useState(false);
+  const [conversaIdParaTags, setConversaIdParaTags] = useState<string | null>(null);
+  const [filtroTagId, setFiltroTagId] = useState<string>('todas');
+  const { tags: todasTags } = useTags();
+
   const playNotification = useNotificationSound();
 
   // Refs to avoid re-running effects on selectedLead changes
