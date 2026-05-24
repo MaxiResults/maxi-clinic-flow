@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -26,6 +26,8 @@ import { useConversasStats } from "@/hooks/useConversasStats";
 import { TagManager } from "@/components/tags/TagManager";
 import { TagBadge } from "@/components/tags/TagBadge";
 import { useTags, type Tag } from "@/hooks/useTags";
+import { EncaminharDialog } from "@/components/chat/EncaminharDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -254,6 +256,11 @@ export default function Conversas() {
   const [conversaIdParaTags, setConversaIdParaTags] = useState<string | null>(null);
   const [filtroTagId, setFiltroTagId] = useState<string>('todas');
   const { tags: todasTags } = useTags();
+
+  // Encaminhamento de mensagens
+  const [modoSelecao, setModoSelecao] = useState(false);
+  const [mensagensSelecionadas, setMensagensSelecionadas] = useState<string[]>([]);
+  const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
 
   const playNotification = useNotificationSound();
 
