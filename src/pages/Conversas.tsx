@@ -1291,13 +1291,17 @@ export default function Conversas() {
   ];
 
   const leadsOrdenados = useMemo(() => reordenarFixadas(leads), [leads]);
+  const leadsFiltrados = useMemo(() => {
+    if (filtroTagId === 'todas') return leadsOrdenados;
+    return leadsOrdenados.filter(l => l.tags?.some(t => t.id === filtroTagId));
+  }, [leadsOrdenados, filtroTagId]);
   const indexPrimeiraNaoFixada = useMemo(
-    () => leadsOrdenados.findIndex(l => !l.sessao_ativa?.fixada),
-    [leadsOrdenados]
+    () => leadsFiltrados.findIndex(l => !l.sessao_ativa?.fixada),
+    [leadsFiltrados]
   );
   const temFixadas = useMemo(
-    () => leads.some(l => l.sessao_ativa?.fixada),
-    [leads]
+    () => leadsFiltrados.some(l => l.sessao_ativa?.fixada),
+    [leadsFiltrados]
   );
 
   if (loading) {
