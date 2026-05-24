@@ -2491,6 +2491,31 @@ export default function Conversas() {
           sessaoId={conversaIdParaTags}
         />
       )}
+      <EncaminharDialog
+        open={encaminharDialogOpen}
+        onOpenChange={setEncaminharDialogOpen}
+        mensagensSelecionadas={mensagens
+          .filter((m: any) => m.id && mensagensSelecionadas.includes(m.id))
+          .map((m: any) => ({
+            id: m.id,
+            mensagem: m.mensagem,
+            tipo_mensagem: m.tipo_mensagem,
+            midia_url: m.midia_url,
+            data_envio: m.data_envio,
+          }))}
+        sessaoOrigemId={selectedLead?.sessao_ativa?.id || ''}
+        contatos={leads
+          .filter((l) => l.whatsapp_id || l.telefone)
+          .map((l) => ({
+            id: l.id,
+            nome: l.nome,
+            numero: l.whatsapp_id || l.telefone,
+          }))}
+        onSuccess={() => {
+          setModoSelecao(false);
+          setMensagensSelecionadas([]);
+        }}
+      />
     </DashboardLayout>
   );
 }
