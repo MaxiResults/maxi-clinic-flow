@@ -168,6 +168,7 @@ interface Lead {
   } | null;
   total_mensagens: number;
   ultima_interacao: string;
+  tags?: Tag[];
 }
 
 interface Mensagem {
