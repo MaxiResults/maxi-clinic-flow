@@ -1827,6 +1827,20 @@ export default function Conversas() {
                             key={mensagem.id ?? idx}
                             className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
                           >
+                            {modoSelecao && mensagem.id && (
+                              <div className="flex items-center mr-2">
+                                <Checkbox
+                                  checked={mensagensSelecionadas.includes(mensagem.id)}
+                                  onCheckedChange={(checked) => {
+                                    setMensagensSelecionadas((prev) =>
+                                      checked
+                                        ? [...prev, mensagem.id]
+                                        : prev.filter((id) => id !== mensagem.id),
+                                    );
+                                  }}
+                                />
+                              </div>
+                            )}
                             {!isOwn && (
                               <ContactAvatar
                                 nome={selectedLead?.nome || 'Usuário'}
