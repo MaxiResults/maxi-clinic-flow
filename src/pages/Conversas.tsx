@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -26,6 +26,8 @@ import { useConversasStats } from "@/hooks/useConversasStats";
 import { TagManager } from "@/components/tags/TagManager";
 import { TagBadge } from "@/components/tags/TagBadge";
 import { useTags, type Tag } from "@/hooks/useTags";
+import { EncaminharDialog } from "@/components/chat/EncaminharDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -254,6 +256,11 @@ export default function Conversas() {
   const [conversaIdParaTags, setConversaIdParaTags] = useState<string | null>(null);
   const [filtroTagId, setFiltroTagId] = useState<string>('todas');
   const { tags: todasTags } = useTags();
+
+  // Encaminhamento de mensagens
+  const [modoSelecao, setModoSelecao] = useState(false);
+  const [mensagensSelecionadas, setMensagensSelecionadas] = useState<string[]>([]);
+  const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
 
   const playNotification = useNotificationSound();
 
@@ -1614,6 +1621,38 @@ export default function Conversas() {
                       </div>
                     </button>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setModoSelecao((v) => {
+                            const novo = !v;
+                            if (!novo) setMensagensSelecionadas([]);
+                            return novo;
+                          });
+                        }}
+                        className="text-white/80 hover:text-white hover:bg-white/10 gap-1.5"
+                        title="Selecionar mensagens"
+                      >
+                        <CheckSquare className="h-4 w-4" />
+                        <span className="hidden sm:inline text-xs">
+                          {modoSelecao ? 'Cancelar' : 'Selecionar'}
+                        </span>
+                      </Button>
+                      {modoSelecao && mensagensSelecionadas.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEncaminharDialogOpen(true)}
+                          className="text-white/90 hover:text-white hover:bg-white/10 gap-1.5 bg-white/10"
+                          title="Encaminhar mensagens selecionadas"
+                        >
+                          <Forward className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">
+                            Encaminhar ({mensagensSelecionadas.length})
+                          </span>
+                        </Button>
+                      )}
                       {selectedLead?.sessao_ativa?.status_sessao === 'encerrada' ? (
                         <Button
                           variant="ghost"
@@ -1788,6 +1827,20 @@ export default function Conversas() {
                             key={mensagem.id ?? idx}
                             className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
                           >
+                            {modoSelecao && mensagem.id && (
+                              <div className="flex items-center mr-2">
+                                <Checkbox
+                                  checked={mensagensSelecionadas.includes(mensagem.id)}
+                                  onCheckedChange={(checked) => {
+                                    setMensagensSelecionadas((prev) =>
+                                      checked
+                                        ? [...prev, mensagem.id]
+                                        : prev.filter((id) => id !== mensagem.id),
+                                    );
+                                  }}
+                                />
+                              </div>
+                            )}
                             {!isOwn && (
                               <ContactAvatar
                                 nome={selectedLead?.nome || 'Usuário'}
@@ -2438,6 +2491,31 @@ export default function Conversas() {
           sessaoId={conversaIdParaTags}
         />
       )}
+      <EncaminharDialog
+        open={encaminharDialogOpen}
+        onOpenChange={setEncaminharDialogOpen}
+        mensagensSelecionadas={mensagens
+          .filter((m: any) => m.id && mensagensSelecionadas.includes(m.id))
+          .map((m: any) => ({
+            id: m.id,
+            mensagem: m.mensagem,
+            tipo_mensagem: m.tipo_mensagem,
+            midia_url: m.midia_url,
+            data_envio: m.data_envio,
+          }))}
+        sessaoOrigemId={selectedLead?.sessao_ativa?.id || ''}
+        contatos={leads
+          .filter((l) => l.whatsapp_id || l.telefone)
+          .map((l) => ({
+            id: l.id,
+            nome: l.nome,
+            numero: l.whatsapp_id || l.telefone,
+          }))}
+        onSuccess={() => {
+          setModoSelecao(false);
+          setMensagensSelecionadas([]);
+        }}
+      />
     </DashboardLayout>
   );
 }
