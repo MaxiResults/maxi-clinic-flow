@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -23,6 +23,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useHotkeys } from "react-hotkeys-hook";
 import { AtendentesOnlinePanel } from "@/components/chat/AtendentesOnlinePanel";
 import { useConversasStats } from "@/hooks/useConversasStats";
+import { TagManager } from "@/components/tags/TagManager";
+import { TagBadge } from "@/components/tags/TagBadge";
+import { useTags, type Tag } from "@/hooks/useTags";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Componente de Avatar com foto do contato ou iniciais coloridas
 const ContactAvatar = ({
@@ -158,6 +168,7 @@ interface Lead {
   } | null;
   total_mensagens: number;
   ultima_interacao: string;
+  tags?: Tag[];
 }
 
 interface Mensagem {
@@ -237,6 +248,12 @@ export default function Conversas() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadando, setUploadando] = useState(false);
   const [progressoUpload, setProgressoUpload] = useState(0);
+
+  // Tags
+  const [tagManagerOpen, setTagManagerOpen] = useState(false);
+  const [conversaIdParaTags, setConversaIdParaTags] = useState<string | null>(null);
+  const [filtroTagId, setFiltroTagId] = useState<string>('todas');
+  const { tags: todasTags } = useTags();
 
   const playNotification = useNotificationSound();
 
@@ -1274,13 +1291,17 @@ export default function Conversas() {
   ];
 
   const leadsOrdenados = useMemo(() => reordenarFixadas(leads), [leads]);
+  const leadsFiltrados = useMemo(() => {
+    if (filtroTagId === 'todas') return leadsOrdenados;
+    return leadsOrdenados.filter(l => l.tags?.some(t => t.id === filtroTagId));
+  }, [leadsOrdenados, filtroTagId]);
   const indexPrimeiraNaoFixada = useMemo(
-    () => leadsOrdenados.findIndex(l => !l.sessao_ativa?.fixada),
-    [leadsOrdenados]
+    () => leadsFiltrados.findIndex(l => !l.sessao_ativa?.fixada),
+    [leadsFiltrados]
   );
   const temFixadas = useMemo(
-    () => leads.some(l => l.sessao_ativa?.fixada),
-    [leads]
+    () => leadsFiltrados.some(l => l.sessao_ativa?.fixada),
+    [leadsFiltrados]
   );
 
   if (loading) {
@@ -1433,7 +1454,7 @@ export default function Conversas() {
           <div className="flex h-full flex-col">
             <div className="border-b p-4 space-y-3">
               <div className="flex items-center justify-between">
-                 <h3 className="font-semibold">Conversas ({leadsOrdenados.length})</h3>
+                 <h3 className="font-semibold">Conversas ({leadsFiltrados.length})</h3>
                 <Button onClick={() => fetchLeads()} variant="ghost" size="sm">🔄</Button>
               </div>
               <ConversationFilters
@@ -1442,10 +1463,29 @@ export default function Conversas() {
                   setConversationFilter(filter);
                 }}
               />
+              <Select value={filtroTagId} onValueChange={setFiltroTagId}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Filtrar por tag" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as tags</SelectItem>
+                  {todasTags.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-block w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: tag.cor }}
+                        />
+                        {tag.nome}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <AtendentesOnlinePanel />
             <div className="flex-1 overflow-y-auto">
-              {leadsOrdenados.length === 0 ? (
+              {leadsFiltrados.length === 0 ? (
                 <div className="p-4">
                   <EmptyState
                     icon={MessageSquare}
@@ -1460,7 +1500,7 @@ export default function Conversas() {
                   />
                 </div>
               ) : (
-                leadsOrdenados.map((lead, index) => (
+                leadsFiltrados.map((lead, index) => (
                   <React.Fragment key={lead.id}>
                   <div
                     className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
@@ -1478,6 +1518,19 @@ export default function Conversas() {
                         <div className="flex items-center justify-between mb-1">
                           <p className={`truncate ${(unreadCounts[lead.id] || 0) > 0 ? 'font-bold text-foreground' : 'font-medium'}`}>{lead.nome}</p>
                           <div className="flex items-center gap-1 shrink-0">
+                            {lead.sessao_ativa?.id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConversaIdParaTags(lead.sessao_ativa!.id);
+                                  setTagManagerOpen(true);
+                                }}
+                                className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                                title="Gerenciar tags"
+                              >
+                                <TagIcon className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                             <button
                               onClick={(e) => handleToggleFixar(lead, e)}
                               className={`p-1 rounded transition-colors ${
@@ -1494,6 +1547,13 @@ export default function Conversas() {
                             </span>
                           </div>
                         </div>
+                        {lead.tags && lead.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-1">
+                            {lead.tags.map((tag) => (
+                              <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
+                            ))}
+                          </div>
+                        )}
                         <p className="truncate text-sm text-muted-foreground">
                           {lead.ultima_mensagem?.mensagem || 'Sem mensagens'}
                         </p>
@@ -2367,6 +2427,16 @@ export default function Conversas() {
             </div>
           </div>
         </div>
+      )}
+      {conversaIdParaTags && (
+        <TagManager
+          open={tagManagerOpen}
+          onOpenChange={(open) => {
+            setTagManagerOpen(open);
+            if (!open) setConversaIdParaTags(null);
+          }}
+          sessaoId={conversaIdParaTags}
+        />
       )}
     </DashboardLayout>
   );
