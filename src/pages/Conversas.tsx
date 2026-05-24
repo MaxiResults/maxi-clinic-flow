@@ -1621,6 +1621,38 @@ export default function Conversas() {
                       </div>
                     </button>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setModoSelecao((v) => {
+                            const novo = !v;
+                            if (!novo) setMensagensSelecionadas([]);
+                            return novo;
+                          });
+                        }}
+                        className="text-white/80 hover:text-white hover:bg-white/10 gap-1.5"
+                        title="Selecionar mensagens"
+                      >
+                        <CheckSquare className="h-4 w-4" />
+                        <span className="hidden sm:inline text-xs">
+                          {modoSelecao ? 'Cancelar' : 'Selecionar'}
+                        </span>
+                      </Button>
+                      {modoSelecao && mensagensSelecionadas.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEncaminharDialogOpen(true)}
+                          className="text-white/90 hover:text-white hover:bg-white/10 gap-1.5 bg-white/10"
+                          title="Encaminhar mensagens selecionadas"
+                        >
+                          <Forward className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">
+                            Encaminhar ({mensagensSelecionadas.length})
+                          </span>
+                        </Button>
+                      )}
                       {selectedLead?.sessao_ativa?.status_sessao === 'encerrada' ? (
                         <Button
                           variant="ghost"
