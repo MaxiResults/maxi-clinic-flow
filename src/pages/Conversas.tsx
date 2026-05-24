@@ -2428,6 +2428,16 @@ export default function Conversas() {
           </div>
         </div>
       )}
+      {conversaIdParaTags && (
+        <TagManager
+          open={tagManagerOpen}
+          onOpenChange={(open) => {
+            setTagManagerOpen(open);
+            if (!open) setConversaIdParaTags(null);
+          }}
+          sessaoId={conversaIdParaTags}
+        />
+      )}
     </DashboardLayout>
   );
 }
