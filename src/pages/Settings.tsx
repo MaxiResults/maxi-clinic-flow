@@ -16,6 +16,7 @@ import {
   FileCode,
   Tag as TagIcon,
   Bot,
+  BarChart3,
 } from 'lucide-react';
 
 const configSections = [
@@ -95,6 +96,15 @@ const comunicacaoSections = [
     description: 'Configure o assistente IA para atendimento automático no WhatsApp',
     icon: Bot,
     route: '/configuracoes/ia',
+    color: 'text-violet-500',
+    bgColor: 'bg-violet-500/10',
+  },
+  {
+    id: 'analytics-ia',
+    title: 'Analytics IA',
+    description: 'Métricas de desempenho do assistente IA: conversas, taxa de resolução e handoffs',
+    icon: BarChart3,
+    route: '/analytics/ia',
     color: 'text-violet-500',
     bgColor: 'bg-violet-500/10',
   },
