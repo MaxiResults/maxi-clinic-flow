@@ -1973,10 +1973,13 @@ export default function Conversas() {
                                 </p>
                               )}
                               <span className="text-xs text-[#667781] mt-1 flex items-center gap-1 justify-end">
+                                {isAIMessage && (
+                                  <span title="Mensagem enviada pela IA">🤖</span>
+                                )}
                                 {new Date(mensagem.data_envio).toLocaleTimeString('pt-BR', {
                                   hour: '2-digit', minute: '2-digit'
                                 })}
-                                {isOwn && (
+                                {isHumanMessage && (
                                   <span className={
                                     mensagem.status_entrega === 'lido' ? 'text-blue-500' : 'text-[#667781]'
                                   }>
