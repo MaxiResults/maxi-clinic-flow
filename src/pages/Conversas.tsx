@@ -268,6 +268,8 @@ export default function Conversas() {
   const [showAISuggestions, setShowAISuggestions] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [iaDigitando, setIaDigitando] = useState(false);
+  const [feedbacksDados, setFeedbacksDados] = useState<Record<string, 'positive' | 'negative'>>({});
 
   // Status IA
   const { isAIActive, toggleAI, assumirManualmente } = useAIStatus({
@@ -718,6 +720,47 @@ export default function Conversas() {
       socket.off('nova_nota_interna', handler);
     };
   }, [socket]);
+
+  // Listen ai_handoff
+  useEffect(() => {
+    if (!socket || !selectedLead?.sessao_ativa?.id) return;
+
+    const handleAIHandoff = (data: {
+      sessaoId: string;
+      trigger: string;
+      reason?: string;
+    }) => {
+      if (data.sessaoId !== selectedLead?.sessao_ativa?.id) return;
+
+      sonnerToast('🤝 Handoff para humano', {
+        description: data.reason || 'Conversa transferida para atendimento humano',
+        duration: 5000,
+        style: { background: '#1e40af', color: 'white', border: 'none' },
+      });
+    };
+
+    socket.on('ai_handoff', handleAIHandoff);
+    return () => { socket.off('ai_handoff', handleAIHandoff); };
+  }, [socket, selectedLead?.sessao_ativa?.id]);
+
+  // Listen ai_typing
+  useEffect(() => {
+    if (!socket || !selectedLead?.sessao_ativa?.id) return;
+
+    const handleAITyping = (data: {
+      sessaoId: string;
+      typing: boolean;
+    }) => {
+      if (data.sessaoId !== selectedLead?.sessao_ativa?.id) return;
+      setIaDigitando(data.typing);
+    };
+
+    socket.on('ai_typing', handleAITyping);
+    return () => {
+      socket.off('ai_typing', handleAITyping);
+      setIaDigitando(false);
+    };
+  }, [socket, selectedLead?.sessao_ativa?.id]);
 
   // Fallback polling - leads (only if socket not connected)
   useEffect(() => {
@@ -1219,6 +1262,26 @@ export default function Conversas() {
     fetchLeads(true);
     if (selectedLead) {
       fetchMensagens(selectedLead.id, true);
+    }
+  };
+
+  const handleFeedbackIA = async (
+    mensagemId: string,
+    rating: 'positive' | 'negative'
+  ) => {
+    if (!selectedLead?.sessao_ativa?.id) return;
+    try {
+      await api.post('/ai/feedback', {
+        mensagemId,
+        sessaoId: selectedLead.sessao_ativa.id,
+        rating,
+      });
+      setFeedbacksDados(prev => ({ ...prev, [mensagemId]: rating }));
+      sonnerToast(rating === 'positive' ? '👍 Feedback positivo!' : '👎 Feedback registrado', {
+        duration: 2000,
+      });
+    } catch {
+      sonnerToast.error('Erro ao registrar feedback');
     }
   };
 
@@ -1935,7 +1998,7 @@ export default function Conversas() {
                               />
                             )}
                             <div
-                              className={`max-w-[70%] px-4 py-2 shadow-sm relative ${
+                              className={`max-w-[70%] px-4 py-2 shadow-sm relative group ${
                                 isOwn ? whatsappStyles.sentBubble : whatsappStyles.receivedBubble
                               }`}
                               style={{
@@ -2028,6 +2091,32 @@ export default function Conversas() {
                                   </span>
                                 )}
                               </span>
+                              {isAIMessage && mensagem.id && (
+                                <div className="flex items-center gap-1 mt-0.5 justify-end">
+                                  {feedbacksDados[mensagem.id] ? (
+                                    <span className="text-[10px]">
+                                      {feedbacksDados[mensagem.id] === 'positive' ? '👍' : '👎'}
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => handleFeedbackIA(mensagem.id, 'positive')}
+                                        className="text-[10px] opacity-0 group-hover:opacity-100 hover:scale-110 transition-all p-0.5 rounded"
+                                        title="Boa resposta"
+                                      >
+                                        👍
+                                      </button>
+                                      <button
+                                        onClick={() => handleFeedbackIA(mensagem.id, 'negative')}
+                                        className="text-[10px] opacity-0 group-hover:opacity-100 hover:scale-110 transition-all p-0.5 rounded"
+                                        title="Resposta ruim"
+                                      >
+                                        👎
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -2049,6 +2138,21 @@ export default function Conversas() {
                           <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                           <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                           <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Indicador "IA digitando..." */}
+                  {iaDigitando && (
+                    <div className="flex items-end gap-2 px-4 py-1">
+                      <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center text-xs shrink-0">
+                        🤖
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 rounded-2xl rounded-bl-none px-4 py-3 shadow-sm border">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
                       </div>
                     </div>
