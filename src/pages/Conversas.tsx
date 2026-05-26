@@ -2064,6 +2064,62 @@ export default function Conversas() {
                     </div>
                   ) : (
                     <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1 relative">
+                      {/* Painel Sugestões IA */}
+                      {showAISuggestions && (
+                        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl border border-[#E9EDEF] shadow-xl overflow-hidden z-50">
+                          <div className="flex items-center justify-between px-3 py-2 border-b bg-[#F0F2F5]">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-[#25D366]" />
+                              <span className="text-sm font-medium text-[#3b4a54]">Sugestões IA</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={fetchAISuggestions}
+                                className="p-1.5 rounded hover:bg-[#E9EDEF] text-[#667781] transition-colors"
+                                title="Regenerar sugestões"
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowAISuggestions(false)}
+                                className="p-1.5 rounded hover:bg-[#E9EDEF] text-[#667781] transition-colors"
+                                title="Fechar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {loadingSuggestions ? (
+                            <div className="px-4 py-6 flex items-center justify-center gap-2 text-[#667781]">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="text-sm">Gerando sugestões...</span>
+                            </div>
+                          ) : aiSuggestions.length === 0 ? (
+                            <div className="px-4 py-6 text-center text-sm text-[#667781]">
+                              Nenhuma sugestão disponível
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-[#F0F2F5]">
+                              {aiSuggestions.map((sugestao, idx) => (
+                                <button
+                                  type="button"
+                                  key={idx}
+                                  onClick={() => aplicarSugestaoIA(sugestao)}
+                                  className="w-full text-left px-4 py-3 hover:bg-[#F0F2F5] transition-colors text-sm text-gray-800 flex items-start gap-2"
+                                >
+                                  <span className="shrink-0 w-5 h-5 rounded-full bg-[#25D366]/10 text-[#25D366] text-xs font-medium flex items-center justify-center">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="flex-1 leading-relaxed">{sugestao}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {/* Menu de respostas rápidas */}
                       {showRespostas && respostasFiltradas.length > 0 && (
                         <div
