@@ -34,6 +34,7 @@ import TagsConfig from '@/pages/TagsConfig';
 import ConfiguracaoIA from '@/pages/ConfiguracaoIA';
 import AnalyticsIA from '@/pages/AnalyticsIA';
 import KnowledgeBase from '@/pages/KnowledgeBase';
+import FunctionPermissions from '@/pages/FunctionPermissions';
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ const AppRoutes = () => (
     <Route path="/configuracoes/ia" element={<PrivateRoute><ConfiguracaoIA /></PrivateRoute>} />
     <Route path="/analytics/ia" element={<PrivateRoute><AnalyticsIA /></PrivateRoute>} />
     <Route path="/ia/knowledge-base" element={<PrivateRoute><KnowledgeBase /></PrivateRoute>} />
+    <Route path="/ia/automacoes" element={<PrivateRoute><FunctionPermissions /></PrivateRoute>} />
   </Routes>
 );
 

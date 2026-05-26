@@ -118,6 +118,15 @@ const comunicacaoSections = [
     color: 'text-emerald-500',
     bgColor: 'bg-emerald-500/10',
   },
+  {
+    id: 'function-permissions',
+    title: 'Automações IA',
+    description: 'Controle quais ações a IA pode executar automaticamente (agendamentos, cancelamentos)',
+    icon: Zap,
+    route: '/ia/automacoes',
+    color: 'text-yellow-500',
+    bgColor: 'bg-yellow-500/10',
+  },
 ];
 
 export default function Settings() {
