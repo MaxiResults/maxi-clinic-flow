@@ -32,6 +32,7 @@ import RespostasRapidas from '@/pages/RespostasRapidas';
 import WhatsAppTemplates from '@/pages/WhatsAppTemplates';
 import TagsConfig from '@/pages/TagsConfig';
 import ConfiguracaoIA from '@/pages/ConfiguracaoIA';
+import AnalyticsIA from '@/pages/AnalyticsIA';
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const AppRoutes = () => (
     <Route path="/whatsapp/templates" element={<PrivateRoute><WhatsAppTemplates /></PrivateRoute>} />
     <Route path="/configuracoes/tags" element={<PrivateRoute><TagsConfig /></PrivateRoute>} />
     <Route path="/configuracoes/ia" element={<PrivateRoute><ConfiguracaoIA /></PrivateRoute>} />
+    <Route path="/analytics/ia" element={<PrivateRoute><AnalyticsIA /></PrivateRoute>} />
   </Routes>
 );
 
