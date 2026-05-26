@@ -31,6 +31,7 @@ import ConfiguracaoGoogleCalendar from '@/pages/ConfiguracaoGoogleCalendar';
 import RespostasRapidas from '@/pages/RespostasRapidas';
 import WhatsAppTemplates from '@/pages/WhatsAppTemplates';
 import TagsConfig from '@/pages/TagsConfig';
+import ConfiguracaoIA from '@/pages/ConfiguracaoIA';
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const AppRoutes = () => (
     <Route path="/respostas-rapidas" element={<PrivateRoute><RespostasRapidas /></PrivateRoute>} />
     <Route path="/whatsapp/templates" element={<PrivateRoute><WhatsAppTemplates /></PrivateRoute>} />
     <Route path="/configuracoes/tags" element={<PrivateRoute><TagsConfig /></PrivateRoute>} />
+    <Route path="/configuracoes/ia" element={<PrivateRoute><ConfiguracaoIA /></PrivateRoute>} />
   </Routes>
 );
 
