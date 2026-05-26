@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  BarChart,
+  Bar,
   LineChart,
   Line,
   XAxis,
@@ -60,6 +62,44 @@ export default function AnalyticsIA() {
       return res.data.data;
     },
   });
+
+  const { data: intentsData, isLoading: loadingIntents } = useQuery({
+    queryKey: ['ai-analytics-intents', periodo],
+    queryFn: async () => {
+      const res = await api.get(`/analytics/ia/intents?periodo=${periodo}`);
+      return res.data.data;
+    },
+  });
+
+  const { data: functionsData, isLoading: loadingFunctions } = useQuery({
+    queryKey: ['ai-analytics-functions', periodo],
+    queryFn: async () => {
+      const res = await api.get(`/analytics/ia/functions?periodo=${periodo}`);
+      return res.data.data;
+    },
+  });
+
+  const INTENT_LABELS: Record<string, string> = {
+    saudacao: '👋 Saudação',
+    informacao_procedimento: '💉 Info Procedimento',
+    horario_funcionamento: '🕐 Horário',
+    localizacao: '📍 Localização',
+    duvida_geral: '❓ Dúvida Geral',
+    agendamento_novo: '📅 Agendar',
+    reagendar: '🔄 Reagendar',
+    cancelar: '❌ Cancelar',
+    reclamacao: '😤 Reclamação',
+    emergencia: '🚨 Emergência',
+    falar_com_atendente: '🧑 Atendente',
+  };
+
+  const FUNCTION_LABELS: Record<string, string> = {
+    buscarHorariosDisponiveis: '🔍 Buscar Horários',
+    criarAgendamento: '📅 Criar Agendamento',
+    buscarAgendamentos: '📋 Buscar Agendamentos',
+    reagendarAgendamento: '🔄 Reagendar',
+    cancelarAgendamento: '❌ Cancelar',
+  };
 
   const taxa = overview?.conversas?.taxa_ia_percent ?? 0;
 
@@ -239,38 +279,103 @@ export default function AnalyticsIA() {
           </CardContent>
         </Card>
 
-        {/* SEÇÃO 3 — Breakdown */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* SEÇÃO 3 — Gráfico de Intents */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Classificação por Intenção</CardTitle>
+            <CardDescription>
+              Top intents detectados — {intentsData?.total_classificacoes ?? 0} classificações no período
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingIntents ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : !intentsData?.intents?.length ? (
+              <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
+                Sem dados de classificação no período
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart
+                  data={(intentsData.intents || []).slice(0, 8).map((item: any) => ({
+                    name: INTENT_LABELS[item.intent] || item.intent,
+                    total: item.total,
+                    auto: item.autoRespondidas,
+                    handoff: item.handoffs,
+                  }))}
+                  layout="vertical"
+                  margin={{ left: 20, right: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={11}
+                    tickLine={false}
+                    width={140}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                      fontSize: "12px"
+                    }}
+                  />
+                  <Bar dataKey="auto" name="Auto-respondidas" stackId="a" fill="#8b5cf6" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="handoff" name="Handoffs" stackId="a" fill="#f97316" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* SEÇÃO 4 — Function Calls + Motivos de Handoff */}
+        <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-orange-500" />
-                Motivos de Handoff
-              </CardTitle>
+              <CardTitle className="text-base">⚡ Execuções de Functions</CardTitle>
+              <CardDescription>
+                {functionsData?.total_execucoes ?? 0} execuções no período
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {loadingOverview ? (
-                <Skeleton className="h-20 w-full" />
+              {loadingFunctions ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+              ) : !functionsData?.functions?.length ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Sem execuções no período
+                </p>
               ) : (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b">
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm">Manuais (atendente)</span>
+                  {functionsData.functions.map((fn: any) => (
+                    <div key={fn.functionName} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium truncate mr-2">
+                          {FUNCTION_LABELS[fn.functionName] || fn.functionName}
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground">{fn.total}x</span>
+                          <span className={`text-xs font-medium ${fn.taxaSucesso >= 90 ? 'text-green-600' : fn.taxaSucesso >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {fn.taxaSucesso}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full transition-all ${fn.taxaSucesso >= 90 ? 'bg-green-500' : fn.taxaSucesso >= 70 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                          style={{ width: `${fn.taxaSucesso}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        {fn.sucesso} ok · {fn.erro} erro · ~{fn.avgTempoMs}ms
+                      </p>
                     </div>
-                    <span className="font-bold">
-                      {overview?.handoffs?.manuais ?? 0}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-2">
-                      <Bot className="h-4 w-4 text-violet-500" />
-                      <span className="text-sm">Automáticos (baixa confiança)</span>
-                    </div>
-                    <span className="font-bold">
-                      {overview?.handoffs?.automaticos ?? 0}
-                    </span>
-                  </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -278,38 +383,41 @@ export default function AnalyticsIA() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-violet-500" />
-                Resumo do Período
-              </CardTitle>
+              <CardTitle className="text-base">🤝 Motivos de Handoff</CardTitle>
+              <CardDescription>Por que a IA transferiu para humano</CardDescription>
             </CardHeader>
             <CardContent>
-              {loadingOverview ? (
-                <Skeleton className="h-32 w-full" />
+              {loadingFunctions ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
               ) : (
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between py-1.5 border-b">
-                    <span className="text-muted-foreground">Período</span>
-                    <span className="font-medium">{periodo} dias</span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b">
-                    <span className="text-muted-foreground">Conversas atendidas pela IA</span>
-                    <span className="font-medium">
-                      {overview?.conversas?.atendidas_ia ?? 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-1.5 border-b">
-                    <span className="text-muted-foreground">Mensagens geradas pela IA</span>
-                    <span className="font-medium">
-                      {overview?.mensagens?.enviadas_ia ?? 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between py-1.5">
-                    <span className="text-muted-foreground">Handoffs realizados</span>
-                    <span className="font-medium">
-                      {overview?.handoffs?.total ?? 0}
-                    </span>
-                  </div>
+                <div className="space-y-3">
+                  {[
+                    { key: 'user_request', label: '🧑 Paciente solicitou', color: 'bg-blue-500' },
+                    { key: 'low_confidence', label: '🤔 Baixa confiança', color: 'bg-yellow-500' },
+                    { key: 'manual', label: '✋ Atendente assumiu', color: 'bg-violet-500' },
+                    { key: 'error', label: '❌ Erro da IA', color: 'bg-red-500' },
+                    { key: 'loop_detected', label: '🔄 Loop detectado', color: 'bg-orange-500' },
+                  ].map(tipo => {
+                    const count = functionsData?.handoffs_por_tipo?.[tipo.key] ?? 0
+                    const total = Object.values(functionsData?.handoffs_por_tipo || {}).reduce((a: number, b: any) => a + b, 0) as number
+                    const pct = total > 0 ? Math.round((count / total) * 100) : 0
+                    return (
+                      <div key={tipo.key} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span>{tipo.label}</span>
+                          <span className="text-xs font-medium">{count} ({pct}%)</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${tipo.color}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
