@@ -10,6 +10,8 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  BarChart,
+  Bar,
   LineChart,
   Line,
   XAxis,
