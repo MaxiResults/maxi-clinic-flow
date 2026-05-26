@@ -33,6 +33,7 @@ import WhatsAppTemplates from '@/pages/WhatsAppTemplates';
 import TagsConfig from '@/pages/TagsConfig';
 import ConfiguracaoIA from '@/pages/ConfiguracaoIA';
 import AnalyticsIA from '@/pages/AnalyticsIA';
+import KnowledgeBase from '@/pages/KnowledgeBase';
 
 const queryClient = new QueryClient();
 

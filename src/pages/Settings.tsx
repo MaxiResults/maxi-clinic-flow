@@ -17,6 +17,7 @@ import {
   Tag as TagIcon,
   Bot,
   BarChart3,
+  BookOpen,
 } from 'lucide-react';
 
 const configSections = [
