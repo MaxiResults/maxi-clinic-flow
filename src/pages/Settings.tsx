@@ -109,6 +109,15 @@ const comunicacaoSections = [
     color: 'text-violet-500',
     bgColor: 'bg-violet-500/10',
   },
+  {
+    id: 'knowledge-base',
+    title: 'Knowledge Base',
+    description: 'Documentos que ensinam a IA a responder perguntas sobre sua clínica',
+    icon: BookOpen,
+    route: '/ia/knowledge-base',
+    color: 'text-emerald-500',
+    bgColor: 'bg-emerald-500/10',
+  },
 ];
 
 export default function Settings() {
