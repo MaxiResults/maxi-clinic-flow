@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bot, Lightbulb, Loader2, Save } from 'lucide-react';
+import { Bot, Lightbulb, Loader2, Save, Clock, CalendarDays, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 
@@ -29,7 +29,36 @@ interface AIConfigForm {
   model: string;
   auto_respond_enabled: boolean;
   confidence_threshold: number;
+  horario_inicio: string;
+  horario_fim: string;
+  dias_semana: string[];
+  intents_bloqueados: string[];
+  intents_auto_respond: string[];
 }
+
+const DIAS_SEMANA = [
+  { key: 'segunda-feira', label: 'Seg' },
+  { key: 'terça-feira', label: 'Ter' },
+  { key: 'quarta-feira', label: 'Qua' },
+  { key: 'quinta-feira', label: 'Qui' },
+  { key: 'sexta-feira', label: 'Sex' },
+  { key: 'sábado', label: 'Sáb' },
+  { key: 'domingo', label: 'Dom' },
+];
+
+const ALL_INTENTS = [
+  { key: 'saudacao', label: '👋 Saudação', descricao: 'Cumprimentos iniciais' },
+  { key: 'informacao_procedimento', label: '💉 Info Procedimento', descricao: 'Dúvidas sobre serviços e preços' },
+  { key: 'horario_funcionamento', label: '🕐 Horário Funcionamento', descricao: 'Quando a clínica abre/fecha' },
+  { key: 'localizacao', label: '📍 Localização', descricao: 'Endereço da clínica' },
+  { key: 'duvida_geral', label: '❓ Dúvida Geral', descricao: 'Perguntas diversas' },
+  { key: 'agendamento_novo', label: '📅 Agendar', descricao: 'Novo agendamento' },
+  { key: 'reagendar', label: '🔄 Reagendar', descricao: 'Mudar data/hora' },
+  { key: 'cancelar', label: '❌ Cancelar', descricao: 'Cancelar agendamento' },
+  { key: 'reclamacao', label: '😤 Reclamação', descricao: 'Cliente insatisfeito' },
+  { key: 'emergencia', label: '🚨 Emergência', descricao: 'Urgência médica' },
+  { key: 'falar_com_atendente', label: '🧑 Falar com Atendente', descricao: 'Pedir humano' },
+];
 
 export default function ConfiguracaoIA() {
   const { toast } = useToast();
@@ -39,6 +68,11 @@ export default function ConfiguracaoIA() {
     model: 'claude-haiku-4-5',
     auto_respond_enabled: false,
     confidence_threshold: 85,
+    horario_inicio: '08:00',
+    horario_fim: '18:00',
+    dias_semana: ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira'],
+    intents_bloqueados: ['agendamento_novo', 'reagendar', 'cancelar', 'reclamacao', 'emergencia'],
+    intents_auto_respond: ['informacao_procedimento', 'horario_funcionamento', 'localizacao', 'duvida_geral'],
   });
 
   const { isLoading } = useQuery({
@@ -51,6 +85,11 @@ export default function ConfiguracaoIA() {
         model: data.model ?? 'claude-haiku-4-5',
         auto_respond_enabled: data.auto_respond_enabled ?? false,
         confidence_threshold: data.confidence_threshold ?? 85,
+        horario_inicio: data.horario_inicio ?? '08:00',
+        horario_fim: data.horario_fim ?? '18:00',
+        dias_semana: data.dias_semana ?? ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira'],
+        intents_bloqueados: data.intents_bloqueados ?? ['agendamento_novo', 'reagendar', 'cancelar', 'reclamacao', 'emergencia'],
+        intents_auto_respond: data.intents_auto_respond ?? ['informacao_procedimento', 'horario_funcionamento', 'localizacao', 'duvida_geral'],
       });
       return data;
     },
@@ -69,6 +108,35 @@ export default function ConfiguracaoIA() {
   };
 
   const isHaiku = form.model === 'claude-haiku-4-5';
+
+  const toggleDia = (dia: string) => {
+    setForm((prev) => ({
+      ...prev,
+      dias_semana: prev.dias_semana.includes(dia)
+        ? prev.dias_semana.filter((d) => d !== dia)
+        : [...prev.dias_semana, dia],
+    }));
+  };
+
+  const toggleIntent = (intentKey: string, tipo: 'auto_respond' | 'bloqueado') => {
+    if (tipo === 'auto_respond') {
+      setForm((prev) => ({
+        ...prev,
+        intents_auto_respond: prev.intents_auto_respond.includes(intentKey)
+          ? prev.intents_auto_respond.filter((i) => i !== intentKey)
+          : [...prev.intents_auto_respond, intentKey],
+        intents_bloqueados: prev.intents_bloqueados.filter((i) => i !== intentKey),
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        intents_bloqueados: prev.intents_bloqueados.includes(intentKey)
+          ? prev.intents_bloqueados.filter((i) => i !== intentKey)
+          : [...prev.intents_bloqueados, intentKey],
+        intents_auto_respond: prev.intents_auto_respond.filter((i) => i !== intentKey),
+      }));
+    }
+  };
 
   return (
     <DashboardLayout title="Assistente IA">
