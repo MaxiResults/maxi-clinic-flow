@@ -264,6 +264,11 @@ export default function Conversas() {
   const [mensagensSelecionadas, setMensagensSelecionadas] = useState<string[]>([]);
   const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
 
+  // Sugestões IA
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
   // Status IA
   const { isAIActive, toggleAI, assumirManualmente } = useAIStatus({
     sessaoId: selectedLead?.sessao_ativa?.id || '',
