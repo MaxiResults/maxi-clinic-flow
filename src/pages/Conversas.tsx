@@ -320,6 +320,29 @@ export default function Conversas() {
     }, 0);
   };
 
+  const fetchAISuggestions = async () => {
+    if (!selectedLead?.sessao_ativa?.id) return;
+    setLoadingSuggestions(true);
+    setShowAISuggestions(true);
+    try {
+      const res = await api.post('/ai/suggest-replies', {
+        conversationId: selectedLead.sessao_ativa.id,
+        count: 3,
+      });
+      setAiSuggestions(res.data.suggestions || []);
+    } catch (err) {
+      setAiSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const aplicarSugestaoIA = (texto: string) => {
+    setNovaMsg(texto);
+    setShowAISuggestions(false);
+    setTimeout(() => textInputRef.current?.focus(), 50);
+  };
+
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setNovaMsg((prev) => prev + emojiData.emoji);
   };
