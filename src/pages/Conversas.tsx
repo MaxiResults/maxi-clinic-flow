@@ -1690,6 +1690,36 @@ export default function Conversas() {
                           <span className="hidden sm:inline text-xs">Encerrar</span>
                         </Button>
                       )}
+                      {selectedLead?.sessao_ativa?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleAI(!isAIActive)}
+                          className={
+                            isAIActive
+                              ? "text-green-300 hover:text-green-200 hover:bg-white/10 gap-1.5"
+                              : "text-white/60 hover:text-white hover:bg-white/10 gap-1.5"
+                          }
+                          title={isAIActive ? "Desativar IA" : "Ativar IA"}
+                        >
+                          <Bot className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">
+                            {isAIActive ? "IA on" : "IA off"}
+                          </span>
+                        </Button>
+                      )}
+                      {isAIActive && selectedLead?.sessao_ativa?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={assumirManualmente}
+                          className="text-blue-300 hover:text-blue-200 hover:bg-white/10 gap-1.5"
+                          title="Assumir atendimento manualmente"
+                        >
+                          <UserCheck className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">Assumir</span>
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1812,7 +1842,9 @@ export default function Conversas() {
                   ) : (
                     <div className="space-y-3">
                         {mensagens.map((mensagem: any, idx) => {
-                         const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
+                          const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
+                          const isAIMessage = mensagem.remetente === 'bot' || mensagem.sent_by === 'ai';
+                          const isHumanMessage = isOwn && !isAIMessage;
                         const isAudio = mensagem.tipo_mensagem === 'audio';
                          if (mensagem.is_nota_interna) {
                            return (
