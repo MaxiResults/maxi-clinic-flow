@@ -15,6 +15,7 @@ import {
   MessageSquare,
   FileCode,
   Tag as TagIcon,
+  Bot,
 } from 'lucide-react';
 
 const configSections = [
@@ -87,6 +88,15 @@ const comunicacaoSections = [
     route: '/configuracoes/tags',
     color: 'text-pink-500',
     bgColor: 'bg-pink-500/10',
+  },
+  {
+    id: 'assistente-ia',
+    title: 'Assistente IA',
+    description: 'Configure o assistente IA para atendimento automático no WhatsApp',
+    icon: Bot,
+    route: '/configuracoes/ia',
+    color: 'text-violet-500',
+    bgColor: 'bg-violet-500/10',
   },
 ];
 
