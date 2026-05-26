@@ -63,6 +63,44 @@ export default function AnalyticsIA() {
     },
   });
 
+  const { data: intentsData, isLoading: loadingIntents } = useQuery({
+    queryKey: ['ai-analytics-intents', periodo],
+    queryFn: async () => {
+      const res = await api.get(`/analytics/ia/intents?periodo=${periodo}`);
+      return res.data.data;
+    },
+  });
+
+  const { data: functionsData, isLoading: loadingFunctions } = useQuery({
+    queryKey: ['ai-analytics-functions', periodo],
+    queryFn: async () => {
+      const res = await api.get(`/analytics/ia/functions?periodo=${periodo}`);
+      return res.data.data;
+    },
+  });
+
+  const INTENT_LABELS: Record<string, string> = {
+    saudacao: '👋 Saudação',
+    informacao_procedimento: '💉 Info Procedimento',
+    horario_funcionamento: '🕐 Horário',
+    localizacao: '📍 Localização',
+    duvida_geral: '❓ Dúvida Geral',
+    agendamento_novo: '📅 Agendar',
+    reagendar: '🔄 Reagendar',
+    cancelar: '❌ Cancelar',
+    reclamacao: '😤 Reclamação',
+    emergencia: '🚨 Emergência',
+    falar_com_atendente: '🧑 Atendente',
+  };
+
+  const FUNCTION_LABELS: Record<string, string> = {
+    buscarHorariosDisponiveis: '🔍 Buscar Horários',
+    criarAgendamento: '📅 Criar Agendamento',
+    buscarAgendamentos: '📋 Buscar Agendamentos',
+    reagendarAgendamento: '🔄 Reagendar',
+    cancelarAgendamento: '❌ Cancelar',
+  };
+
   const taxa = overview?.conversas?.taxa_ia_percent ?? 0;
 
   return (
