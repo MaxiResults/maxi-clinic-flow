@@ -307,6 +307,17 @@ export default function Conversas() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Fecha painel de sugestões IA ao pressionar Esc
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowAISuggestions(false);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
   const aplicarResposta = (r: RespostaRapida) => {
     setNovaMsg(r.conteudo);
     setShowRespostas(false);
