@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -29,6 +29,7 @@ import { useTags, type Tag } from "@/hooks/useTags";
 import { EncaminharDialog } from "@/components/chat/EncaminharDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AIHandoffBadge } from "@/components/ai/AIHandoffBadge";
+import { useAIStatus } from "@/hooks/useAIStatus";
 import {
   Select,
   SelectContent,
@@ -262,6 +263,12 @@ export default function Conversas() {
   const [modoSelecao, setModoSelecao] = useState(false);
   const [mensagensSelecionadas, setMensagensSelecionadas] = useState<string[]>([]);
   const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
+
+  // Status IA
+  const { isAIActive, toggleAI, assumirManualmente } = useAIStatus({
+    sessaoId: selectedLead?.sessao_ativa?.id || '',
+    enabled: !!selectedLead?.sessao_ativa?.id,
+  });
 
   const playNotification = useNotificationSound();
 
@@ -1683,6 +1690,36 @@ export default function Conversas() {
                           <span className="hidden sm:inline text-xs">Encerrar</span>
                         </Button>
                       )}
+                      {selectedLead?.sessao_ativa?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleAI(!isAIActive)}
+                          className={
+                            isAIActive
+                              ? "text-green-300 hover:text-green-200 hover:bg-white/10 gap-1.5"
+                              : "text-white/60 hover:text-white hover:bg-white/10 gap-1.5"
+                          }
+                          title={isAIActive ? "Desativar IA" : "Ativar IA"}
+                        >
+                          <Bot className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">
+                            {isAIActive ? "IA on" : "IA off"}
+                          </span>
+                        </Button>
+                      )}
+                      {isAIActive && selectedLead?.sessao_ativa?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={assumirManualmente}
+                          className="text-blue-300 hover:text-blue-200 hover:bg-white/10 gap-1.5"
+                          title="Assumir atendimento manualmente"
+                        >
+                          <UserCheck className="h-4 w-4" />
+                          <span className="hidden sm:inline text-xs">Assumir</span>
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1805,7 +1842,9 @@ export default function Conversas() {
                   ) : (
                     <div className="space-y-3">
                         {mensagens.map((mensagem: any, idx) => {
-                         const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
+                          const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
+                          const isAIMessage = mensagem.remetente === 'bot' || mensagem.sent_by === 'ai';
+                          const isHumanMessage = isOwn && !isAIMessage;
                         const isAudio = mensagem.tipo_mensagem === 'audio';
                          if (mensagem.is_nota_interna) {
                            return (
@@ -1934,10 +1973,13 @@ export default function Conversas() {
                                 </p>
                               )}
                               <span className="text-xs text-[#667781] mt-1 flex items-center gap-1 justify-end">
+                                {isAIMessage && (
+                                  <span title="Mensagem enviada pela IA">🤖</span>
+                                )}
                                 {new Date(mensagem.data_envio).toLocaleTimeString('pt-BR', {
                                   hour: '2-digit', minute: '2-digit'
                                 })}
-                                {isOwn && (
+                                {isHumanMessage && (
                                   <span className={
                                     mensagem.status_entrega === 'lido' ? 'text-blue-500' : 'text-[#667781]'
                                   }>
