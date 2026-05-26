@@ -279,6 +279,162 @@ export default function ConfiguracaoIA() {
               </CardContent>
             </Card>
 
+            {/* Seção 4 — Horário de Funcionamento */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <CardTitle>Horário de Funcionamento</CardTitle>
+                    <CardDescription>
+                      A IA só responderá automaticamente neste horário
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium">Início</label>
+                    <input
+                      type="time"
+                      value={form.horario_inicio}
+                      onChange={(e) => setForm((prev) => ({ ...prev, horario_inicio: e.target.value }))}
+                      className="border rounded-lg px-3 py-2 text-sm bg-background w-32"
+                    />
+                  </div>
+                  <div className="flex items-center pt-5 text-muted-foreground">até</div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium">Fim</label>
+                    <input
+                      type="time"
+                      value={form.horario_fim}
+                      onChange={(e) => setForm((prev) => ({ ...prev, horario_fim: e.target.value }))}
+                      className="border rounded-lg px-3 py-2 text-sm bg-background w-32"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  ⏰ Fora deste horário, a IA fica inativa e mensagens ficam aguardando
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Seção 5 — Dias da Semana */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-purple-500" />
+                  <div>
+                    <CardTitle>Dias de Atendimento</CardTitle>
+                    <CardDescription>Dias em que a IA estará ativa</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 flex-wrap">
+                  {DIAS_SEMANA.map((dia) => {
+                    const ativo = form.dias_semana.includes(dia.key);
+                    return (
+                      <button
+                        key={dia.key}
+                        type="button"
+                        onClick={() => toggleDia(dia.key)}
+                        className={`w-12 h-12 rounded-xl text-sm font-semibold transition-all ${
+                          ativo
+                            ? 'bg-purple-500 text-white shadow-sm'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {dia.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  📅 {form.dias_semana.length} dia{form.dias_semana.length !== 1 ? 's' : ''} selecionado
+                  {form.dias_semana.length !== 1 ? 's' : ''}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Seção 6 — Intents */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <CardTitle>Comportamento por Intenção</CardTitle>
+                    <CardDescription>
+                      Defina como a IA reage a cada tipo de mensagem
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4 mb-4 text-xs flex-wrap">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+                    Auto-responde
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-orange-500 inline-block" />
+                    Faz handoff
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full bg-gray-200 inline-block" />
+                    Não configurado
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {ALL_INTENTS.map((intent) => {
+                    const isAutoRespond = form.intents_auto_respond.includes(intent.key);
+                    const isBloqueado = form.intents_bloqueados.includes(intent.key);
+                    return (
+                      <div
+                        key={intent.key}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0 mr-3">
+                          <p className="text-sm font-medium">{intent.label}</p>
+                          <p className="text-xs text-muted-foreground">{intent.descricao}</p>
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleIntent(intent.key, 'auto_respond')}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                              isAutoRespond
+                                ? 'bg-green-500 text-white'
+                                : 'bg-muted text-muted-foreground hover:bg-green-100 hover:text-green-700'
+                            }`}
+                            title="IA responde automaticamente"
+                          >
+                            Auto
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleIntent(intent.key, 'bloqueado')}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                              isBloqueado
+                                ? 'bg-orange-500 text-white'
+                                : 'bg-muted text-muted-foreground hover:bg-orange-100 hover:text-orange-700'
+                            }`}
+                            title="Transferir para humano"
+                          >
+                            Handoff
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  💡 Intents sem configuração são tratados como "Auto" com o threshold de confiança definido acima
+                </p>
+              </CardContent>
+            </Card>
+
             {/* Botão Salvar */}
             <Button
               onClick={handleSave}
