@@ -2331,6 +2331,22 @@ export default function Conversas() {
                         </button>
                       </div>
 
+                      {/* Botão Sugestões IA */}
+                      {selectedLead?.sessao_ativa?.id && (
+                        <button
+                          type="button"
+                          onClick={fetchAISuggestions}
+                          className={`flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-105 ${
+                            showAISuggestions
+                              ? 'bg-[#25D366] text-white shadow-sm'
+                              : 'bg-white text-[#54656F] hover:text-[#25D366] border border-[#E9EDEF]'
+                          }`}
+                          title="Sugestões IA"
+                        >
+                          <Sparkles className="h-5 w-5" />
+                        </button>
+                      )}
+
                       {/* Botão microfone circular com hover verde */}
                       <button
                         type="button"
