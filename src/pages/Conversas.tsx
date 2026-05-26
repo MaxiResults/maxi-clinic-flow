@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -264,6 +264,11 @@ export default function Conversas() {
   const [mensagensSelecionadas, setMensagensSelecionadas] = useState<string[]>([]);
   const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
 
+  // Sugestões IA
+  const [showAISuggestions, setShowAISuggestions] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
   // Status IA
   const { isAIActive, toggleAI, assumirManualmente } = useAIStatus({
     sessaoId: selectedLead?.sessao_ativa?.id || '',
@@ -313,6 +318,29 @@ export default function Conversas() {
         el.setSelectionRange(r.conteudo.length, r.conteudo.length);
       }
     }, 0);
+  };
+
+  const fetchAISuggestions = async () => {
+    if (!selectedLead?.sessao_ativa?.id) return;
+    setLoadingSuggestions(true);
+    setShowAISuggestions(true);
+    try {
+      const res = await api.post('/ai/suggest-replies', {
+        conversationId: selectedLead.sessao_ativa.id,
+        count: 3,
+      });
+      setAiSuggestions(res.data.suggestions || []);
+    } catch (err) {
+      setAiSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const aplicarSugestaoIA = (texto: string) => {
+    setNovaMsg(texto);
+    setShowAISuggestions(false);
+    setTimeout(() => textInputRef.current?.focus(), 50);
   };
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
@@ -2036,6 +2064,62 @@ export default function Conversas() {
                     </div>
                   ) : (
                     <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1 relative">
+                      {/* Painel Sugestões IA */}
+                      {showAISuggestions && (
+                        <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl border border-[#E9EDEF] shadow-xl overflow-hidden z-50">
+                          <div className="flex items-center justify-between px-3 py-2 border-b bg-[#F0F2F5]">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-[#25D366]" />
+                              <span className="text-sm font-medium text-[#3b4a54]">Sugestões IA</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={fetchAISuggestions}
+                                className="p-1.5 rounded hover:bg-[#E9EDEF] text-[#667781] transition-colors"
+                                title="Regenerar sugestões"
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowAISuggestions(false)}
+                                className="p-1.5 rounded hover:bg-[#E9EDEF] text-[#667781] transition-colors"
+                                title="Fechar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {loadingSuggestions ? (
+                            <div className="px-4 py-6 flex items-center justify-center gap-2 text-[#667781]">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span className="text-sm">Gerando sugestões...</span>
+                            </div>
+                          ) : aiSuggestions.length === 0 ? (
+                            <div className="px-4 py-6 text-center text-sm text-[#667781]">
+                              Nenhuma sugestão disponível
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-[#F0F2F5]">
+                              {aiSuggestions.map((sugestao, idx) => (
+                                <button
+                                  type="button"
+                                  key={idx}
+                                  onClick={() => aplicarSugestaoIA(sugestao)}
+                                  className="w-full text-left px-4 py-3 hover:bg-[#F0F2F5] transition-colors text-sm text-gray-800 flex items-start gap-2"
+                                >
+                                  <span className="shrink-0 w-5 h-5 rounded-full bg-[#25D366]/10 text-[#25D366] text-xs font-medium flex items-center justify-center">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="flex-1 leading-relaxed">{sugestao}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {/* Menu de respostas rápidas */}
                       {showRespostas && respostasFiltradas.length > 0 && (
                         <div
@@ -2246,6 +2330,22 @@ export default function Conversas() {
                           <StickyNote className="h-4 w-4" />
                         </button>
                       </div>
+
+                      {/* Botão Sugestões IA */}
+                      {selectedLead?.sessao_ativa?.id && (
+                        <button
+                          type="button"
+                          onClick={fetchAISuggestions}
+                          className={`flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-105 ${
+                            showAISuggestions
+                              ? 'bg-[#25D366] text-white shadow-sm'
+                              : 'bg-white text-[#54656F] hover:text-[#25D366] border border-[#E9EDEF]'
+                          }`}
+                          title="Sugestões IA"
+                        >
+                          <Sparkles className="h-5 w-5" />
+                        </button>
+                      )}
 
                       {/* Botão microfone circular com hover verde */}
                       <button
