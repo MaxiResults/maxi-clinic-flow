@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -29,6 +29,7 @@ import { useTags, type Tag } from "@/hooks/useTags";
 import { EncaminharDialog } from "@/components/chat/EncaminharDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AIHandoffBadge } from "@/components/ai/AIHandoffBadge";
+import { useAIStatus } from "@/hooks/useAIStatus";
 import {
   Select,
   SelectContent,
@@ -262,6 +263,12 @@ export default function Conversas() {
   const [modoSelecao, setModoSelecao] = useState(false);
   const [mensagensSelecionadas, setMensagensSelecionadas] = useState<string[]>([]);
   const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
+
+  // Status IA
+  const { isAIActive, toggleAI, assumirManualmente } = useAIStatus({
+    sessaoId: selectedLead?.sessao_ativa?.id || '',
+    enabled: !!selectedLead?.sessao_ativa?.id,
+  });
 
   const playNotification = useNotificationSound();
 
