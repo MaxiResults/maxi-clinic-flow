@@ -28,6 +28,7 @@ import { TagBadge } from "@/components/tags/TagBadge";
 import { useTags, type Tag } from "@/hooks/useTags";
 import { EncaminharDialog } from "@/components/chat/EncaminharDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AIHandoffBadge } from "@/components/ai/AIHandoffBadge";
 import {
   Select,
   SelectContent,
@@ -1615,8 +1616,14 @@ export default function Conversas() {
                         <p className="text-xs text-white/80">
                           {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
                         </p>
-                        <div className="mt-1.5">
+                        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                           <JanelaBadge />
+                          {selectedLead.sessao_ativa?.id && (
+                            <AIHandoffBadge
+                              sessaoId={selectedLead.sessao_ativa.id}
+                              size="sm"
+                            />
+                          )}
                         </div>
                       </div>
                     </button>
