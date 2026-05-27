@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { Plus, Eye, Users, AlertCircle } from "lucide-react";
+import { Plus, Eye, Users, AlertCircle, Pencil } from "lucide-react";
 import { useLeadsData } from "@/hooks/useLeadsData";
 import { useLeadFilters } from "@/hooks/useLeadFilters";
 import { useLeadStats } from "@/hooks/useLeadStats";
@@ -167,7 +167,7 @@ export default function Leads() {
                   </div>
                   <div className="flex gap-2 ml-4">
                     <Button variant="ghost" size="icon" onClick={() => handleView(lead.id)} title="Exibir" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Plus className="h-4 w-4 rotate-45" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(lead.id)} className="h-8 w-8 text-destructive"><Plus className="h-4 w-4 rotate-45" /></Button>
                   </div>
                 </div>
@@ -206,7 +206,7 @@ export default function Leads() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
                             <Button variant="ghost" size="icon" onClick={() => handleView(lead.id)} title="Exibir" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Plus className="h-4 w-4 rotate-45" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(lead.id)} title="Excluir" className="h-8 w-8 text-destructive"><Plus className="h-4 w-4 rotate-45" /></Button>
                           </div>
                         </td>
