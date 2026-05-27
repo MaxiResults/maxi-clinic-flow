@@ -576,7 +576,12 @@ export default function Conversas() {
       console.log('[Socket.io] Nova mensagem recebida:', data);
       if (data.conversaId === conversaId) {
         setMensagens((prev) => {
-          const existe = prev.some((m) => m.id === data.mensagem.id);
+          const existe = prev.some((m) =>
+            m.id === data.mensagem.id ||
+            (data.mensagem.message_id &&
+              m.message_id &&
+              m.message_id === data.mensagem.message_id)
+          );
           if (existe) return prev;
           return [...prev, data.mensagem];
         });
@@ -805,6 +810,17 @@ export default function Conversas() {
 
       const leadsArray = response.data || [];
       setLeads(leadsArray);
+
+      // Inicializa contagem de n�o lidas do banco (restaura estado ap�s login)
+      const countsFromDB: Record<string, number> = {};
+      leadsArray.forEach((lead: any) => {
+        if (lead.mensagens_nao_lidas > 0) {
+          countsFromDB[lead.id] = lead.mensagens_nao_lidas;
+        }
+      });
+      if (Object.keys(countsFromDB).length > 0) {
+        setUnreadCounts(prev => ({ ...countsFromDB, ...prev }));
+      }
 
       if (!silent && leadsArray.length > 0 && !selectedLead) {
         const primeiro = leadsArray[0];
