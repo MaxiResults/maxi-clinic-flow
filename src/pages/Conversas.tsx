@@ -496,7 +496,7 @@ export default function Conversas() {
     const total = Object.values(unreadCounts).reduce((sum, n) => sum + n, 0);
     setTotalUnread(total);
     document.title = total > 0
-      ? `(${finalTotal}) Conversas — MaxiClínicas`
+      ? `(${total}) Conversas — MaxiClínicas`
       : 'MaxiClínicas';
     return () => {
       document.title = 'MaxiClínicas';
@@ -872,7 +872,6 @@ export default function Conversas() {
     }
 
     // Busca info da janela 24h
-    const sessaoId = lead.sessao_ativa?.id;
     if (sessaoId) {
       setLoadingJanela(true);
       api.get(`/conversas/sessoes/${sessaoId}/janela`)
