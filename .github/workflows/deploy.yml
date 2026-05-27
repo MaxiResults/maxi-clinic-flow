@@ -37,7 +37,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /root/maxi-system/frontend
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             npm install
             VITE_API_URL=${{ secrets.VITE_API_URL }} \
             VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }} \
