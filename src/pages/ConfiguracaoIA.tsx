@@ -91,22 +91,23 @@ export default function ConfiguracaoIA() {
   });
 
   useEffect(() => {
-    if (serverData && !formInitialized) {
+    if (!isLoading && !formInitialized) {
+      const data = serverData || {};
       setForm({
-        enabled: serverData.enabled ?? false,
-        model: serverData.model ?? 'claude-haiku-4-5',
-        auto_respond_enabled: serverData.auto_respond_enabled ?? false,
-        confidence_threshold: serverData.confidence_threshold ?? 85,
-        horario_inicio: serverData.horario_inicio ?? '08:00',
-        horario_fim: serverData.horario_fim ?? '18:00',
-        dias_semana: serverData.dias_semana ?? ['segunda-feira', 'terça-feira',
+        enabled: data.enabled ?? false,
+        model: data.model ?? 'claude-haiku-4-5',
+        auto_respond_enabled: data.auto_respond_enabled ?? false,
+        confidence_threshold: data.confidence_threshold ?? 85,
+        horario_inicio: (data.horario_inicio ?? '08:00').substring(0, 5),
+        horario_fim: (data.horario_fim ?? '18:00').substring(0, 5),
+        dias_semana: data.dias_semana ?? ['segunda-feira', 'terça-feira',
           'quarta-feira', 'quinta-feira', 'sexta-feira'],
-        intents_bloqueados: serverData.intents_bloqueados ?? [],
-        intents_auto_respond: serverData.intents_auto_respond ?? [],
+        intents_bloqueados: data.intents_bloqueados ?? [],
+        intents_auto_respond: data.intents_auto_respond ?? [],
       });
       setFormInitialized(true);
     }
-  }, [serverData, formInitialized]);
+  }, [isLoading, serverData, formInitialized]);
 
   const handleSave = async () => {
     setSaving(true);
