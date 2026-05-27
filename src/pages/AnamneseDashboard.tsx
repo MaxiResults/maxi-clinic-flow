@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { MetricasCards } from '../components/anamnese/dashboard/MetricasCards';
 import { TabelaAnamneses } from '../components/anamnese/dashboard/TabelaAnamneses';
 import { anamneseService } from '../services/anamnese.service';
@@ -103,7 +104,7 @@ export const AnamneseDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <DashboardLayout title="Anamneses">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -186,6 +187,6 @@ export const AnamneseDashboard: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
