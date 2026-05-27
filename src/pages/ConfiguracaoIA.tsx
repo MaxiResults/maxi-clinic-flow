@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import {
   Card,
@@ -75,6 +75,8 @@ export default function ConfiguracaoIA() {
     intents_auto_respond: ['informacao_procedimento', 'horario_funcionamento', 'localizacao', 'duvida_geral'],
   });
 
+  const queryClient = useQueryClient();
+
   const { isLoading } = useQuery({
     queryKey: ['ai-config'],
     queryFn: async () => {
@@ -99,6 +101,7 @@ export default function ConfiguracaoIA() {
     setSaving(true);
     try {
       await api.patch('/ai/config', form);
+      queryClient.invalidateQueries({ queryKey: ['ai-config'] });
       toast({ title: 'Configurações salvas com sucesso!' });
     } catch (err) {
       toast({ title: 'Erro ao salvar configurações', variant: 'destructive' });
