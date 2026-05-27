@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import {
@@ -63,6 +63,7 @@ const ALL_INTENTS = [
 export default function ConfiguracaoIA() {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [formInitialized, setFormInitialized] = useState(false);
   const [form, setForm] = useState<AIConfigForm>({
     enabled: false,
     model: 'claude-haiku-4-5',
@@ -77,31 +78,39 @@ export default function ConfiguracaoIA() {
 
   const queryClient = useQueryClient();
 
-  const { isLoading } = useQuery({
+  const { data: serverData, isLoading } = useQuery({
     queryKey: ['ai-config'],
     queryFn: async () => {
       const res = await api.get('/ai/config');
-      const data = res.data?.data ?? {};
-      setForm({
-        enabled: data.enabled ?? false,
-        model: data.model ?? 'claude-haiku-4-5',
-        auto_respond_enabled: data.auto_respond_enabled ?? false,
-        confidence_threshold: data.confidence_threshold ?? 85,
-        horario_inicio: data.horario_inicio ?? '08:00',
-        horario_fim: data.horario_fim ?? '18:00',
-        dias_semana: data.dias_semana ?? ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira'],
-        intents_bloqueados: data.intents_bloqueados ?? ['agendamento_novo', 'reagendar', 'cancelar', 'reclamacao', 'emergencia'],
-        intents_auto_respond: data.intents_auto_respond ?? ['informacao_procedimento', 'horario_funcionamento', 'localizacao', 'duvida_geral'],
-      });
-      return data;
+      return res.data?.data ?? {};
     },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
+
+  useEffect(() => {
+    if (serverData && !formInitialized) {
+      setForm({
+        enabled: serverData.enabled ?? false,
+        model: serverData.model ?? 'claude-haiku-4-5',
+        auto_respond_enabled: serverData.auto_respond_enabled ?? false,
+        confidence_threshold: serverData.confidence_threshold ?? 85,
+        horario_inicio: serverData.horario_inicio ?? '08:00',
+        horario_fim: serverData.horario_fim ?? '18:00',
+        dias_semana: serverData.dias_semana ?? ['segunda-feira', 'terça-feira',
+          'quarta-feira', 'quinta-feira', 'sexta-feira'],
+        intents_bloqueados: serverData.intents_bloqueados ?? [],
+        intents_auto_respond: serverData.intents_auto_respond ?? [],
+      });
+      setFormInitialized(true);
+    }
+  }, [serverData, formInitialized]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       await api.patch('/ai/config', form);
-      queryClient.invalidateQueries({ queryKey: ['ai-config'] });
+      queryClient.setQueryData(['ai-config'], form);
       toast({ title: 'Configurações salvas com sucesso!' });
     } catch (err) {
       toast({ title: 'Erro ao salvar configurações', variant: 'destructive' });
@@ -140,6 +149,16 @@ export default function ConfiguracaoIA() {
       }));
     }
   };
+
+  if (isLoading || !formInitialized) {
+    return (
+      <DashboardLayout title="Assistente IA">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">Carregando configurações...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Assistente IA">
