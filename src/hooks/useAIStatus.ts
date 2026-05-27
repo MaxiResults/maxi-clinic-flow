@@ -234,8 +234,9 @@ export const useAIStatus = ({
   // COMPUTED VALUES
   // ============================================================================
   
-  const isAIActive = aiStatus?.tipoAtendimentoAtual === 'ai' && 
-                     aiStatus?.aiEnabledEfetivo === true;
+  const isAIActive = aiStatus?.aiEnabledEfetivo === true &&
+                     (aiStatus?.tipoAtendimentoAtual === 'bot' ||
+                      aiStatus?.tipoAtendimentoAtual === 'ai');
   
   const isHumanActive = aiStatus?.tipoAtendimentoAtual === 'humano' || 
                         aiStatus?.aiEnabledEfetivo === false;
