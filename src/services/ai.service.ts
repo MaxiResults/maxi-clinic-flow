@@ -18,7 +18,7 @@ export interface AIStatus {
   aiEnabledSessao: boolean | null;
   aiEnabledTenant: boolean;
   aiEnabledEfetivo: boolean;
-  tipoAtendimentoAtual: 'ai' | 'humano';
+  tipoAtendimentoAtual: 'ai' | 'bot' | 'humano';
 }
 
 export interface AISuggestion {
