@@ -494,9 +494,8 @@ export default function Conversas() {
   // Sync totalUnread + browser title
   useEffect(() => {
     const total = Object.values(unreadCounts).reduce((sum, n) => sum + n, 0);
-    const finalTotal = Math.max(total, statsNaoLidas);
-    setTotalUnread(finalTotal);
-    document.title = finalTotal > 0
+    setTotalUnread(total);
+    document.title = total > 0
       ? `(${finalTotal}) Conversas — MaxiClínicas`
       : 'MaxiClínicas';
     return () => {
@@ -865,6 +864,12 @@ export default function Conversas() {
       setTotalUnread(total);
       return next;
     });
+
+    // Persiste no banco: zera mensagens_nao_lidas e marca mensagens como lidas
+    const sessaoId = lead.sessao_ativa?.id;
+    if (sessaoId) {
+      api.patch(`/conversas/${sessaoId}/marcar-lidas`).catch(() => {});
+    }
 
     // Busca info da janela 24h
     const sessaoId = lead.sessao_ativa?.id;
