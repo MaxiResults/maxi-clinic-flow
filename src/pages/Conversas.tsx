@@ -512,7 +512,12 @@ export default function Conversas() {
     const { lead } = lastNovaConversa;
     setLeads((prev) => {
       const existe = prev.some((l) => l.id === lead.id);
-      if (existe) return prev;
+      if (existe) {
+        // Lead j� existe: atualiza dados (nova sess�o/mensagem) e move para o topo
+        const atualizado = { ...prev.find((l) => l.id === lead.id)!, ...lead };
+        return [atualizado, ...prev.filter((l) => l.id !== lead.id)];
+      }
+      // Lead novo: adiciona no topo
       return [lead, ...prev];
     });
     setUnreadCounts((prev) => ({
