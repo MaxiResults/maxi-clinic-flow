@@ -82,7 +82,9 @@ export default function ConfiguracaoIA() {
     queryKey: ['ai-config'],
     queryFn: async () => {
       const res = await api.get('/ai/config');
-      return res.data?.data ?? {};
+      // O interceptor já extrai response.data.data automaticamente
+      // res.data já é o objeto final: { enabled, model, horario_inicio, ... }
+      return res.data ?? {};
     },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
