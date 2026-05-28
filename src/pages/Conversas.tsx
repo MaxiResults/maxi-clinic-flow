@@ -810,6 +810,7 @@ export default function Conversas() {
         params: {
           t: Date.now(),
           ...(conversationFilter === 'resolvidas' ? { status: 'encerrada' } : {}),
+          ...(conversationFilter === 'fila' ? { fila: true } : {}),
         },
       });
 
@@ -2054,13 +2055,13 @@ export default function Conversas() {
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors">
                                     <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                   </div>
-                                  {mensagem.mensagem && (
-                                    <p className="text-sm whitespace-pre-wrap break-words mt-2">
-                                      {buscaAtiva && buscaMensagem
-                                        ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
-                                        : mensagem.mensagem}
-                                    </p>
-                                  )}
+                                   {mensagem.mensagem && (
+                                     <p className="text-sm whitespace-pre-wrap break-words mt-2">
+                                       {buscaAtiva && buscaMensagem
+                                         ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                         : renderWhatsAppMarkdown(mensagem.mensagem)}
+                                     </p>
+                                   )}
                                 </div>
                               ) : mensagem.tipo_mensagem === 'document' && mensagem.midia_url ? (
                                 <a
@@ -2081,13 +2082,13 @@ export default function Conversas() {
                                   </div>
                                   <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 </a>
-                              ) : (
-                                <p className="text-sm whitespace-pre-wrap break-words">
-                                  {buscaAtiva && buscaMensagem
-                                    ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
-                                    : mensagem.mensagem}
-                                </p>
-                              )}
+                               ) : (
+                                 <p className="text-sm whitespace-pre-wrap break-words">
+                                   {buscaAtiva && buscaMensagem
+                                     ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                     : renderWhatsAppMarkdown(mensagem.mensagem || '')}
+                                 </p>
+                               )}
                               <span className="text-xs text-[#667781] mt-1 flex items-center gap-1 justify-end">
                                 {isAIMessage && (
                                   <span title="Mensagem enviada pela IA">🤖</span>
@@ -2561,6 +2562,7 @@ export default function Conversas() {
           onOpenChange={setAssignModalOpen}
           conversationId={selectedLead.sessao_ativa?.id ?? ''}
           currentAtendente={selectedLead.sessao_ativa?.atendente || undefined}
+          preSelectedId={user?.profissional_id ?? undefined}
           onSuccess={handleAssignSuccess}
         />
       )}
