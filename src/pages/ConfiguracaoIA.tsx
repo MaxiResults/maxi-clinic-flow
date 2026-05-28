@@ -288,6 +288,116 @@ export default function ConfiguracaoIA() {
             {/* Seção 3 — Modo de Operação */}
             <Card>
               <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle>Personalidade do Assistente</CardTitle>
+                    <CardDescription>
+                      Defina como o assistente se apresenta e se comunica com os pacientes
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="nome_assistente">Nome do assistente</Label>
+                  <Input
+                    id="nome_assistente"
+                    maxLength={50}
+                    value={form.nome_assistente}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, nome_assistente: e.target.value }))
+                    }
+                    placeholder="Ex: Lara"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Como o assistente se apresenta ao paciente
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tom de voz</Label>
+                  <RadioGroup
+                    value={form.tom_voz}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, tom_voz: v as AIConfigForm['tom_voz'] }))
+                    }
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+                  >
+                    {[
+                      { value: 'formal', label: 'Formal' },
+                      { value: 'descontraido', label: 'Descontraído' },
+                      { value: 'neutro', label: 'Neutro' },
+                    ].map((opt) => (
+                      <label
+                        key={opt.value}
+                        htmlFor={`tom-${opt.value}`}
+                        className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                          form.tom_voz === opt.value
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                      >
+                        <RadioGroupItem value={opt.value} id={`tom-${opt.value}`} />
+                        <span className="text-sm font-medium">{opt.label}</span>
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="saudacao_inicial">Saudação inicial</Label>
+                  <Textarea
+                    id="saudacao_inicial"
+                    rows={3}
+                    maxLength={300}
+                    value={form.saudacao_inicial}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, saudacao_inicial: e.target.value }))
+                    }
+                    placeholder="Olá! Sou a Lara, assistente virtual..."
+                    className="resize-y"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Deixe vazio para usar saudação padrão</span>
+                    <span>{form.saudacao_inicial.length}/300</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="instrucoes_adicionais">Instruções adicionais</Label>
+                  <Textarea
+                    id="instrucoes_adicionais"
+                    rows={6}
+                    maxLength={1000}
+                    value={form.instrucoes_adicionais}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, instrucoes_adicionais: e.target.value }))
+                    }
+                    placeholder={'- Nunca informar preços pelo WhatsApp\n- Sempre perguntar o nome do paciente'}
+                    className="resize-y"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Regras específicas, restrições e orientações</span>
+                    <span>{form.instrucoes_adicionais.length}/1000</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Eye className="h-4 w-4" />
+                    Preview do prompt gerado
+                  </div>
+                  <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground whitespace-pre-wrap font-mono">
+                    {generatePromptPreview()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Seção 3 — Modo de Operação */}
+            <Card>
+              <CardHeader>
                 <CardTitle>Como a IA deve atuar?</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
