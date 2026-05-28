@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +13,34 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Bot, Building2, Loader2, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
-interface Atendente {
+interface AtendenteHumano {
   id: string;
   nome: string;
-  email: string;
-  status: "online" | "ausente" | "offline";
-  conversas_ativas: number;
+  email?: string;
+  conversas_ativas?: number;
+}
+
+interface AgenteIA {
+  id: string;
+  nome: string;
+  is_ai_agent: true;
+  disponivel?: boolean;
+}
+
+interface AtendentePadrao {
+  id: string;
+  nome: string;
+  is_default: true;
+}
+
+interface DisponiveisResponse {
+  ia?: AgenteIA | null;
+  humanos?: AtendenteHumano[];
+  padrao?: AtendentePadrao | null;
 }
 
 interface AssignmentModalProps {
@@ -32,6 +51,8 @@ interface AssignmentModalProps {
     id: string;
     nome: string;
   };
+  /** Pré-seleciona um profissional (ex: usuário logado ao clicar "Assumir"). */
+  preSelectedId?: string;
   onSuccess: () => void;
 }
 
@@ -40,176 +61,215 @@ export function AssignmentModal({
   onOpenChange,
   conversationId,
   currentAtendente,
+  preSelectedId,
   onSuccess,
 }: AssignmentModalProps) {
   const { toast } = useToast();
-  const [atendentes, setAtendentes] = useState<Atendente[]>([]);
-  const [selectedAtendente, setSelectedAtendente] = useState("");
+  const queryClient = useQueryClient();
+  const [selectedId, setSelectedId] = useState("");
   const [motivo, setMotivo] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loadingAtendentes, setLoadingAtendentes] = useState(true);
 
   const isTransfer = !!currentAtendente;
 
+  const {
+    data: disponiveis,
+    isLoading: loadingAtendentes,
+  } = useQuery<DisponiveisResponse>({
+    queryKey: ["assignment", "disponiveis"],
+    queryFn: async () => {
+      const res = await api.get("/assignment/atendentes/disponiveis");
+      return (res.data ?? {}) as DisponiveisResponse;
+    },
+    enabled: open,
+    staleTime: 30_000,
+  });
+
   useEffect(() => {
     if (open) {
-      setSelectedAtendente("");
+      setSelectedId(preSelectedId ?? "");
       setMotivo("");
-      fetchAtendentes();
     }
-  }, [open]);
+  }, [open, preSelectedId]);
 
-  const fetchAtendentes = async () => {
-    try {
-      setLoadingAtendentes(true);
-      const response = await api.get("/atendentes/disponiveis");
-      setAtendentes(response.data || []);
-    } catch (error: any) {
+  const assignMutation = useMutation({
+    mutationFn: async (payload: { profissional_id: string; motivo?: string }) => {
+      const res = await api.post(
+        `/assignment/conversas/${conversationId}/assign`,
+        payload,
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
       toast({
-        title: "Erro ao carregar atendentes",
-        description: error.message,
+        title: "Conversa atribuída",
+        description: data?.message || "A ação foi realizada com sucesso",
+      });
+      queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      queryClient.invalidateQueries({ queryKey: ["assignment"] });
+      onSuccess();
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro",
+        description: error?.response?.data?.message || error.message,
         variant: "destructive",
       });
-    } finally {
-      setLoadingAtendentes(false);
-    }
-  };
+    },
+  });
 
-  const handleSubmit = async () => {
-    if (!selectedAtendente) {
+  const handleSubmit = (profissionalId?: string) => {
+    const id = profissionalId ?? selectedId;
+    if (!id) {
       toast({ title: "Selecione um atendente", variant: "destructive" });
       return;
     }
-    if (isTransfer && !motivo.trim()) {
-      toast({
-        title: "Motivo é obrigatório para transferências",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const endpoint = isTransfer
-        ? `/conversas/${conversationId}/transfer`
-        : `/conversas/${conversationId}/assign`;
-
-      const payload = isTransfer
-        ? { novo_profissional_id: selectedAtendente, motivo }
-        : { profissional_id: selectedAtendente, motivo };
-
-      const response = await api.post(endpoint, payload);
-
-      toast({
-        title: isTransfer ? "Conversa transferida" : "Conversa atribuída",
-        description: response.data?.message || "A ação foi realizada com sucesso",
-      });
-
-      onSuccess();
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    assignMutation.mutate({
+      profissional_id: id,
+      motivo: motivo.trim() || undefined,
+    });
   };
 
-  const statusColor = (status: string) => {
-    if (status === "online") return "bg-green-500";
-    if (status === "ausente") return "bg-yellow-500";
-    return "bg-gray-400";
-  };
+  const ia = disponiveis?.ia ?? null;
+  const humanos = disponiveis?.humanos ?? [];
+  const padrao = disponiveis?.padrao ?? null;
+  const loading = assignMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {isTransfer ? "Transferir Conversa" : "Atribuir Conversa"}
+            {isTransfer ? "Transferir conversa" : "Atribuir conversa"}
           </DialogTitle>
           <DialogDescription>
-            {isTransfer
-              ? `Transferir de ${currentAtendente?.nome} para outro atendente`
-              : "Selecione um atendente para atribuir esta conversa"}
+            Escolha quem vai atender esta conversa.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           {loadingAtendentes ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : (
             <>
-              <div className="space-y-2">
-                <Label>Atendente</Label>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {atendentes
+              {ia && (
+                <section className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <Bot className="h-3.5 w-3.5" />
+                    Agente IA
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(ia.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                      selectedId === ia.id
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="h-9 w-9 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-lg">
+                      🤖
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{ia.nome}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Atendimento automático
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700 border-green-200"
+                    >
+                      {ia.disponivel === false ? "Indisponível" : "Disponível"}
+                    </Badge>
+                  </button>
+                </section>
+              )}
+
+              <section className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  Atendentes
+                </div>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {humanos
                     .filter(
                       (a) => !currentAtendente || a.id !== currentAtendente.id,
                     )
-                    .map((atendente) => (
-                      <div
-                        key={atendente.id}
-                        onClick={() => setSelectedAtendente(atendente.id)}
-                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                          selectedAtendente === atendente.id
+                    .map((a) => (
+                      <button
+                        type="button"
+                        key={a.id}
+                        onClick={() => setSelectedId(a.id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                          selectedId === a.id
                             ? "border-primary bg-primary/5"
                             : "hover:bg-muted/50"
                         }`}
                       >
-                        <div className="relative">
-                          <Avatar>
-                            <AvatarFallback>
-                              {atendente.nome.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span
-                            className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-background ${statusColor(atendente.status)}`}
-                          />
-                        </div>
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback>
+                            {a.nome.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">
-                            {atendente.nome}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {atendente.email}
-                          </p>
+                          <p className="font-medium truncate">{a.nome}</p>
+                          {a.email && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {a.email}
+                            </p>
+                          )}
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline" className="capitalize">
-                            {atendente.status}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {atendente.conversas_ativas} conversas
-                          </span>
-                        </div>
-                      </div>
+                        <span className="text-xs text-muted-foreground">
+                          {a.conversas_ativas ?? 0}{" "}
+                          {(a.conversas_ativas ?? 0) === 1
+                            ? "conversa"
+                            : "conversas"}
+                        </span>
+                      </button>
                     ))}
-                  {atendentes.length === 0 && (
+                  {humanos.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       Nenhum atendente disponível
                     </p>
                   )}
                 </div>
-              </div>
+              </section>
+
+              {padrao && (
+                <section className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(padrao.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                      selectedId === padrao.id
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="h-9 w-9 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center">
+                      <Building2 className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        🏥 Devolver à fila
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Atribui ao atendente padrão ({padrao.nome})
+                      </p>
+                    </div>
+                  </button>
+                </section>
+              )}
 
               <div className="space-y-2">
-                <Label>
-                  Motivo {isTransfer && <span className="text-destructive">*</span>}
-                </Label>
+                <Label>Motivo (opcional)</Label>
                 <Input
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
-                  placeholder={
-                    isTransfer
-                      ? "Informe o motivo da transferência"
-                      : "Motivo (opcional)"
-                  }
+                  placeholder="Ex: especialista no assunto"
                 />
               </div>
             </>
@@ -220,9 +280,12 @@ export function AssignmentModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button
+            onClick={() => handleSubmit()}
+            disabled={loading || !selectedId}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isTransfer ? "Transferir" : "Atribuir"}
+            Atribuir
           </Button>
         </DialogFooter>
       </DialogContent>
