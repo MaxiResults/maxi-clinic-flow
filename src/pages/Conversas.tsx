@@ -1826,30 +1826,14 @@ export default function Conversas() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleAI(!isAIActive)}
-                          className={
-                            isAIActive
-                              ? "text-green-300 hover:text-green-200 hover:bg-white/10 gap-1.5"
-                              : "text-white/60 hover:text-white hover:bg-white/10 gap-1.5"
-                          }
-                          title={isAIActive ? "Desativar IA" : "Ativar IA"}
-                        >
-                          <Bot className="h-4 w-4" />
-                          <span className="hidden sm:inline text-xs">
-                            {isAIActive ? "IA on" : "IA off"}
-                          </span>
-                        </Button>
-                      )}
-                      {isAIActive && selectedLead?.sessao_ativa?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={assumirManualmente}
-                          className="text-blue-300 hover:text-blue-200 hover:bg-white/10 gap-1.5"
-                          title="Assumir atendimento manualmente"
+                          onClick={() => setAssignModalOpen(true)}
+                          className="text-white/80 hover:text-white hover:bg-white/10 gap-1.5"
+                          title="Assumir / atribuir conversa"
                         >
                           <UserCheck className="h-4 w-4" />
-                          <span className="hidden sm:inline text-xs">Assumir</span>
+                          <span className="hidden sm:inline text-xs">
+                            Assumir
+                          </span>
                         </Button>
                       )}
                       <Button
