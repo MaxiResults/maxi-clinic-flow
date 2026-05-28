@@ -13,12 +13,17 @@ import api from '@/lib/api'; // Usar o Axios configurado do projeto
 
 export interface AIStatus {
   sessaoId: string;
-  clienteId: number;
-  empresaId: number;
-  aiEnabledSessao: boolean | null;
-  aiEnabledTenant: boolean;
-  aiEnabledEfetivo: boolean;
-  tipoAtendimentoAtual: 'ai' | 'bot' | 'humano';
+  clienteId?: number;
+  empresaId?: number;
+  responsavel: {
+    id: string;
+    nome: string;
+    is_ai_agent: boolean;
+    is_default: boolean;
+  } | null;
+  isAIActive: boolean;
+  isHumanActive: boolean;
+  isQueue: boolean;
 }
 
 export interface AISuggestion {

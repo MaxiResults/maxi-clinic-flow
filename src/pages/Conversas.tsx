@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles } from "lucide-react";
+import { renderWhatsAppMarkdown } from "@/lib/whatsappMarkdown";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -221,7 +223,7 @@ export default function Conversas() {
   const [buscaAtiva, setBuscaAtiva] = useState(false);
   const [resultadosBusca, setResultadosBusca] = useState<number[]>([]);
   const [resultadoAtual, setResultadoAtual] = useState(0);
-  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'resolvidas'>('todas');
+  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'fila' | 'resolvidas'>('todas');
   const [modalFecharOpen, setModalFecharOpen] = useState(false);
   const [motivoFechamento, setMotivoFechamento] = useState('');
   const [fechandoConversa, setFechandoConversa] = useState(false);
@@ -271,11 +273,14 @@ export default function Conversas() {
   const [iaDigitando, setIaDigitando] = useState(false);
   const [feedbacksDados, setFeedbacksDados] = useState<Record<string, 'positive' | 'negative'>>({});
 
-  // Status IA
-  const { isAIActive, toggleAI, assumirManualmente } = useAIStatus({
+  // Status IA / Responsável da conversa
+  const { isAIActive } = useAIStatus({
     sessaoId: selectedLead?.sessao_ativa?.id || '',
     enabled: !!selectedLead?.sessao_ativa?.id,
   });
+
+  // Usuário logado (para pré-selecionar no modal de "Assumir conversa")
+  const { user } = useAuth();
 
   const playNotification = useNotificationSound();
 
@@ -805,6 +810,7 @@ export default function Conversas() {
         params: {
           t: Date.now(),
           ...(conversationFilter === 'resolvidas' ? { status: 'encerrada' } : {}),
+          ...(conversationFilter === 'fila' ? { fila: true } : {}),
         },
       });
 
@@ -1821,30 +1827,14 @@ export default function Conversas() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleAI(!isAIActive)}
-                          className={
-                            isAIActive
-                              ? "text-green-300 hover:text-green-200 hover:bg-white/10 gap-1.5"
-                              : "text-white/60 hover:text-white hover:bg-white/10 gap-1.5"
-                          }
-                          title={isAIActive ? "Desativar IA" : "Ativar IA"}
-                        >
-                          <Bot className="h-4 w-4" />
-                          <span className="hidden sm:inline text-xs">
-                            {isAIActive ? "IA on" : "IA off"}
-                          </span>
-                        </Button>
-                      )}
-                      {isAIActive && selectedLead?.sessao_ativa?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={assumirManualmente}
-                          className="text-blue-300 hover:text-blue-200 hover:bg-white/10 gap-1.5"
-                          title="Assumir atendimento manualmente"
+                          onClick={() => setAssignModalOpen(true)}
+                          className="text-white/80 hover:text-white hover:bg-white/10 gap-1.5"
+                          title="Assumir / atribuir conversa"
                         >
                           <UserCheck className="h-4 w-4" />
-                          <span className="hidden sm:inline text-xs">Assumir</span>
+                          <span className="hidden sm:inline text-xs">
+                            Assumir
+                          </span>
                         </Button>
                       )}
                       <Button
@@ -2065,13 +2055,13 @@ export default function Conversas() {
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 rounded-lg transition-colors">
                                     <Maximize2 className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                                   </div>
-                                  {mensagem.mensagem && (
-                                    <p className="text-sm whitespace-pre-wrap break-words mt-2">
-                                      {buscaAtiva && buscaMensagem
-                                        ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
-                                        : mensagem.mensagem}
-                                    </p>
-                                  )}
+                                   {mensagem.mensagem && (
+                                     <p className="text-sm whitespace-pre-wrap break-words mt-2">
+                                       {buscaAtiva && buscaMensagem
+                                         ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                         : renderWhatsAppMarkdown(mensagem.mensagem)}
+                                     </p>
+                                   )}
                                 </div>
                               ) : mensagem.tipo_mensagem === 'document' && mensagem.midia_url ? (
                                 <a
@@ -2092,13 +2082,13 @@ export default function Conversas() {
                                   </div>
                                   <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 </a>
-                              ) : (
-                                <p className="text-sm whitespace-pre-wrap break-words">
-                                  {buscaAtiva && buscaMensagem
-                                    ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
-                                    : mensagem.mensagem}
-                                </p>
-                              )}
+                               ) : (
+                                 <p className="text-sm whitespace-pre-wrap break-words">
+                                   {buscaAtiva && buscaMensagem
+                                     ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                     : renderWhatsAppMarkdown(mensagem.mensagem || '')}
+                                 </p>
+                               )}
                               <span className="text-xs text-[#667781] mt-1 flex items-center gap-1 justify-end">
                                 {isAIMessage && (
                                   <span title="Mensagem enviada pela IA">🤖</span>
@@ -2572,6 +2562,7 @@ export default function Conversas() {
           onOpenChange={setAssignModalOpen}
           conversationId={selectedLead.sessao_ativa?.id ?? ''}
           currentAtendente={selectedLead.sessao_ativa?.atendente || undefined}
+          preSelectedId={user?.profissional_id ?? undefined}
           onSuccess={handleAssignSuccess}
         />
       )}
