@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles } from "lucide-react";
+import { renderWhatsAppMarkdown } from "@/lib/whatsappMarkdown";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import api from "@/lib/api";
@@ -221,7 +223,7 @@ export default function Conversas() {
   const [buscaAtiva, setBuscaAtiva] = useState(false);
   const [resultadosBusca, setResultadosBusca] = useState<number[]>([]);
   const [resultadoAtual, setResultadoAtual] = useState(0);
-  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'resolvidas'>('todas');
+  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'fila' | 'resolvidas'>('todas');
   const [modalFecharOpen, setModalFecharOpen] = useState(false);
   const [motivoFechamento, setMotivoFechamento] = useState('');
   const [fechandoConversa, setFechandoConversa] = useState(false);
@@ -271,11 +273,14 @@ export default function Conversas() {
   const [iaDigitando, setIaDigitando] = useState(false);
   const [feedbacksDados, setFeedbacksDados] = useState<Record<string, 'positive' | 'negative'>>({});
 
-  // Status IA
-  const { isAIActive, toggleAI, assumirManualmente } = useAIStatus({
+  // Status IA / Responsável da conversa
+  const { isAIActive } = useAIStatus({
     sessaoId: selectedLead?.sessao_ativa?.id || '',
     enabled: !!selectedLead?.sessao_ativa?.id,
   });
+
+  // Usuário logado (para pré-selecionar no modal de "Assumir conversa")
+  const { user } = useAuth();
 
   const playNotification = useNotificationSound();
 
