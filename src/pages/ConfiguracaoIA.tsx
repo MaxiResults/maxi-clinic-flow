@@ -143,6 +143,32 @@ export default function ConfiguracaoIA() {
 
   const isHaiku = form.model === 'claude-haiku-4-5';
 
+  const generatePromptPreview = (): string => {
+    const tom = {
+      formal: 'Use linguagem formal e profissional.',
+      descontraido: 'Use linguagem descontraída e amigável.',
+      neutro: 'Use linguagem neutra e objetiva.',
+    }[form.tom_voz];
+
+    let preview = `Você é ${form.nome_assistente || 'Assistente Virtual'}, `;
+    preview += `assistente virtual de ${nomeClinica}.\n\n`;
+    preview += tom;
+
+    if (form.saudacao_inicial) {
+      preview += `\n\nSaudação: "${form.saudacao_inicial}"`;
+    }
+
+    if (form.instrucoes_adicionais) {
+      const linhas = form.instrucoes_adicionais.split('\n').slice(0, 3);
+      preview += `\n\nInstruções: ${linhas.join(' | ')}`;
+      if (form.instrucoes_adicionais.split('\n').length > 3) {
+        preview += '...';
+      }
+    }
+
+    return preview;
+  };
+
   const toggleDia = (dia: string) => {
     setForm((prev) => ({
       ...prev,
