@@ -50,6 +50,7 @@ export const AIHandoffBadge: React.FC<AIHandoffBadgeProps> = ({
     aiStatus,
     isLoading,
     isAIActive,
+    isQueue,
     badgeColor,
     badgeIcon,
     badgeText,
@@ -72,10 +73,12 @@ export const AIHandoffBadge: React.FC<AIHandoffBadgeProps> = ({
       // IA Ativa: Verde
       'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700':
         isAIActive,
-      
+      // Fila: Cinza
+      'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800/40 dark:text-gray-300 dark:border-gray-600':
+        isQueue,
       // Humano: Azul
       'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700':
-        !isAIActive,
+        !isAIActive && !isQueue,
     },
     className
   );
@@ -90,23 +93,20 @@ export const AIHandoffBadge: React.FC<AIHandoffBadgeProps> = ({
       <p className="text-xs opacity-90">
         Esta conversa está sendo atendida automaticamente pelo assistente IA.
       </p>
-      {aiStatus?.aiEnabledSessao !== null && (
-        <p className="text-xs opacity-75">
-          (Override manual nesta sessão)
-        </p>
-      )}
+    </div>
+  ) : isQueue ? (
+    <div className="space-y-1">
+      <p className="font-semibold">🏥 Na fila</p>
+      <p className="text-xs opacity-90">
+        Esta conversa ainda não foi atribuída a um atendente.
+      </p>
     </div>
   ) : (
     <div className="space-y-1">
-      <p className="font-semibold">👤 Atendimento Humano</p>
+      <p className="font-semibold">👤 {aiStatus?.responsavel?.nome || 'Atendente'}</p>
       <p className="text-xs opacity-90">
-        Esta conversa está sendo atendida por um humano ou aguardando atribuição.
+        Esta conversa está sendo atendida por {aiStatus?.responsavel?.nome || 'um atendente humano'}.
       </p>
-      {aiStatus?.aiEnabledSessao === false && (
-        <p className="text-xs opacity-75">
-          (IA desativada manualmente)
-        </p>
-      )}
     </div>
   );
 
