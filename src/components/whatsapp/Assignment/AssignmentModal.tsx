@@ -21,6 +21,7 @@ interface AtendenteHumano {
   id: string;
   nome: string;
   email?: string;
+  status?: string;
   conversas_ativas?: number;
 }
 
@@ -77,7 +78,7 @@ export function AssignmentModal({
   } = useQuery<DisponiveisResponse>({
     queryKey: ["assignment", "disponiveis"],
     queryFn: async () => {
-      const res = await api.get("/assignment/atendentes/disponiveis");
+      const res = await api.get("/atendentes/disponiveis");
       return (res.data ?? {}) as DisponiveisResponse;
     },
     enabled: open,
@@ -93,19 +94,23 @@ export function AssignmentModal({
 
   const assignMutation = useMutation({
     mutationFn: async (payload: { profissional_id: string; motivo?: string }) => {
-      const res = await api.post(
-        `/assignment/conversas/${conversationId}/assign`,
-        payload,
-      );
+      const isReturnToQueue =
+        padrao && payload.profissional_id === padrao.id;
+      const endpoint =
+        !isReturnToQueue && isTransfer
+          ? `/conversas/${conversationId}/transfer`
+          : `/conversas/${conversationId}/assign`;
+      const res = await api.post(endpoint, payload);
       return res.data;
     },
     onSuccess: (data) => {
       toast({
-        title: "Conversa atribuída",
+        title: isTransfer ? "Conversa transferida" : "Conversa atribuída",
         description: data?.message || "A ação foi realizada com sucesso",
       });
       queryClient.invalidateQueries({ queryKey: ["ai-status"] });
       queryClient.invalidateQueries({ queryKey: ["assignment"] });
+      queryClient.invalidateQueries({ queryKey: ["conversas"] });
       onSuccess();
       onOpenChange(false);
     },
@@ -124,9 +129,20 @@ export function AssignmentModal({
       toast({ title: "Selecione um atendente", variant: "destructive" });
       return;
     }
+    const isReturnToQueue = padrao && id === padrao.id;
+    const motivoTrim = motivo.trim();
+    // Motivo obrigatório apenas em transferência (não em atribuição inicial nem devolução à fila)
+    if (isTransfer && !isReturnToQueue && !motivoTrim) {
+      toast({
+        title: "Motivo obrigatório",
+        description: "Informe o motivo da transferência",
+        variant: "destructive",
+      });
+      return;
+    }
     assignMutation.mutate({
       profissional_id: id,
-      motivo: motivo.trim() || undefined,
+      motivo: motivoTrim || undefined,
     });
   };
 
@@ -134,6 +150,13 @@ export function AssignmentModal({
   const humanos = disponiveis?.humanos ?? [];
   const padrao = disponiveis?.padrao ?? null;
   const loading = assignMutation.isPending;
+  const iaDisponivel = ia?.disponivel !== false;
+  const humanosFiltrados = humanos.filter(
+    (a) => !currentAtendente || a.id !== currentAtendente.id,
+  );
+  const isReturnToQueueSelected =
+    !!padrao && selectedId === padrao.id;
+  const motivoRequired = isTransfer && !isReturnToQueueSelected;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,8 +185,9 @@ export function AssignmentModal({
                   </div>
                   <button
                     type="button"
-                    onClick={() => setSelectedId(ia.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                    disabled={!iaDisponivel}
+                    onClick={() => iaDisponivel && setSelectedId(ia.id)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                       selectedId === ia.id
                         ? "border-primary bg-primary/5"
                         : "hover:bg-muted/50"
@@ -180,9 +204,13 @@ export function AssignmentModal({
                     </div>
                     <Badge
                       variant="outline"
-                      className="bg-green-50 text-green-700 border-green-200"
+                      className={
+                        iaDisponivel
+                          ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-gray-100 text-gray-600 border-gray-200"
+                      }
                     >
-                      {ia.disponivel === false ? "Indisponível" : "Disponível"}
+                      {iaDisponivel ? "Disponível" : "Indisponível"}
                     </Badge>
                   </button>
                 </section>
@@ -194,11 +222,7 @@ export function AssignmentModal({
                   Atendentes
                 </div>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {humanos
-                    .filter(
-                      (a) => !currentAtendente || a.id !== currentAtendente.id,
-                    )
-                    .map((a) => (
+                  {humanosFiltrados.map((a) => (
                       <button
                         type="button"
                         key={a.id}
@@ -230,9 +254,9 @@ export function AssignmentModal({
                         </span>
                       </button>
                     ))}
-                  {humanos.length === 0 && (
+                  {humanosFiltrados.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum atendente disponível
+                      Nenhum atendente habilitado para conversas ainda
                     </p>
                   )}
                 </div>
@@ -265,11 +289,17 @@ export function AssignmentModal({
               )}
 
               <div className="space-y-2">
-                <Label>Motivo (opcional)</Label>
+                <Label>
+                  Motivo{motivoRequired ? " *" : " (opcional)"}
+                </Label>
                 <Input
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
-                  placeholder="Ex: especialista no assunto"
+                  placeholder={
+                    motivoRequired
+                      ? "Informe o motivo da transferência"
+                      : "Ex: especialista no assunto"
+                  }
                 />
               </div>
             </>
@@ -285,7 +315,7 @@ export function AssignmentModal({
             disabled={loading || !selectedId}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Atribuir
+            Confirmar
           </Button>
         </DialogFooter>
       </DialogContent>
