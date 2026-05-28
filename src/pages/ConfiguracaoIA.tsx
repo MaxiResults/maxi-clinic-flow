@@ -20,9 +20,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Bot, Lightbulb, Loader2, Save, Clock, CalendarDays, Zap } from 'lucide-react';
+import { Bot, Lightbulb, Loader2, Save, Clock, CalendarDays, Zap, Sparkles, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AIConfigForm {
   enabled: boolean;
@@ -34,6 +39,10 @@ interface AIConfigForm {
   dias_semana: string[];
   intents_bloqueados: string[];
   intents_auto_respond: string[];
+  nome_assistente: string;
+  tom_voz: 'formal' | 'descontraido' | 'neutro';
+  saudacao_inicial: string;
+  instrucoes_adicionais: string;
 }
 
 const DIAS_SEMANA = [
@@ -62,6 +71,8 @@ const ALL_INTENTS = [
 
 export default function ConfiguracaoIA() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const nomeClinica = user?.empresa_nome || 'sua clínica';
   const [saving, setSaving] = useState(false);
   const [formInitialized, setFormInitialized] = useState(false);
   const [form, setForm] = useState<AIConfigForm>({
@@ -74,6 +85,10 @@ export default function ConfiguracaoIA() {
     dias_semana: ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira'],
     intents_bloqueados: ['agendamento_novo', 'reagendar', 'cancelar', 'reclamacao', 'emergencia'],
     intents_auto_respond: ['informacao_procedimento', 'horario_funcionamento', 'localizacao', 'duvida_geral'],
+    nome_assistente: 'Assistente Virtual',
+    tom_voz: 'neutro',
+    saudacao_inicial: '',
+    instrucoes_adicionais: '',
   });
 
   const queryClient = useQueryClient();
@@ -104,6 +119,10 @@ export default function ConfiguracaoIA() {
           'quarta-feira', 'quinta-feira', 'sexta-feira'],
         intents_bloqueados: data.intents_bloqueados ?? [],
         intents_auto_respond: data.intents_auto_respond ?? [],
+        nome_assistente: data.nome_assistente ?? 'Assistente Virtual',
+        tom_voz: (data.tom_voz as AIConfigForm['tom_voz']) ?? 'neutro',
+        saudacao_inicial: data.saudacao_inicial ?? '',
+        instrucoes_adicionais: data.instrucoes_adicionais ?? '',
       });
       setFormInitialized(true);
     }
