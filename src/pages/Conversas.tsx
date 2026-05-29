@@ -138,6 +138,16 @@ const whatsappStyles = {
 
 const chatBgPattern = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d9d9d9' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`;
 
+// Returns the most relevant session id for a lead, falling back to the
+// last message's session when there is no active session.
+const getSessionId = (lead: any): string | null => {
+  return lead?.sessao_ativa?.id
+    || lead?.ultima_mensagem?.sessao_id
+    || lead?.ultima_sessao_id
+    || lead?.sessoes?.[0]?.id
+    || null;
+};
+
 interface Atendente {
   id: string;
   nome: string;
@@ -1760,9 +1770,9 @@ export default function Conversas() {
                         </p>
                         <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                           <JanelaBadge />
-                          {selectedLead.sessao_ativa?.id && (
+                          {getSessionId(selectedLead) && (
                             <AIHandoffBadge
-                              sessaoId={selectedLead.sessao_ativa.id}
+                              sessaoId={getSessionId(selectedLead)!}
                               size="sm"
                             />
                           )}
@@ -2562,12 +2572,7 @@ export default function Conversas() {
         <AssignmentModal
           open={assignModalOpen}
           onOpenChange={setAssignModalOpen}
-          conversationId={
-            selectedLead.sessao_ativa?.id ||
-            selectedLead.ultima_sessao_id ||
-            selectedLead.sessoes?.[0]?.id ||
-            ''
-          }
+          conversationId={getSessionId(selectedLead) || ''}
           currentAtendente={selectedLead.sessao_ativa?.atendente || undefined}
           preSelectedId={user?.profissional_id ?? undefined}
           onSuccess={handleAssignSuccess}
