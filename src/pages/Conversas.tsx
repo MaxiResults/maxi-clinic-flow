@@ -1763,7 +1763,7 @@ export default function Conversas() {
                             >
                               <Pin className={`h-3.5 w-3.5 ${lead.sessao_ativa?.fixada ? 'fill-current' : ''}`} />
                             </button>
-                            {(user?.role === 'admin' || user?.role === 'manager') &&
+                            {(user?.role === 'admin' || user?.role === 'gestor') &&
                               lead.sessao_ativa?.id && (
                                 <button
                                   onClick={(e) => handleExcluirConversa(
