@@ -2884,6 +2884,39 @@ export default function Conversas() {
           setMensagensSelecionadas([]);
         }}
       />
+
+      {/* Modal de confirmação — Excluir conversa */}
+      {conversaParaExcluir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-sm mx-4">
+            <h3 className="text-base font-semibold mb-2">Excluir conversa</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Deseja excluir a conversa com{" "}
+              <span className="font-medium text-foreground">
+                {conversaParaExcluir.nomeLead}
+              </span>
+              ?{" "}
+              A conversa ficará oculta. Os dados são mantidos no banco.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setConversaParaExcluir(null)}
+                disabled={excluindo}
+                className="px-4 py-2 text-sm rounded-md border border-input bg-background hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarExclusao}
+                disabled={excluindo}
+                className="px-4 py-2 text-sm rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50"
+              >
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
