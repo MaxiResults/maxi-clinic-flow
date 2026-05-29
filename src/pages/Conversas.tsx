@@ -1863,13 +1863,33 @@ export default function Conversas() {
                       </Button>
                       <AttendantBadge
                         atendente={selectedLead.sessao_ativa?.atendente || undefined}
-                        onTransfer={() => setAssignModalOpen(true)}
+                        onTransfer={() => {
+                          if (!selectedLead?.sessao_ativa?.id) {
+                            toast({
+                              title: "Erro: conversa sem sessão ativa",
+                              description: "Não é possível atribuir esta conversa no momento.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          setAssignModalOpen(true);
+                        }}
                       />
                       {!selectedLead.sessao_ativa?.atendente && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setAssignModalOpen(true)}
+                          onClick={() => {
+                            if (!selectedLead?.sessao_ativa?.id) {
+                              toast({
+                                title: "Erro: conversa sem sessão ativa",
+                                description: "Não é possível atribuir esta conversa no momento.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            setAssignModalOpen(true);
+                          }}
                           className="bg-white text-[#075E54] border-white hover:bg-[#F0F2F5] hover:text-[#075E54]"
                         >
                           Atribuir
