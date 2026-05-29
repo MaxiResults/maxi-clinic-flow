@@ -1631,6 +1631,43 @@ export default function Conversas() {
     }
   };
 
+  // ============================================================
+  // EXCLUIR CONVERSA (soft delete)
+  // ============================================================
+  const handleExcluirConversa = useCallback((
+    e: React.MouseEvent,
+    sessaoId: string,
+    nomeLead: string
+  ) => {
+    e.stopPropagation();
+    setConversaParaExcluir({ sessaoId, nomeLead });
+  }, []);
+
+  const confirmarExclusao = useCallback(async () => {
+    if (!conversaParaExcluir) return;
+    setExcluindo(true);
+
+    try {
+      await api.delete(`/conversas/sessoes/${conversaParaExcluir.sessaoId}`);
+
+      setLeads(prev => prev.filter(lead =>
+        lead.sessao_ativa?.id !== conversaParaExcluir.sessaoId
+      ));
+
+      if (selectedLead?.sessao_ativa?.id === conversaParaExcluir.sessaoId) {
+        setSelectedLead(null);
+      }
+
+      setConversaParaExcluir(null);
+      sonnerToast.success('Conversa excluída');
+    } catch (error: any) {
+      console.error('Erro ao excluir conversa:', error);
+      sonnerToast.error('Erro ao excluir conversa');
+    } finally {
+      setExcluindo(false);
+    }
+  }, [conversaParaExcluir, selectedLead]);
+
   return (
     <DashboardLayout title="Conversas WhatsApp">
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
