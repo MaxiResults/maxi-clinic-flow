@@ -704,6 +704,23 @@ export default function Conversas() {
     return () => { socket.off('conversa_fixada', handler); };
   }, [socket]);
 
+  // Listen conversa_excluida (soft delete em tempo real)
+  useEffect(() => {
+    if (!socket) return;
+    const handler = ({ sessaoId }: { sessaoId: string }) => {
+      setLeads(prev => prev.filter(lead =>
+        lead.sessao_ativa?.id !== sessaoId
+      ));
+      if (selectedLeadRef.current?.sessao_ativa?.id === sessaoId) {
+        setSelectedLead(null);
+      }
+    };
+    socket.on('conversa_excluida', handler);
+    return () => {
+      socket.off('conversa_excluida', handler);
+    };
+  }, [socket]);
+
   // Listen lead_digitando
   useEffect(() => {
     if (!socket || !selectedLead?.sessao_ativa?.id) return;
