@@ -87,13 +87,20 @@ export function AssignmentModal({
 
   useEffect(() => {
     if (open) {
+      console.log("[AssignmentModal] aberto com conversationId:", conversationId);
+      if (!conversationId) {
+        console.error("[AssignmentModal] conversationId vazio ao abrir o modal!");
+      }
       setSelectedId(preSelectedId ?? "");
       setMotivo("");
     }
-  }, [open, preSelectedId]);
+  }, [open, preSelectedId, conversationId]);
 
   const assignMutation = useMutation({
     mutationFn: async (payload: { profissional_id: string; motivo?: string }) => {
+      if (!conversationId) {
+        throw new Error("Conversa não identificada");
+      }
       const isReturnToQueue =
         padrao && payload.profissional_id === padrao.id;
       const endpoint =
@@ -124,6 +131,14 @@ export function AssignmentModal({
   });
 
   const handleSubmit = (profissionalId?: string) => {
+    if (!conversationId) {
+      toast({
+        title: "Erro: conversa não identificada",
+        description: "Não foi possível identificar a sessão da conversa. Recarregue a página e tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
     const id = profissionalId ?? selectedId;
     if (!id) {
       toast({ title: "Selecione um atendente", variant: "destructive" });
