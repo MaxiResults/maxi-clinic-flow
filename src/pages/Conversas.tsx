@@ -2558,11 +2558,16 @@ export default function Conversas() {
         </Card>
       </div>
 
-      {selectedLead?.sessao_ativa?.id && (
+      {selectedLead && (
         <AssignmentModal
           open={assignModalOpen}
           onOpenChange={setAssignModalOpen}
-          conversationId={selectedLead.sessao_ativa.id}
+          conversationId={
+            selectedLead.sessao_ativa?.id ||
+            selectedLead.ultima_sessao_id ||
+            selectedLead.sessoes?.[0]?.id ||
+            ''
+          }
           currentAtendente={selectedLead.sessao_ativa?.atendente || undefined}
           preSelectedId={user?.profissional_id ?? undefined}
           onSuccess={handleAssignSuccess}
