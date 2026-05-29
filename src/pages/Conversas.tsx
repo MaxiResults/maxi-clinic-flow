@@ -167,6 +167,8 @@ interface Lead {
     atendente?: Atendente | null;
     fixada?: boolean;
   } | null;
+  ultima_sessao_id?: string | null;
+  sessoes?: Array<{ id: string }> | null;
   ultima_mensagem: {
     mensagem: string;
     data_envio: string;
