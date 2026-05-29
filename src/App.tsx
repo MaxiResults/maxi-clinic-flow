@@ -48,6 +48,25 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+// Protege rotas por feature — redireciona para /configuracoes se não tiver acesso
+const FeatureRoute = ({
+  children,
+  feature,
+}: {
+  children: React.ReactNode;
+  feature: 'whatsapp' | 'ai_assistant';
+}) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+
+  const hasFeature = user.features?.[feature] === true;
+  if (!hasFeature) return <Navigate to="/configuracoes" replace />;
+
+  return <>{children}</>;
+};
+
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
@@ -56,7 +75,7 @@ const AppRoutes = () => (
     <Route path="/agendamentos" element={<PrivateRoute><Agendamentos /></PrivateRoute>} />
     <Route path="/agendamentos/novo" element={<PrivateRoute><AgendamentoForm /></PrivateRoute>} />
     <Route path="/agendamentos/:id/editar" element={<PrivateRoute><AgendamentoForm /></PrivateRoute>} />
-    <Route path="/conversas" element={<PrivateRoute><Conversas /></PrivateRoute>} />
+    <Route path="/conversas" element={<FeatureRoute feature="whatsapp"><Conversas /></FeatureRoute>} />
     <Route path="/profissionais" element={<PrivateRoute><Profissionais /></PrivateRoute>} />
     <Route path="/profissionais/novo" element={<PrivateRoute><ProfissionalForm /></PrivateRoute>} />
     <Route path="/profissionais/:id/editar" element={<PrivateRoute><ProfissionalForm /></PrivateRoute>} />
@@ -73,12 +92,12 @@ const AppRoutes = () => (
     <Route path="/pipeline" element={<PrivateRoute><Pipeline /></PrivateRoute>} />
     <Route path="/configuracoes/google-calendar" element={<PrivateRoute><ConfiguracaoGoogleCalendar /></PrivateRoute>} />
     <Route path="/respostas-rapidas" element={<PrivateRoute><RespostasRapidas /></PrivateRoute>} />
-    <Route path="/whatsapp/templates" element={<PrivateRoute><WhatsAppTemplates /></PrivateRoute>} />
+    <Route path="/whatsapp/templates" element={<FeatureRoute feature="whatsapp"><WhatsAppTemplates /></FeatureRoute>} />
     <Route path="/configuracoes/tags" element={<PrivateRoute><TagsConfig /></PrivateRoute>} />
-    <Route path="/configuracoes/ia" element={<PrivateRoute><ConfiguracaoIA /></PrivateRoute>} />
-    <Route path="/analytics/ia" element={<PrivateRoute><AnalyticsIA /></PrivateRoute>} />
-    <Route path="/ia/knowledge-base" element={<PrivateRoute><KnowledgeBase /></PrivateRoute>} />
-    <Route path="/ia/automacoes" element={<PrivateRoute><FunctionPermissions /></PrivateRoute>} />
+    <Route path="/configuracoes/ia" element={<FeatureRoute feature="ai_assistant"><ConfiguracaoIA /></FeatureRoute>} />
+    <Route path="/analytics/ia" element={<FeatureRoute feature="ai_assistant"><AnalyticsIA /></FeatureRoute>} />
+    <Route path="/ia/knowledge-base" element={<FeatureRoute feature="ai_assistant"><KnowledgeBase /></FeatureRoute>} />
+    <Route path="/ia/automacoes" element={<FeatureRoute feature="ai_assistant"><FunctionPermissions /></FeatureRoute>} />
   </Routes>
 );
 

@@ -13,6 +13,13 @@ export interface AuthUser {
   cliente_nome?: string | null;
   profissional_id: string | null;
   empresas_acesso: number[];
+  // Novos campos — features e provider WhatsApp
+  features: {
+    whatsapp: boolean;
+    ai_assistant: boolean;
+  } | null;
+  whatsapp_provider: 'evolution' | 'meta' | null;
+  whatsapp_instancia_id: string | null;
 }
 
 export interface AuthContextType {

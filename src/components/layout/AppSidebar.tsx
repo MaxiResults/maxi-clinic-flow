@@ -14,6 +14,9 @@ import {
   KanbanSquare,
   CalendarCheck,
   FileText,
+  Bot,
+  BookOpen,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,14 +32,26 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const menuItems = [
+// Itens sempre visíveis (Core)
+const coreItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Leads", url: "/leads", icon: Users },
   { title: "Pipeline CRM", url: "/pipeline", icon: KanbanSquare },
   { title: "Agendamentos", url: "/agendamentos", icon: Calendar },
   { title: "Anamnese", url: "/anamneses", icon: FileText },
-  { title: "Conversas", url: "/conversas", icon: MessageSquare },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
+];
+
+// Itens visíveis com WhatsApp (plano Profissional ou Premium)
+const whatsappItems = [
+  { title: "Conversas", url: "/conversas", icon: MessageSquare },
+];
+
+// Itens visíveis com IA (plano Premium)
+const iaItems = [
+  { title: "Assistente IA", url: "/configuracoes/ia", icon: Bot },
+  { title: "Knowledge Base", url: "/ia/knowledge-base", icon: BookOpen },
+  { title: "Analytics IA", url: "/analytics/ia", icon: BarChart3 },
 ];
 
 export function AppSidebar() {
@@ -44,6 +59,16 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { totalUnread } = useUnread();
+
+  const hasWhatsApp   = user?.features?.whatsapp      === true;
+  const hasIA         = user?.features?.ai_assistant  === true;
+
+  // Montar menu dinamicamente conforme plano
+  const menuItems = [
+    ...coreItems,
+    ...(hasWhatsApp ? whatsappItems : []),
+    ...(hasIA       ? iaItems       : []),
+  ];
 
   const initials = user?.nome
     ? user.nome.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase()
