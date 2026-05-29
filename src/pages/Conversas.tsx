@@ -1770,9 +1770,9 @@ export default function Conversas() {
                         </p>
                         <div className="mt-1.5 flex items-center gap-2 flex-wrap">
                           <JanelaBadge />
-                          {selectedLead.sessao_ativa?.id && (
+                          {getSessionId(selectedLead) && (
                             <AIHandoffBadge
-                              sessaoId={selectedLead.sessao_ativa.id}
+                              sessaoId={getSessionId(selectedLead)!}
                               size="sm"
                             />
                           )}
@@ -2572,12 +2572,7 @@ export default function Conversas() {
         <AssignmentModal
           open={assignModalOpen}
           onOpenChange={setAssignModalOpen}
-          conversationId={
-            selectedLead.sessao_ativa?.id ||
-            selectedLead.ultima_sessao_id ||
-            selectedLead.sessoes?.[0]?.id ||
-            ''
-          }
+          conversationId={getSessionId(selectedLead) || ''}
           currentAtendente={selectedLead.sessao_ativa?.atendente || undefined}
           preSelectedId={user?.profissional_id ?? undefined}
           onSuccess={handleAssignSuccess}
