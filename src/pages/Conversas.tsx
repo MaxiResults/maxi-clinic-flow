@@ -512,6 +512,65 @@ export default function Conversas() {
     []
   );
 
+  // ============================================================
+  // FIXAR CONVERSA - reorder helper + memos (MUST be before effects)
+  // ============================================================
+  const reordenarFixadas = (lista: Lead[]) => [
+    ...lista.filter(l => l.sessao_ativa?.fixada),
+    ...lista.filter(l => !l.sessao_ativa?.fixada),
+  ];
+
+  const leadsOrdenados = useMemo(() => reordenarFixadas(leads), [leads]);
+  const leadsFiltrados = useMemo(() => {
+    if (filtroTagId === 'todas') return leadsOrdenados;
+    return leadsOrdenados.filter(l => l.tags?.some(t => t.id === filtroTagId));
+  }, [leadsOrdenados, filtroTagId]);
+  const indexPrimeiraNaoFixada = useMemo(
+    () => leadsFiltrados.findIndex(l => !l.sessao_ativa?.fixada),
+    [leadsFiltrados]
+  );
+  const temFixadas = useMemo(
+    () => leadsFiltrados.some(l => l.sessao_ativa?.fixada),
+    [leadsFiltrados]
+  );
+
+  // ============================================================
+  // EXCLUIR CONVERSA (soft delete)
+  // ============================================================
+  const handleExcluirConversa = useCallback((
+    e: React.MouseEvent,
+    sessaoId: string,
+    nomeLead: string
+  ) => {
+    e.stopPropagation();
+    setConversaParaExcluir({ sessaoId, nomeLead });
+  }, []);
+
+  const confirmarExclusao = async () => {
+    if (!conversaParaExcluir) return;
+    setExcluindo(true);
+
+    try {
+      await api.delete(`/conversas/sessoes/${conversaParaExcluir.sessaoId}`);
+
+      setLeads(prev => prev.filter(lead =>
+        lead.sessao_ativa?.id !== conversaParaExcluir.sessaoId
+      ));
+
+      if (selectedLead?.sessao_ativa?.id === conversaParaExcluir.sessaoId) {
+        setSelectedLead(null);
+      }
+
+      setConversaParaExcluir(null);
+      sonnerToast.success('Conversa excluída');
+    } catch (error: any) {
+      console.error('Erro ao excluir conversa:', error);
+      sonnerToast.error('Erro ao excluir conversa');
+    } finally {
+      setExcluindo(false);
+    }
+  };
+
   useEffect(() => {
     fetchLeads();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1442,28 +1501,6 @@ export default function Conversas() {
     setResultadoAtual(0);
   }, [selectedLead?.id]);
 
-  // ============================================================
-  // FIXAR CONVERSA - reorder helper + memos (MUST run unconditionally before any early return)
-  // ============================================================
-  const reordenarFixadas = (lista: Lead[]) => [
-    ...lista.filter(l => l.sessao_ativa?.fixada),
-    ...lista.filter(l => !l.sessao_ativa?.fixada),
-  ];
-
-  const leadsOrdenados = useMemo(() => reordenarFixadas(leads), [leads]);
-  const leadsFiltrados = useMemo(() => {
-    if (filtroTagId === 'todas') return leadsOrdenados;
-    return leadsOrdenados.filter(l => l.tags?.some(t => t.id === filtroTagId));
-  }, [leadsOrdenados, filtroTagId]);
-  const indexPrimeiraNaoFixada = useMemo(
-    () => leadsFiltrados.findIndex(l => !l.sessao_ativa?.fixada),
-    [leadsFiltrados]
-  );
-  const temFixadas = useMemo(
-    () => leadsFiltrados.some(l => l.sessao_ativa?.fixada),
-    [leadsFiltrados]
-  );
-
   if (loading) {
     return (
       <DashboardLayout title="Conversas WhatsApp">
@@ -1604,43 +1641,6 @@ export default function Conversas() {
       sonnerToast.success(fixada ? 'Conversa fixada no topo' : 'Conversa desafixada');
     } catch {
       sonnerToast.error('Erro ao fixar conversa');
-    }
-  };
-
-  // ============================================================
-  // EXCLUIR CONVERSA (soft delete)
-  // ============================================================
-  const handleExcluirConversa = useCallback((
-    e: React.MouseEvent,
-    sessaoId: string,
-    nomeLead: string
-  ) => {
-    e.stopPropagation();
-    setConversaParaExcluir({ sessaoId, nomeLead });
-  }, []);
-
-  const confirmarExclusao = async () => {
-    if (!conversaParaExcluir) return;
-    setExcluindo(true);
-
-    try {
-      await api.delete(`/conversas/sessoes/${conversaParaExcluir.sessaoId}`);
-
-      setLeads(prev => prev.filter(lead =>
-        lead.sessao_ativa?.id !== conversaParaExcluir.sessaoId
-      ));
-
-      if (selectedLead?.sessao_ativa?.id === conversaParaExcluir.sessaoId) {
-        setSelectedLead(null);
-      }
-
-      setConversaParaExcluir(null);
-      sonnerToast.success('Conversa excluída');
-    } catch (error: any) {
-      console.error('Erro ao excluir conversa:', error);
-      sonnerToast.error('Erro ao excluir conversa');
-    } finally {
-      setExcluindo(false);
     }
   };
 
