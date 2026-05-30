@@ -561,15 +561,24 @@ export default function Conversas() {
       await api.delete(`/conversas/sessoes/${conversaParaExcluir.sessaoId}`);
 
       setLeads(prev => prev.filter(lead =>
-        lead.sessao_ativa?.id !== conversaParaExcluir.sessaoId
+        lead.sessao_ativa?.id !== conversaParaExcluir.sessaoId &&
+        lead.sessao_recente?.id !== conversaParaExcluir.sessaoId
       ));
 
-      if (selectedLead?.sessao_ativa?.id === conversaParaExcluir.sessaoId) {
+      if (
+        selectedLead?.sessao_ativa?.id === conversaParaExcluir.sessaoId ||
+        selectedLead?.sessao_recente?.id === conversaParaExcluir.sessaoId
+      ) {
         setSelectedLead(null);
       }
 
       setConversaParaExcluir(null);
       sonnerToast.success('Conversa excluída');
+
+      // Recarregar lista para garantir dados atualizados
+      setTimeout(() => {
+        fetchLeads(true);
+      }, 500);
     } catch (error: any) {
       console.error('Erro ao excluir conversa:', error);
       sonnerToast.error('Erro ao excluir conversa');
@@ -777,9 +786,13 @@ export default function Conversas() {
     if (!socket) return;
     const handler = ({ sessaoId }: { sessaoId: string }) => {
       setLeads(prev => prev.filter(lead =>
-        lead.sessao_ativa?.id !== sessaoId
+        lead.sessao_ativa?.id !== sessaoId &&
+        lead.sessao_recente?.id !== sessaoId
       ));
-      if (selectedLeadRef.current?.sessao_ativa?.id === sessaoId) {
+      if (
+        selectedLeadRef.current?.sessao_ativa?.id === sessaoId ||
+        selectedLeadRef.current?.sessao_recente?.id === sessaoId
+      ) {
         setSelectedLead(null);
       }
     };
