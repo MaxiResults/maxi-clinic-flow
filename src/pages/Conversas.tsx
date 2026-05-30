@@ -226,6 +226,14 @@ export default function Conversas() {
   const [loadingMensagens, setLoadingMensagens] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Soft delete de conversas
+  const [conversaParaExcluir, setConversaParaExcluir] = useState<{
+    sessaoId: string;
+    nomeLead: string;
+  } | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
   const [novaMsg, setNovaMsg] = useState("");
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
