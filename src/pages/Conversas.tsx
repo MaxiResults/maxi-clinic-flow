@@ -1025,7 +1025,7 @@ export default function Conversas() {
     });
 
     // Persiste no banco: zera mensagens_nao_lidas e marca mensagens como lidas
-    const sessaoId = lead.sessao_ativa?.id;
+    const sessaoId = lead.sessao_ativa?.id || lead.sessao_recente?.id;
     if (sessaoId) {
       api.patch(`/conversas/${sessaoId}/marcar-lidas`).catch(() => {});
     }
