@@ -293,12 +293,6 @@ export default function Conversas() {
   const [iaDigitando, setIaDigitando] = useState(false);
   const [feedbacksDados, setFeedbacksDados] = useState<Record<string, 'positive' | 'negative'>>({});
 
-  // Soft delete de conversas
-  const [conversaParaExcluir, setConversaParaExcluir] = useState<{
-    sessaoId: string;
-    nomeLead: string;
-  } | null>(null);
-  const [excluindo, setExcluindo] = useState(false);
 
   // Status IA / Responsável da conversa
   const { isAIActive } = useAIStatus({
