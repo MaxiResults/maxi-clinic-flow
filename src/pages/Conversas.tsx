@@ -1645,7 +1645,7 @@ export default function Conversas() {
     setConversaParaExcluir({ sessaoId, nomeLead });
   }, []);
 
-  const confirmarExclusao = useCallback(async () => {
+  const confirmarExclusao = async () => {
     if (!conversaParaExcluir) return;
     setExcluindo(true);
 
@@ -1668,7 +1668,7 @@ export default function Conversas() {
     } finally {
       setExcluindo(false);
     }
-  }, [conversaParaExcluir, selectedLead]);
+  };
 
   return (
     <DashboardLayout title="Conversas WhatsApp">
