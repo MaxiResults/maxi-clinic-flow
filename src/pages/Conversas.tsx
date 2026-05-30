@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { renderWhatsAppMarkdown } from "@/lib/whatsappMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -284,6 +284,13 @@ export default function Conversas() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [iaDigitando, setIaDigitando] = useState(false);
   const [feedbacksDados, setFeedbacksDados] = useState<Record<string, 'positive' | 'negative'>>({});
+
+  // Soft delete de conversas
+  const [conversaParaExcluir, setConversaParaExcluir] = useState<{
+    sessaoId: string;
+    nomeLead: string;
+  } | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
 
   // Status IA / Responsável da conversa
   const { isAIActive } = useAIStatus({
@@ -695,6 +702,23 @@ export default function Conversas() {
     };
     socket.on('conversa_fixada', handler);
     return () => { socket.off('conversa_fixada', handler); };
+  }, [socket]);
+
+  // Listen conversa_excluida (soft delete em tempo real)
+  useEffect(() => {
+    if (!socket) return;
+    const handler = ({ sessaoId }: { sessaoId: string }) => {
+      setLeads(prev => prev.filter(lead =>
+        lead.sessao_ativa?.id !== sessaoId
+      ));
+      if (selectedLeadRef.current?.sessao_ativa?.id === sessaoId) {
+        setSelectedLead(null);
+      }
+    };
+    socket.on('conversa_excluida', handler);
+    return () => {
+      socket.off('conversa_excluida', handler);
+    };
   }, [socket]);
 
   // Listen lead_digitando
@@ -1607,6 +1631,43 @@ export default function Conversas() {
     }
   };
 
+  // ============================================================
+  // EXCLUIR CONVERSA (soft delete)
+  // ============================================================
+  const handleExcluirConversa = useCallback((
+    e: React.MouseEvent,
+    sessaoId: string,
+    nomeLead: string
+  ) => {
+    e.stopPropagation();
+    setConversaParaExcluir({ sessaoId, nomeLead });
+  }, []);
+
+  const confirmarExclusao = useCallback(async () => {
+    if (!conversaParaExcluir) return;
+    setExcluindo(true);
+
+    try {
+      await api.delete(`/conversas/sessoes/${conversaParaExcluir.sessaoId}`);
+
+      setLeads(prev => prev.filter(lead =>
+        lead.sessao_ativa?.id !== conversaParaExcluir.sessaoId
+      ));
+
+      if (selectedLead?.sessao_ativa?.id === conversaParaExcluir.sessaoId) {
+        setSelectedLead(null);
+      }
+
+      setConversaParaExcluir(null);
+      sonnerToast.success('Conversa excluída');
+    } catch (error: any) {
+      console.error('Erro ao excluir conversa:', error);
+      sonnerToast.error('Erro ao excluir conversa');
+    } finally {
+      setExcluindo(false);
+    }
+  }, [conversaParaExcluir, selectedLead]);
+
   return (
     <DashboardLayout title="Conversas WhatsApp">
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
@@ -1702,6 +1763,21 @@ export default function Conversas() {
                             >
                               <Pin className={`h-3.5 w-3.5 ${lead.sessao_ativa?.fixada ? 'fill-current' : ''}`} />
                             </button>
+                            {(user?.role === 'admin' || user?.role === 'gestor') &&
+                              lead.sessao_ativa?.id && (
+                                <button
+                                  onClick={(e) => handleExcluirConversa(
+                                    e,
+                                    lead.sessao_ativa!.id,
+                                    lead.nome
+                                  )}
+                                  className="p-1 rounded text-muted-foreground/40 hover:text-destructive transition-colors"
+                                  title="Excluir conversa"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )
+                            }
                             <span className="text-xs text-muted-foreground">
                               {formatTime(lead.ultima_interacao)}
                             </span>
@@ -2808,6 +2884,39 @@ export default function Conversas() {
           setMensagensSelecionadas([]);
         }}
       />
+
+      {/* Modal de confirmação — Excluir conversa */}
+      {conversaParaExcluir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-sm mx-4">
+            <h3 className="text-base font-semibold mb-2">Excluir conversa</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Deseja excluir a conversa com{" "}
+              <span className="font-medium text-foreground">
+                {conversaParaExcluir.nomeLead}
+              </span>
+              ?{" "}
+              A conversa ficará oculta. Os dados são mantidos no banco.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setConversaParaExcluir(null)}
+                disabled={excluindo}
+                className="px-4 py-2 text-sm rounded-md border border-input bg-background hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarExclusao}
+                disabled={excluindo}
+                className="px-4 py-2 text-sm rounded-md bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50"
+              >
+                {excluindo ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
