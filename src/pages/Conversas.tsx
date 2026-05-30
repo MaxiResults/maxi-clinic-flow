@@ -318,6 +318,13 @@ export default function Conversas() {
 
   useEffect(() => {
     selectedLeadRef.current = selectedLead;
+    // Remarcar como lidas ao mudar de conversa ou retornar à aba
+    if (selectedLead) {
+      const sessaoId = selectedLead.sessao_ativa?.id || selectedLead.sessao_recente?.id;
+      if (sessaoId) {
+        api.patch(`/conversas/${sessaoId}/marcar-lidas`).catch(() => {});
+      }
+    }
   }, [selectedLead]);
 
   // Carrega respostas rápidas ao montar
@@ -694,11 +701,14 @@ export default function Conversas() {
           playNotification();
 
           // Atualiza janela 24h ao receber mensagem do cliente
-          const sessaoId = selectedLeadRef.current?.sessao_ativa?.id || selectedLeadRef.current?.sessao_recente?.id;
+          const sessaoId = selectedLeadRef.current?.sessao_ativa?.id
+            || selectedLeadRef.current?.sessao_recente?.id;
           if (sessaoId) {
             api.get(`/conversas/sessoes/${sessaoId}/janela`)
               .then(r => setJanela(r.data))
               .catch(() => {});
+            // Marcar como lidas automaticamente pois conversa está aberta
+            api.patch(`/conversas/${sessaoId}/marcar-lidas`).catch(() => {});
           }
         }
 
