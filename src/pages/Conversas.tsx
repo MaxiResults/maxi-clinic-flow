@@ -673,7 +673,7 @@ export default function Conversas() {
 
     const handleNovaMensagem = (data: any) => {
       const current = selectedLeadRef.current;
-      const conversaId = current?.sessao_ativa?.id;
+      const conversaId = current?.sessao_ativa?.id || current?.sessao_recente?.id;
       console.log('[Socket.io] Nova mensagem recebida:', data);
       if (data.conversaId === conversaId) {
         setMensagens((prev) => {
@@ -694,7 +694,7 @@ export default function Conversas() {
           playNotification();
 
           // Atualiza janela 24h ao receber mensagem do cliente
-          const sessaoId = selectedLeadRef.current?.sessao_ativa?.id;
+          const sessaoId = selectedLeadRef.current?.sessao_ativa?.id || selectedLeadRef.current?.sessao_recente?.id;
           if (sessaoId) {
             api.get(`/conversas/sessoes/${sessaoId}/janela`)
               .then(r => setJanela(r.data))
@@ -704,8 +704,7 @@ export default function Conversas() {
 
         // Atualiza preview da última mensagem na sidebar
         setLeads(prev => prev.map(lead => {
-          if (!lead.sessao_ativa) return lead;
-          if (lead.sessao_ativa.id !== data.conversaId) return lead;
+          if ((lead.sessao_ativa?.id ?? lead.sessao_recente?.id) !== data.conversaId) return lead;
           return {
             ...lead,
             ultima_mensagem: {
@@ -720,11 +719,11 @@ export default function Conversas() {
 
         // Reordena a lista para o lead com nova mensagem aparecer primeiro
         setLeads(prev => {
-          const atualizado = prev.find(l => l.sessao_ativa?.id === data.conversaId);
+          const atualizado = prev.find(l => (l.sessao_ativa?.id ?? l.sessao_recente?.id) === data.conversaId);
           if (!atualizado) return prev;
           return [
             atualizado,
-            ...prev.filter(l => l.sessao_ativa?.id !== data.conversaId)
+            ...prev.filter(l => (l.sessao_ativa?.id ?? l.sessao_recente?.id) !== data.conversaId)
           ];
         });
 
@@ -745,7 +744,7 @@ export default function Conversas() {
 
         // Incrementa não lidas se não for a conversa ativa
         if (data.mensagem?.is_from_me === false &&
-            data.conversaId !== current?.sessao_ativa?.id) {
+            data.conversaId !== (current?.sessao_ativa?.id ?? current?.sessao_recente?.id)) {
           setUnreadCounts(prev => ({
             ...prev,
             [current?.id || '']:
@@ -755,9 +754,30 @@ export default function Conversas() {
       }
     };
 
+    const handleNovaConversa = (_data: any) => {
+      fetchLeads(true);
+    };
+
+    const handleConversaAtualizada = (data: any) => {
+      setLeads(prev => {
+        const existe = prev.some(l =>
+          l.sessao_ativa?.id === data.sessaoId ||
+          l.sessao_recente?.id === data.sessaoId
+        );
+        if (!existe) {
+          fetchLeads(true);
+        }
+        return prev;
+      });
+    };
+
     socket.on('nova_mensagem', handleNovaMensagem);
+    socket.on('nova_conversa', handleNovaConversa);
+    socket.on('conversa_atualizada', handleConversaAtualizada);
     return () => {
       socket.off('nova_mensagem', handleNovaMensagem);
+      socket.off('nova_conversa', handleNovaConversa);
+      socket.off('conversa_atualizada', handleConversaAtualizada);
     };
   }, [socket, playNotification]);
 
