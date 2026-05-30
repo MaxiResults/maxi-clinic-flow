@@ -37,6 +37,7 @@ interface AIConfigForm {
   horario_inicio: string;
   horario_fim: string;
   dias_semana: string[];
+  horario_por_dia: Record<string, HorarioDia>;
   intents_bloqueados: string[];
   intents_auto_respond: string[];
   nome_assistente: string;
@@ -46,14 +47,30 @@ interface AIConfigForm {
 }
 
 const DIAS_SEMANA = [
-  { key: 'segunda-feira', label: 'Seg' },
-  { key: 'terça-feira', label: 'Ter' },
-  { key: 'quarta-feira', label: 'Qua' },
-  { key: 'quinta-feira', label: 'Qui' },
-  { key: 'sexta-feira', label: 'Sex' },
-  { key: 'sábado', label: 'Sáb' },
-  { key: 'domingo', label: 'Dom' },
+  { key: 'segunda-feira', label: 'Seg', labelFull: 'Segunda' },
+  { key: 'terça-feira', label: 'Ter', labelFull: 'Terça' },
+  { key: 'quarta-feira', label: 'Qua', labelFull: 'Quarta' },
+  { key: 'quinta-feira', label: 'Qui', labelFull: 'Quinta' },
+  { key: 'sexta-feira', label: 'Sex', labelFull: 'Sexta' },
+  { key: 'sábado', label: 'Sáb', labelFull: 'Sábado' },
+  { key: 'domingo', label: 'Dom', labelFull: 'Domingo' },
 ];
+
+interface HorarioDia {
+  ativo: boolean;
+  inicio: string;
+  fim: string;
+}
+
+const HORARIO_PADRAO_POR_DIA: Record<string, HorarioDia> = {
+  'segunda-feira': { ativo: true,  inicio: '08:00', fim: '18:00' },
+  'terça-feira':   { ativo: true,  inicio: '08:00', fim: '18:00' },
+  'quarta-feira':  { ativo: true,  inicio: '08:00', fim: '18:00' },
+  'quinta-feira':  { ativo: true,  inicio: '08:00', fim: '18:00' },
+  'sexta-feira':   { ativo: true,  inicio: '08:00', fim: '18:00' },
+  'sábado':        { ativo: false, inicio: '08:00', fim: '18:00' },
+  'domingo':       { ativo: false, inicio: '08:00', fim: '18:00' },
+};
 
 const ALL_INTENTS = [
   { key: 'saudacao', label: '👋 Saudação', descricao: 'Cumprimentos iniciais' },
