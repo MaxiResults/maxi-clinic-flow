@@ -226,6 +226,14 @@ export default function Conversas() {
   const [loadingMensagens, setLoadingMensagens] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Soft delete de conversas
+  const [conversaParaExcluir, setConversaParaExcluir] = useState<{
+    sessaoId: string;
+    nomeLead: string;
+  } | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
   const [novaMsg, setNovaMsg] = useState("");
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [contactInfoOpen, setContactInfoOpen] = useState(false);
@@ -285,12 +293,6 @@ export default function Conversas() {
   const [iaDigitando, setIaDigitando] = useState(false);
   const [feedbacksDados, setFeedbacksDados] = useState<Record<string, 'positive' | 'negative'>>({});
 
-  // Soft delete de conversas
-  const [conversaParaExcluir, setConversaParaExcluir] = useState<{
-    sessaoId: string;
-    nomeLead: string;
-  } | null>(null);
-  const [excluindo, setExcluindo] = useState(false);
 
   // Status IA / Responsável da conversa
   const { isAIActive } = useAIStatus({
@@ -1643,7 +1645,7 @@ export default function Conversas() {
     setConversaParaExcluir({ sessaoId, nomeLead });
   }, []);
 
-  const confirmarExclusao = useCallback(async () => {
+  const confirmarExclusao = async () => {
     if (!conversaParaExcluir) return;
     setExcluindo(true);
 
@@ -1666,7 +1668,7 @@ export default function Conversas() {
     } finally {
       setExcluindo(false);
     }
-  }, [conversaParaExcluir, selectedLead]);
+  };
 
   return (
     <DashboardLayout title="Conversas WhatsApp">
