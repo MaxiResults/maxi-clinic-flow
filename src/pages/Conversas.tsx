@@ -177,6 +177,13 @@ interface Lead {
     atendente?: Atendente | null;
     fixada?: boolean;
   } | null;
+  sessao_recente: {
+    id: string;
+    status_sessao: string;
+    ultima_interacao: string;
+    total_mensagens: number;
+    fixada?: boolean;
+  } | null;
   ultima_sessao_id?: string | null;
   sessoes?: Array<{ id: string }> | null;
   ultima_mensagem: {
@@ -1739,12 +1746,14 @@ export default function Conversas() {
                             >
                               <Pin className={`h-3.5 w-3.5 ${lead.sessao_ativa?.fixada ? 'fill-current' : ''}`} />
                             </button>
-                            {(user?.role === 'admin' || user?.role === 'gestor') &&
-                              lead.sessao_ativa?.id && (
+                            {(user?.role === 'admin' || user?.role === 'gestor') && (() => {
+                              const sessaoIdParaExcluir = lead.sessao_ativa?.id || lead.sessao_recente?.id;
+                              if (!sessaoIdParaExcluir) return null;
+                              return (
                                 <button
                                   onClick={(e) => handleExcluirConversa(
                                     e,
-                                    lead.sessao_ativa!.id,
+                                    sessaoIdParaExcluir,
                                     lead.nome
                                   )}
                                   className="p-1 rounded text-muted-foreground/40 hover:text-destructive transition-colors"
@@ -1752,8 +1761,8 @@ export default function Conversas() {
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
-                              )
-                            }
+                              );
+                            })()}
                             <span className="text-xs text-muted-foreground">
                               {formatTime(lead.ultima_interacao)}
                             </span>
