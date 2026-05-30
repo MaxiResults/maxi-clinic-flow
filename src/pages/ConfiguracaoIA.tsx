@@ -478,81 +478,114 @@ export default function ConfiguracaoIA() {
               </CardContent>
             </Card>
 
-            {/* Seção 4 — Horário de Funcionamento */}
+            {/* Seção 4 — Grade de Horários por Dia */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-blue-500" />
                   <div>
-                    <CardTitle>Horário de Funcionamento</CardTitle>
+                    <CardTitle>Horários de Atendimento da IA</CardTitle>
                     <CardDescription>
-                      A IA só responderá automaticamente neste horário
+                      Configure os dias e horários em que a IA responderá automaticamente.
+                      Para atendimento overnight, defina início maior que fim (ex: 18:00 às 08:00).
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium">Início</label>
-                    <input
-                      type="time"
-                      value={form.horario_inicio}
-                      onChange={(e) => setForm((prev) => ({ ...prev, horario_inicio: e.target.value }))}
-                      className="border rounded-lg px-3 py-2 text-sm bg-background w-32"
-                    />
+                <div className="space-y-2">
+                  <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 items-center px-2 pb-1 border-b">
+                    <span className="text-xs font-medium text-muted-foreground">Dia</span>
+                    <span className="text-xs font-medium text-muted-foreground w-16 text-center">Ativo</span>
+                    <span className="text-xs font-medium text-muted-foreground w-24 text-center">Início</span>
+                    <span className="text-xs font-medium text-muted-foreground w-24 text-center">Fim</span>
                   </div>
-                  <div className="flex items-center pt-5 text-muted-foreground">até</div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-sm font-medium">Fim</label>
-                    <input
-                      type="time"
-                      value={form.horario_fim}
-                      onChange={(e) => setForm((prev) => ({ ...prev, horario_fim: e.target.value }))}
-                      className="border rounded-lg px-3 py-2 text-sm bg-background w-32"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  ⏰ Fora deste horário, a IA fica inativa e mensagens ficam aguardando
-                </p>
-              </CardContent>
-            </Card>
 
-            {/* Seção 5 — Dias da Semana */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5 text-purple-500" />
-                  <div>
-                    <CardTitle>Dias de Atendimento</CardTitle>
-                    <CardDescription>Dias em que a IA estará ativa</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-2 flex-wrap">
                   {DIAS_SEMANA.map((dia) => {
-                    const ativo = form.dias_semana.includes(dia.key);
+                    const config = form.horario_por_dia[dia.key] ?? {
+                      ativo: false, inicio: '08:00', fim: '18:00'
+                    };
+                    const isOvernight = config.inicio > config.fim && config.ativo;
+
                     return (
-                      <button
+                      <div
                         key={dia.key}
-                        type="button"
-                        onClick={() => toggleDia(dia.key)}
-                        className={`w-12 h-12 rounded-xl text-sm font-semibold transition-all ${
-                          ativo
-                            ? 'bg-purple-500 text-white shadow-sm'
-                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        className={`grid grid-cols-[1fr_auto_auto_auto] gap-3 items-center px-2 py-1 rounded-lg transition-colors ${
+                          config.ativo ? 'bg-muted/30' : 'opacity-50'
                         }`}
                       >
-                        {dia.label}
-                      </button>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{dia.labelFull}</span>
+                          {isOvernight && (
+                            <span className="text-xs text-orange-500 bg-orange-50 px-1.5 py-0.5 rounded">
+                              overnight
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex justify-center w-16">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                horario_por_dia: {
+                                  ...prev.horario_por_dia,
+                                  [dia.key]: { ...config, ativo: !config.ativo },
+                                },
+                              }))
+                            }
+                            className={`w-10 h-5 rounded-full transition-colors relative ${
+                              config.ativo ? 'bg-purple-500' : 'bg-muted'
+                            }`}
+                          >
+                            <span
+                              className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                                config.ativo ? 'translate-x-5' : 'translate-x-0.5'
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        <input
+                          type="time"
+                          value={config.inicio}
+                          disabled={!config.ativo}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              horario_por_dia: {
+                                ...prev.horario_por_dia,
+                                [dia.key]: { ...config, inicio: e.target.value },
+                              },
+                            }))
+                          }
+                          className="w-24 border rounded-lg px-2 py-1 text-sm bg-background disabled:opacity-40 disabled:cursor-not-allowed"
+                        />
+
+                        <input
+                          type="time"
+                          value={config.fim}
+                          disabled={!config.ativo}
+                          onChange={(e) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              horario_por_dia: {
+                                ...prev.horario_por_dia,
+                                [dia.key]: { ...config, fim: e.target.value },
+                              },
+                            }))
+                          }
+                          className="w-24 border rounded-lg px-2 py-1 text-sm bg-background disabled:opacity-40 disabled:cursor-not-allowed"
+                        />
+                      </div>
                     );
                   })}
                 </div>
+
                 <p className="text-xs text-muted-foreground mt-3">
-                  📅 {form.dias_semana.length} dia{form.dias_semana.length !== 1 ? 's' : ''} selecionado
-                  {form.dias_semana.length !== 1 ? 's' : ''}
+                  💡 Para atender 24h: ative o dia e defina 00:00 às 23:59.
+                  Para overnight: defina início maior que fim (ex: 18:00 às 08:00).
                 </p>
               </CardContent>
             </Card>
