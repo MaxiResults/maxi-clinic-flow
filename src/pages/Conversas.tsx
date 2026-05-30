@@ -655,8 +655,8 @@ export default function Conversas() {
 
   // Join/Leave conversation rooms
   useEffect(() => {
-    if (!socket || !selectedLead?.sessao_ativa?.id) return;
-    const conversaId = selectedLead.sessao_ativa.id;
+    const conversaId = selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id;
+    if (!socket || !conversaId) return;
 
     socket.emit('join_conversation', conversaId);
     console.log('[Socket.io] Entrou na sala:', conversaId);
@@ -665,7 +665,7 @@ export default function Conversas() {
       socket.emit('leave_conversation', conversaId);
       console.log('[Socket.io] Saiu da sala:', conversaId);
     };
-  }, [socket, selectedLead?.sessao_ativa?.id]);
+  }, [socket, selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id]);
 
   // Listen to nova_mensagem event
   useEffect(() => {
