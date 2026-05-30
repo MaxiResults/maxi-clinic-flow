@@ -1735,11 +1735,12 @@ export default function Conversas() {
                         <div className="flex items-center justify-between mb-1">
                           <p className={`truncate ${(unreadCounts[lead.id] || 0) > 0 ? 'font-bold text-foreground' : 'font-medium'}`}>{lead.nome}</p>
                           <div className="flex items-center gap-1 shrink-0">
-                            {lead.sessao_ativa?.id && (
+                            {(lead.sessao_ativa?.id || lead.sessao_recente?.id) && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setConversaIdParaTags(lead.sessao_ativa!.id);
+                                  const sessaoId = lead.sessao_ativa?.id || lead.sessao_recente?.id;
+                                  setConversaIdParaTags(sessaoId!);
                                   setTagManagerOpen(true);
                                 }}
                                 className="p-1 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors"
@@ -1751,13 +1752,13 @@ export default function Conversas() {
                             <button
                               onClick={(e) => handleToggleFixar(lead, e)}
                               className={`p-1 rounded transition-colors ${
-                                lead.sessao_ativa?.fixada
+                                (lead.sessao_ativa?.fixada || lead.sessao_recente?.fixada)
                                   ? 'text-primary'
                                   : 'text-muted-foreground/40 hover:text-muted-foreground'
                               }`}
-                              title={lead.sessao_ativa?.fixada ? 'Desafixar conversa' : 'Fixar no topo'}
+                              title={(lead.sessao_ativa?.fixada || lead.sessao_recente?.fixada) ? 'Desafixar conversa' : 'Fixar no topo'}
                             >
-                              <Pin className={`h-3.5 w-3.5 ${lead.sessao_ativa?.fixada ? 'fill-current' : ''}`} />
+                              <Pin className={`h-3.5 w-3.5 ${(lead.sessao_ativa?.fixada || lead.sessao_recente?.fixada) ? 'fill-current' : ''}`} />
                             </button>
                             {(user?.role === 'admin' || user?.role === 'gestor') && (() => {
                               const sessaoIdParaExcluir = lead.sessao_ativa?.id || lead.sessao_recente?.id;
