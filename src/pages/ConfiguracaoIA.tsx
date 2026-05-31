@@ -388,7 +388,7 @@ export default function ConfiguracaoIA() {
                   <Textarea
                     id="instrucoes_adicionais"
                     rows={6}
-                    maxLength={1000}
+                    maxLength={1500}
                     value={form.instrucoes_adicionais}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, instrucoes_adicionais: e.target.value }))
@@ -398,7 +398,7 @@ export default function ConfiguracaoIA() {
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Regras específicas, restrições e orientações</span>
-                    <span>{form.instrucoes_adicionais.length}/1000</span>
+                    <span>{form.instrucoes_adicionais.length}/1500</span>
                   </div>
                 </div>
 
