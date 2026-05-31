@@ -62,6 +62,7 @@ export default function KnowledgeBase() {
       formData.append('file', file);
       await api.post('/knowledge/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000, // 120 segundos — necessário para processar embeddings via OpenAI
         onUploadProgress: (e) => {
           setUploadProgress(Math.round((e.loaded * 100) / (e.total || 1)));
         },
