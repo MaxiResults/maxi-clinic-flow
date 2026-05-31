@@ -345,6 +345,105 @@ export default function KnowledgeBase() {
             )}
           </CardContent>
         </Card>
+
+        {/* Visualizador de documentos */}
+        {docViewer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="bg-background rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] mx-4 flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <div className="flex items-center gap-2 min-w-0">
+                  {getFileIcon(docViewer.fileType)}
+                  <span className="text-sm font-medium truncate">{docViewer.filename}</span>
+                </div>
+                <div className="flex items-center gap-2 ml-2">
+                  {docViewer.url && (
+                    <a
+                      href={docViewer.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={docViewer.filename}
+                      className="p-1.5 rounded text-muted-foreground hover:text-primary transition-colors"
+                      title="Baixar arquivo"
+                    >
+                      <Download className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button
+                    onClick={() => setDocViewer(null)}
+                    className="p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+                    title="Fechar"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Conteúdo */}
+              <div className="flex-1 overflow-auto p-1">
+                {(() => {
+                  const type = docViewer.fileType?.toLowerCase() || '';
+                  const isImage = type.includes('image') || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(docViewer.filename);
+                  const isPDF = type.includes('pdf') || docViewer.filename.toLowerCase().endsWith('.pdf');
+                  const isText = type.includes('text') || docViewer.filename.toLowerCase().endsWith('.txt');
+
+                  // PDF
+                  if (isPDF && docViewer.url) {
+                    return (
+                      <iframe
+                        src={docViewer.url}
+                        className="w-full h-full rounded"
+                        title={docViewer.filename}
+                      />
+                    );
+                  }
+
+                  // Imagem
+                  if (isImage && docViewer.url) {
+                    return (
+                      <div className="flex items-center justify-center h-full p-4">
+                        <img
+                          src={docViewer.url}
+                          alt={docViewer.filename}
+                          className="max-w-full max-h-full object-contain rounded"
+                        />
+                      </div>
+                    );
+                  }
+
+                  // Texto extraído (Word, txt, ou fallback)
+                  if (docViewer.textContent) {
+                    return (
+                      <div className="p-4 h-full overflow-auto">
+                        <div className="bg-muted/30 rounded-lg p-4 text-sm font-mono whitespace-pre-wrap leading-relaxed">
+                          {docViewer.textContent}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Sem preview disponível — oferecer download
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+                      <FileText className="h-16 w-16 opacity-30" />
+                      <p className="text-sm">Visualização não disponível para este tipo de arquivo.</p>
+                      {docViewer.url && (
+                        <a
+                          href={docViewer.url}
+                          download={docViewer.filename}
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Download className="h-4 w-4" />
+                          Baixar arquivo
+                        </a>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
