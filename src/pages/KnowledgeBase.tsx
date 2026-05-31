@@ -125,6 +125,7 @@ export default function KnowledgeBase() {
   };
 
   const handleViewDocument = async (doc: any) => {
+    // Prioridade 1: file_url direto no objeto do documento
     if (doc.file_url) {
       setDocViewer({
         id: doc.id,
@@ -136,24 +137,32 @@ export default function KnowledgeBase() {
       return;
     }
 
+    // Prioridade 2: buscar URL do backend
     try {
       const res = await api.get(`/knowledge/documents/${doc.id}/view-url`);
-      setDocViewer({
-        id: doc.id,
-        url: res.data?.data?.url || null,
-        filename: doc.original_name || doc.filename,
-        fileType: doc.file_type || '',
-        textContent: doc.text_content,
-      });
+      const data = res.data?.data;
+      if (data?.url) {
+        setDocViewer({
+          id: doc.id,
+          url: data.url,
+          filename: data.filename || doc.original_name || doc.filename,
+          fileType: data.file_type || doc.file_type || '',
+          textContent: doc.text_content,
+        });
+        return;
+      }
     } catch {
-      setDocViewer({
-        id: doc.id,
-        url: null,
-        filename: doc.original_name || doc.filename,
-        fileType: doc.file_type || '',
-        textContent: doc.text_content,
-      });
+      // Fallback para text_content
     }
+
+    // Prioridade 3: mostrar texto extraído (fallback para documentos antigos)
+    setDocViewer({
+      id: doc.id,
+      url: null,
+      filename: doc.original_name || doc.filename,
+      fileType: doc.file_type || '',
+      textContent: doc.text_content,
+    });
   };
 
   return (
