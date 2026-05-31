@@ -15,6 +15,9 @@ import {
   BookOpen,
   FileSpreadsheet,
   FileCode,
+  Eye,
+  Download,
+  X,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/api';
@@ -24,6 +27,13 @@ export default function KnowledgeBase() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [docViewer, setDocViewer] = useState<{
+    id: string;
+    url: string | null;
+    filename: string;
+    fileType: string;
+    textContent?: string;
+  } | null>(null);
 
   const { data: documents, isLoading } = useQuery({
     queryKey: ['knowledge-documents'],
@@ -112,6 +122,38 @@ export default function KnowledgeBase() {
     if (type?.includes('pdf')) return <FileText className="h-5 w-5 text-red-500" />;
     if (type?.includes('word') || type?.includes('docx')) return <FileSpreadsheet className="h-5 w-5 text-blue-500" />;
     return <FileCode className="h-5 w-5 text-gray-500" />;
+  };
+
+  const handleViewDocument = async (doc: any) => {
+    if (doc.file_url) {
+      setDocViewer({
+        id: doc.id,
+        url: doc.file_url,
+        filename: doc.original_name || doc.filename,
+        fileType: doc.file_type || '',
+        textContent: doc.text_content,
+      });
+      return;
+    }
+
+    try {
+      const res = await api.get(`/knowledge/documents/${doc.id}/view-url`);
+      setDocViewer({
+        id: doc.id,
+        url: res.data?.data?.url || null,
+        filename: doc.original_name || doc.filename,
+        fileType: doc.file_type || '',
+        textContent: doc.text_content,
+      });
+    } catch {
+      setDocViewer({
+        id: doc.id,
+        url: null,
+        filename: doc.original_name || doc.filename,
+        fileType: doc.file_type || '',
+        textContent: doc.text_content,
+      });
+    }
   };
 
   return (
@@ -274,6 +316,15 @@ export default function KnowledgeBase() {
                     <Badge variant="secondary" className="shrink-0">
                       Indexado
                     </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-muted-foreground hover:text-primary"
+                      onClick={() => handleViewDocument(doc)}
+                      title="Visualizar documento"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
