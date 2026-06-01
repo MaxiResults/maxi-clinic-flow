@@ -2161,6 +2161,14 @@ export default function Conversas() {
                               }}
                               title="Clique com o botão direito para copiar"
                             >
+                              <button
+                                type="button"
+                                onClick={() => setRespondendoMensagem(mensagem)}
+                                className={`absolute -top-7 ${isOwn ? 'right-0' : 'left-0'} opacity-0 group-hover:opacity-100 bg-white rounded-full shadow-md p-1.5 text-gray-400 hover:text-[#25D366] transition-all z-10`}
+                                title="Responder"
+                              >
+                                <Reply className="w-3.5 h-3.5" />
+                              </button>
                               <div
                                 className={`absolute bottom-0 ${isOwn ? '-right-2' : '-left-2'}`}
                                 style={{
@@ -2173,6 +2181,22 @@ export default function Conversas() {
                                     : 'transparent transparent transparent #ffffff',
                                 }}
                               />
+                              {mensagem.quoted_content && (
+                                <div className="border-l-4 border-[#25D366] bg-black/5 rounded px-2 py-1 mb-2 max-w-full">
+                                  <span className="text-[11px] font-semibold text-[#25D366] block truncate">
+                                    {mensagem.quoted_remetente === 'atendente' || mensagem.quoted_remetente === 'bot'
+                                      ? 'Você'
+                                      : selectedLead?.nome || 'Contato'}
+                                  </span>
+                                  <span className="text-[11px] text-gray-500 truncate block max-w-[220px]">
+                                    {mensagem.quoted_type === 'image' ? '📷 Imagem'
+                                     : mensagem.quoted_type === 'audio' ? '🎵 Áudio'
+                                     : mensagem.quoted_type === 'video' ? '🎬 Vídeo'
+                                     : mensagem.quoted_type === 'document' ? '📄 Documento'
+                                     : mensagem.quoted_content}
+                                  </span>
+                                </div>
+                              )}
                               {isAudio && mensagem.midia_url ? (
                                 <AudioPlayer
                                   audioUrl={mensagem.midia_url}
