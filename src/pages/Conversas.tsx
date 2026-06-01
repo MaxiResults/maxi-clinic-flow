@@ -215,7 +215,6 @@ interface Mensagem {
   quoted_content?: string;
   quoted_type?: string;
   quoted_remetente?: string;
-  conteudo?: string;
 }
 
 interface RespostaRapida {
