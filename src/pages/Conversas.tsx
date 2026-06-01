@@ -2351,6 +2351,33 @@ export default function Conversas() {
                       />
                     </div>
                   ) : (
+                    <>
+                    {respondendoMensagem && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-[#F0F2F5] border-t border-[#E9EDEF]">
+                        <div className="flex-1 border-l-4 border-[#25D366] bg-white rounded-lg px-3 py-1.5 min-w-0">
+                          <p className="text-xs font-semibold text-[#25D366] truncate">
+                            {respondendoMensagem.is_from_me
+                              ? 'Você'
+                              : selectedLead?.nome || 'Contato'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {respondendoMensagem.tipo_mensagem === 'image' ? '📷 Imagem'
+                             : respondendoMensagem.tipo_mensagem === 'audio' ? '🎵 Áudio'
+                             : respondendoMensagem.tipo_mensagem === 'video' ? '🎬 Vídeo'
+                             : respondendoMensagem.tipo_mensagem === 'document' ? '📄 Documento'
+                             : respondendoMensagem.mensagem}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRespondendoMensagem(null)}
+                          className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                          title="Cancelar resposta"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1 relative">
                       {/* Painel Sugestões IA */}
                       {showAISuggestions && (
