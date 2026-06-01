@@ -2121,6 +2121,7 @@ export default function Conversas() {
                   ) : (
                     <div className="space-y-3">
                         {mensagens.map((mensagem: any, idx) => {
+                          if (mensagem.tipo_mensagem === 'reaction') return null;
                           const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
                           const isAIMessage = mensagem.remetente === 'bot' || mensagem.sent_by === 'ai';
                           const isHumanMessage = isOwn && !isAIMessage;
@@ -2327,6 +2328,17 @@ export default function Conversas() {
                                   </span>
                                 )}
                               </span>
+                              {(() => {
+                                const emoji = mensagem.reaction_emoji || (mensagem.message_id ? reacoesMap[mensagem.message_id] : null);
+                                if (!emoji) return null;
+                                return (
+                                  <div className={`absolute -bottom-4 ${isOwn ? 'right-2' : 'left-2'}`}>
+                                    <span className="text-base bg-white rounded-full shadow-sm border border-gray-100 px-1 py-0.5 leading-none">
+                                      {emoji}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                               {isAIMessage && mensagem.id && (
                                 <div className="flex items-center gap-1 mt-0.5 justify-end">
                                   {feedbacksDados[mensagem.id] ? (
