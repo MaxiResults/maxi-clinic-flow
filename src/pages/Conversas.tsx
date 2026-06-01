@@ -277,6 +277,7 @@ export default function Conversas() {
   const [loadingJanela, setLoadingJanela] = useState(false);
   const [modoNota, setModoNota] = useState(false);
   const [enviandoNota, setEnviandoNota] = useState(false);
+  const [respondendoMensagem, setRespondendoMensagem] = useState<Mensagem | null>(null);
 
   // Respostas rápidas
   const [respostasRapidas, setRespostasRapidas] = useState<RespostaRapida[]>([]);
@@ -1033,6 +1034,7 @@ export default function Conversas() {
     setJanela(null);
     setSelectedLead(lead);
     setMensagens([]);
+    setRespondendoMensagem(null);
     fetchMensagens(lead.id);
     setUnreadCounts(prev => {
       const next = { ...prev, [lead.id]: 0 };
@@ -1089,7 +1091,14 @@ export default function Conversas() {
 
       const response = await api.post(
         `/conversas/leads/${selectedLead.id}/mensagens`,
-        { texto: textoEnvio }
+        {
+          texto: textoEnvio,
+          ...(respondendoMensagem && {
+            quotedMessageId: respondendoMensagem.message_id || null,
+            quotedContent: respondendoMensagem.mensagem || null,
+            quotedType: respondendoMensagem.tipo_mensagem || null,
+          }),
+        }
       );
 
       // Adiciona imediatamente ao estado local (fallback caso o socket não entregue)
@@ -1111,6 +1120,7 @@ export default function Conversas() {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
       }
+      setRespondendoMensagem(null);
 
       // Se o backend criou uma nova sessão (lead sem sessao_ativa),
       // atualiza o estado para que join_conversation passe a funcionar
