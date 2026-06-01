@@ -2119,7 +2119,7 @@ export default function Conversas() {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-3 pb-2">
                         {mensagens.map((mensagem: any, idx) => {
                           if (mensagem.tipo_mensagem === 'reaction') return null;
                           const isOwn = mensagem.is_from_me === true || mensagem.remetente === 'atendente' || mensagem.remetente === 'assistant';
