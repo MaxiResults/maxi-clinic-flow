@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2, Reply } from "lucide-react";
 import { renderWhatsAppMarkdown } from "@/lib/whatsappMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -208,6 +208,14 @@ interface Mensagem {
   midia_url?: string;
   midia_tipo?: string;
   duracao_audio_segundos?: number;
+  is_from_me?: boolean;
+  is_nota_interna?: boolean;
+  nota_autor_nome?: string;
+  quoted_message_id?: string;
+  quoted_content?: string;
+  quoted_type?: string;
+  quoted_remetente?: string;
+  conteudo?: string;
 }
 
 interface RespostaRapida {
