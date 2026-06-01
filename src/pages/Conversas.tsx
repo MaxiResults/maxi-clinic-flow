@@ -216,6 +216,7 @@ interface Mensagem {
   quoted_type?: string;
   quoted_remetente?: string;
   metadata?: { lat?: number; lng?: number; name?: string; address?: string } | null;
+  reaction_emoji?: string | null;
 }
 
 interface RespostaRapida {
@@ -300,6 +301,8 @@ export default function Conversas() {
   // Encaminhamento de mensagens
   const [modoSelecao, setModoSelecao] = useState(false);
   const [mensagensSelecionadas, setMensagensSelecionadas] = useState<string[]>([]);
+  // chave: message_id da mensagem que recebeu a reação, valor: emoji
+  const [reacoesMap, setReacoesMap] = useState<Record<string, string>>({});
   const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
 
   // Sugestões IA
@@ -793,10 +796,26 @@ export default function Conversas() {
     socket.on('nova_mensagem', handleNovaMensagem);
     socket.on('nova_conversa', handleNovaConversa);
     socket.on('conversa_atualizada', handleConversaAtualizada);
+
+    const handleMensagemReagida = (data: { messageId: string; emoji: string }) => {
+      if (!data?.messageId) return;
+      setReacoesMap(prev => ({
+        ...prev,
+        [data.messageId]: data.emoji,
+      }));
+      setMensagens(prev => prev.map(m =>
+        m.message_id === data.messageId
+          ? { ...m, reaction_emoji: data.emoji }
+          : m
+      ));
+    };
+    socket.on('mensagem_reagida', handleMensagemReagida);
+
     return () => {
       socket.off('nova_mensagem', handleNovaMensagem);
       socket.off('nova_conversa', handleNovaConversa);
       socket.off('conversa_atualizada', handleConversaAtualizada);
+      socket.off('mensagem_reagida', handleMensagemReagida);
     };
   }, [socket, playNotification]);
 
@@ -1007,7 +1026,15 @@ export default function Conversas() {
         params: { t: Date.now() }
       });
 
-      setMensagens(response.data || []);
+      const msgs = response.data || [];
+      setMensagens(msgs);
+      const mapaInicial: Record<string, string> = {};
+      msgs.forEach((m: any) => {
+        if (m.message_id && m.reaction_emoji) {
+          mapaInicial[m.message_id] = m.reaction_emoji;
+        }
+      });
+      setReacoesMap(mapaInicial);
     } catch (err: any) {
       if (!silent) setMensagens([]);
     } finally {
