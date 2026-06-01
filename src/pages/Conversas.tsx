@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2, Reply } from "lucide-react";
 import { renderWhatsAppMarkdown } from "@/lib/whatsappMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -208,6 +208,13 @@ interface Mensagem {
   midia_url?: string;
   midia_tipo?: string;
   duracao_audio_segundos?: number;
+  is_from_me?: boolean;
+  is_nota_interna?: boolean;
+  nota_autor_nome?: string;
+  quoted_message_id?: string;
+  quoted_content?: string;
+  quoted_type?: string;
+  quoted_remetente?: string;
 }
 
 interface RespostaRapida {
@@ -270,6 +277,7 @@ export default function Conversas() {
   const [loadingJanela, setLoadingJanela] = useState(false);
   const [modoNota, setModoNota] = useState(false);
   const [enviandoNota, setEnviandoNota] = useState(false);
+  const [respondendoMensagem, setRespondendoMensagem] = useState<Mensagem | null>(null);
 
   // Respostas rápidas
   const [respostasRapidas, setRespostasRapidas] = useState<RespostaRapida[]>([]);
@@ -1026,6 +1034,7 @@ export default function Conversas() {
     setJanela(null);
     setSelectedLead(lead);
     setMensagens([]);
+    setRespondendoMensagem(null);
     fetchMensagens(lead.id);
     setUnreadCounts(prev => {
       const next = { ...prev, [lead.id]: 0 };
@@ -1082,7 +1091,14 @@ export default function Conversas() {
 
       const response = await api.post(
         `/conversas/leads/${selectedLead.id}/mensagens`,
-        { texto: textoEnvio }
+        {
+          texto: textoEnvio,
+          ...(respondendoMensagem && {
+            quotedMessageId: respondendoMensagem.message_id || null,
+            quotedContent: respondendoMensagem.mensagem || null,
+            quotedType: respondendoMensagem.tipo_mensagem || null,
+          }),
+        }
       );
 
       // Adiciona imediatamente ao estado local (fallback caso o socket não entregue)
@@ -1104,6 +1120,7 @@ export default function Conversas() {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
       }
+      setRespondendoMensagem(null);
 
       // Se o backend criou uma nova sessão (lead sem sessao_ativa),
       // atualiza o estado para que join_conversation passe a funcionar
@@ -2144,6 +2161,14 @@ export default function Conversas() {
                               }}
                               title="Clique com o botão direito para copiar"
                             >
+                              <button
+                                type="button"
+                                onClick={() => setRespondendoMensagem(mensagem)}
+                                className={`absolute -top-7 ${isOwn ? 'right-0' : 'left-0'} opacity-0 group-hover:opacity-100 bg-white rounded-full shadow-md p-1.5 text-gray-400 hover:text-[#25D366] transition-all z-10`}
+                                title="Responder"
+                              >
+                                <Reply className="w-3.5 h-3.5" />
+                              </button>
                               <div
                                 className={`absolute bottom-0 ${isOwn ? '-right-2' : '-left-2'}`}
                                 style={{
@@ -2156,6 +2181,22 @@ export default function Conversas() {
                                     : 'transparent transparent transparent #ffffff',
                                 }}
                               />
+                              {mensagem.quoted_content && (
+                                <div className="border-l-4 border-[#25D366] bg-black/5 rounded px-2 py-1 mb-2 max-w-full">
+                                  <span className="text-[11px] font-semibold text-[#25D366] block truncate">
+                                    {mensagem.quoted_remetente === 'atendente' || mensagem.quoted_remetente === 'bot'
+                                      ? 'Você'
+                                      : selectedLead?.nome || 'Contato'}
+                                  </span>
+                                  <span className="text-[11px] text-gray-500 truncate block max-w-[220px]">
+                                    {mensagem.quoted_type === 'image' ? '📷 Imagem'
+                                     : mensagem.quoted_type === 'audio' ? '🎵 Áudio'
+                                     : mensagem.quoted_type === 'video' ? '🎬 Vídeo'
+                                     : mensagem.quoted_type === 'document' ? '📄 Documento'
+                                     : mensagem.quoted_content}
+                                  </span>
+                                </div>
+                              )}
                               {isAudio && mensagem.midia_url ? (
                                 <AudioPlayer
                                   audioUrl={mensagem.midia_url}
@@ -2310,6 +2351,33 @@ export default function Conversas() {
                       />
                     </div>
                   ) : (
+                    <>
+                    {respondendoMensagem && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-[#F0F2F5] border-t border-[#E9EDEF]">
+                        <div className="flex-1 border-l-4 border-[#25D366] bg-white rounded-lg px-3 py-1.5 min-w-0">
+                          <p className="text-xs font-semibold text-[#25D366] truncate">
+                            {respondendoMensagem.is_from_me
+                              ? 'Você'
+                              : selectedLead?.nome || 'Contato'}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {respondendoMensagem.tipo_mensagem === 'image' ? '📷 Imagem'
+                             : respondendoMensagem.tipo_mensagem === 'audio' ? '🎵 Áudio'
+                             : respondendoMensagem.tipo_mensagem === 'video' ? '🎬 Vídeo'
+                             : respondendoMensagem.tipo_mensagem === 'document' ? '📄 Documento'
+                             : respondendoMensagem.mensagem}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setRespondendoMensagem(null)}
+                          className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                          title="Cancelar resposta"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1 relative">
                       {/* Painel Sugestões IA */}
                       {showAISuggestions && (
@@ -2650,6 +2718,7 @@ export default function Conversas() {
                         )}
                       </div>
                     </form>
+                    </>
                   )}
                 </div>
               </>
