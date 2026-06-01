@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2, Reply } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2, Reply, MapPin } from "lucide-react";
 import { renderWhatsAppMarkdown } from "@/lib/whatsappMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -200,7 +200,7 @@ interface Mensagem {
   id: string;
   sessao_id: string;
   remetente: 'cliente' | 'atendente' | 'bot';
-  tipo_mensagem: 'text' | 'image' | 'audio' | 'video' | 'document';
+  tipo_mensagem: 'text' | 'image' | 'audio' | 'video' | 'document' | 'location';
   mensagem: string;
   message_id?: string;
   data_envio: string;
@@ -215,6 +215,7 @@ interface Mensagem {
   quoted_content?: string;
   quoted_type?: string;
   quoted_remetente?: string;
+  metadata?: { lat?: number; lng?: number; name?: string; address?: string } | null;
 }
 
 interface RespostaRapida {
@@ -2254,13 +2255,34 @@ export default function Conversas() {
                                      </p>
                                    )}
                                  </div>
-                               ) : (
-                                 <p className="text-sm whitespace-pre-wrap break-words">
-                                   {buscaAtiva && buscaMensagem
-                                     ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
-                                     : renderWhatsAppMarkdown(mensagem.mensagem || '')}
-                                 </p>
-                               )}
+                                ) : mensagem.tipo_mensagem === 'location' && mensagem.metadata?.lat != null ? (
+                                  <a
+                                    href={`https://maps.google.com/?q=${mensagem.metadata.lat},${mensagem.metadata.lng}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-3 p-2 bg-white/80 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors max-w-[260px]"
+                                  >
+                                    <div className="w-9 h-9 bg-red-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                      <MapPin className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {mensagem.metadata.name || 'Localização'}
+                                      </p>
+                                      <p className="text-xs text-gray-500 truncate">
+                                        {mensagem.metadata.address ||
+                                          `${mensagem.metadata.lat?.toFixed(4)}, ${mensagem.metadata.lng?.toFixed(4)}`}
+                                      </p>
+                                      <p className="text-xs text-blue-500 mt-0.5">Abrir no Maps →</p>
+                                    </div>
+                                  </a>
+                                ) : (
+                                  <p className="text-sm whitespace-pre-wrap break-words">
+                                    {buscaAtiva && buscaMensagem
+                                      ? highlightTexto(mensagem.mensagem || '', buscaMensagem)
+                                      : renderWhatsAppMarkdown(mensagem.mensagem || '')}
+                                  </p>
+                                )}
                               <span className="text-xs text-[#667781] mt-1 flex items-center gap-1 justify-end">
                                 {isAIMessage && (
                                   <span title="Mensagem enviada pela IA">🤖</span>
