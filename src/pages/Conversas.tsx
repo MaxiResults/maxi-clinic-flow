@@ -2240,6 +2240,20 @@ export default function Conversas() {
                                   </div>
                                   <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 </a>
+                               ) : mensagem.tipo_mensagem === 'video' && mensagem.midia_url ? (
+                                 <div>
+                                   <video
+                                     src={mensagem.midia_url}
+                                     controls
+                                     className="max-w-[300px] max-h-[250px] rounded-lg w-full"
+                                     preload="metadata"
+                                   />
+                                   {mensagem.mensagem && mensagem.mensagem !== '[Vídeo]' && (
+                                     <p className="text-sm whitespace-pre-wrap break-words mt-1">
+                                       {mensagem.mensagem}
+                                     </p>
+                                   )}
+                                 </div>
                                ) : (
                                  <p className="text-sm whitespace-pre-wrap break-words">
                                    {buscaAtiva && buscaMensagem
