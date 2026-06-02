@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { Plus, Eye, Users, AlertCircle, Pencil } from "lucide-react";
+import { Plus, Eye, Users, AlertCircle, Pencil, Tag as TagIcon } from "lucide-react";
 import { useLeadsData } from "@/hooks/useLeadsData";
 import { useLeadFilters } from "@/hooks/useLeadFilters";
 import { useLeadStats } from "@/hooks/useLeadStats";
@@ -15,6 +15,7 @@ import { LeadViewModal } from "@/components/leads/LeadViewModal";
 import { LeadViewToggle } from "@/components/leads/LeadViewToggle";
 import { FormattedDate } from "@/components/ui/FormattedDate";
 import { TagBadge } from "@/components/tags/TagBadge";
+import { LeadTagManager } from "@/components/tags/LeadTagManager";
 import type { Lead } from "@/hooks/useLeadsData";
 import { ListSkeleton } from "@/components/skeletons/ListSkeleton";
 
@@ -30,6 +31,8 @@ export default function Leads() {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'table'>('grid');
   const [viewingLead, setViewingLead] = useState<Lead | null>(null);
+  const [tagManagerOpen, setTagManagerOpen] = useState(false);
+  const [leadIdParaTags, setLeadIdParaTags] = useState<string | null>(null);
 
   const handleCreate = () => {
     setDialogMode('create');
@@ -149,13 +152,26 @@ export default function Leads() {
             {filters.filteredLeads.map(lead => (
               <div key={lead.id}>
                 <LeadCard lead={lead} onView={handleView} onEdit={handleEdit} onDelete={handleDeleteClick} />
-                {lead.tags && lead.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {lead.tags.map(tag => (
-                      <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
-                    ))}
-                  </div>
-                )}
+                <div className="flex items-center justify-between mt-2 gap-2">
+                  {lead.tags && lead.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 flex-1">
+                      {lead.tags.map(tag => (
+                        <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLeadIdParaTags(lead.id);
+                      setTagManagerOpen(true);
+                    }}
+                    className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
+                    title="Gerenciar tags"
+                  >
+                    <TagIcon className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -192,6 +208,17 @@ export default function Leads() {
                   <div className="flex gap-2 ml-4">
                     <Button variant="ghost" size="icon" onClick={() => handleView(lead.id)} title="Exibir" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLeadIdParaTags(lead.id);
+                        setTagManagerOpen(true);
+                      }}
+                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                      title="Gerenciar tags"
+                    >
+                      <TagIcon className="h-4 w-4" />
+                    </button>
                     <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(lead.id)} className="h-8 w-8 text-destructive"><Plus className="h-4 w-4 rotate-45" /></Button>
                   </div>
                 </div>
@@ -244,6 +271,16 @@ export default function Leads() {
                           <div className="flex justify-end gap-2">
                             <Button variant="ghost" size="icon" onClick={() => handleView(lead.id)} title="Exibir" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+                            <button
+                              onClick={() => {
+                                setLeadIdParaTags(lead.id);
+                                setTagManagerOpen(true);
+                              }}
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                              title="Gerenciar tags"
+                            >
+                              <TagIcon className="h-4 w-4" />
+                            </button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(lead.id)} title="Excluir" className="h-8 w-8 text-destructive"><Plus className="h-4 w-4 rotate-45" /></Button>
                           </div>
                         </td>
@@ -286,6 +323,21 @@ export default function Leads() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {leadIdParaTags && (
+        <LeadTagManager
+          open={tagManagerOpen}
+          onOpenChange={(open) => {
+            setTagManagerOpen(open);
+            if (!open) {
+              setLeadIdParaTags(null);
+              refreshLeads();
+            }
+          }}
+          leadId={leadIdParaTags}
+          onTagsChange={() => refreshLeads()}
+        />
+      )}
     </DashboardLayout>
   );
 }
