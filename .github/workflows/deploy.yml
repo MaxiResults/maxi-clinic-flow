@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout código
         uses: actions/checkout@v4
@@ -29,22 +29,24 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
-      - name: 🚀 Deploy via SSH
+      - name: 📤 Enviar build para VPS via rsync
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr --delete
+          path: dist/
+          remote_path: /root/maxi-system/frontend/dist/
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 🔄 Recarregar Nginx
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /root/maxi-system/frontend
-            git fetch origin main
-            git reset --hard origin/main
-            npm install
-            VITE_API_URL=${{ secrets.VITE_API_URL }} \
-            VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }} \
-            VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }} \
-            npm run build
-            docker-compose -f /root/maxi-system/docker-compose.yml restart nginx
+            docker exec maxi-nginx nginx -s reload
             echo "✅ Deploy concluído em $(date)"
 
       - name: ✅ Deploy bem-sucedido!
