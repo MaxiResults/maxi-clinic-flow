@@ -2223,6 +2223,43 @@ export default function Conversas() {
                               >
                                 <Reply className="w-3.5 h-3.5" />
                               </button>
+                              {mensagem.message_id && (
+                                <div className={`absolute -top-7 ${isOwn ? 'right-8' : 'left-8'} z-20`}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setReacaoPickerMsgId(
+                                      reacaoPickerMsgId === mensagem.message_id ? null : mensagem.message_id
+                                    )}
+                                    className="opacity-0 group-hover:opacity-100 bg-white rounded-full shadow-md p-1.5 text-gray-400 hover:text-[#25D366] transition-all"
+                                    title="Reagir"
+                                  >
+                                    <span className="text-sm">😊</span>
+                                  </button>
+                                  {reacaoPickerMsgId === mensagem.message_id && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-10"
+                                        onClick={() => setReacaoPickerMsgId(null)}
+                                      />
+                                      <div className={`absolute ${isOwn ? 'right-0' : 'left-0'} -top-12 z-20 bg-white rounded-full shadow-xl border border-gray-100 px-2 py-1.5 flex items-center gap-1`}>
+                                        {['❤️', '👍', '😂', '😮', '😢', '🙏'].map(emoji => (
+                                          <button
+                                            key={emoji}
+                                            type="button"
+                                            onClick={() => {
+                                              handleEnviarReacao(mensagem, emoji);
+                                              setReacaoPickerMsgId(null);
+                                            }}
+                                            className="text-xl hover:scale-125 transition-transform"
+                                          >
+                                            {emoji}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                               <div
                                 className={`absolute bottom-0 ${isOwn ? '-right-2' : '-left-2'}`}
                                 style={{
