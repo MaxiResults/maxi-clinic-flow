@@ -1510,6 +1510,29 @@ export default function Conversas() {
     }
   };
 
+  const handleEnviarReacao = async (mensagem: Mensagem, emoji: string) => {
+    if (!mensagem.message_id || !selectedLead?.sessao_ativa?.id) return;
+    try {
+      await api.post('/evolution/send-reaction', {
+        conversaId: selectedLead.sessao_ativa.id,
+        messageId: mensagem.message_id,
+        emoji,
+      });
+      setReacoesMap(prev => ({
+        ...prev,
+        [mensagem.message_id!]: emoji,
+      }));
+      setMensagens(prev => prev.map(m =>
+        m.message_id === mensagem.message_id
+          ? { ...m, reaction_emoji: emoji }
+          : m
+      ));
+      setReacaoVersion(v => v + 1);
+    } catch {
+      sonnerToast.error('Erro ao enviar reação');
+    }
+  };
+
   // ============================================================
   // BUSCA NA CONVERSA (hooks devem ficar antes de returns condicionais)
   // ============================================================
