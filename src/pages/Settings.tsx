@@ -63,6 +63,19 @@ const configSections = [
   },
 ];
 
+const sistemaSections = [
+  {
+    id: 'usuarios',
+    title: 'Usuários',
+    description: 'Gerencie usuários e permissões de acesso ao sistema',
+    icon: Users,
+    route: '/configuracoes/usuarios',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-600/10',
+    count: null,
+  },
+];
+
 const comunicacaoSections = [
   {
     id: 'respostas-rapidas',
@@ -229,7 +242,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Seção: Sistema (futuro) */}
+        {/* Seção: Sistema */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Users className="h-5 w-5 text-muted-foreground" />
@@ -237,12 +250,7 @@ export default function Settings() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="opacity-50">
-              <CardHeader>
-                <CardTitle className="text-lg">👥 Usuários</CardTitle>
-                <CardDescription>Em breve</CardDescription>
-              </CardHeader>
-            </Card>
+            {sistemaSections.map(renderCard)}
 
             <Card className="opacity-50">
               <CardHeader>
