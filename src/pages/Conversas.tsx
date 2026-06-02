@@ -231,7 +231,7 @@ export default function Conversas() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const { setTotalUnread } = useUnread();
-  const { socket, lastNovaConversa, lastConversaAtualizada } = useSocket();
+  const { socket, lastNovaConversa, lastConversaAtualizada, lastMensagemReagida } = useSocket();
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const { totalNaoLidas: statsNaoLidas } = useConversasStats();
 
@@ -327,7 +327,6 @@ export default function Conversas() {
   // Refs to avoid re-running effects on selectedLead changes
   const selectedLeadRef = useRef<Lead | null>(null);
   const processedEvents = useRef<Set<number>>(new Set());
-  const handleMensagemReagidaRef = useRef<((data: any) => void) | null>(null);
 
   useEffect(() => {
     selectedLeadRef.current = selectedLead;
@@ -673,6 +672,20 @@ export default function Conversas() {
     }
   }, [lastConversaAtualizada]);
 
+  // Reage à mensagem reagida (listener global no SocketContext)
+  useEffect(() => {
+    if (!lastMensagemReagida?.messageId) return;
+    setReacoesMap(prev => ({
+      ...prev,
+      [lastMensagemReagida.messageId]: lastMensagemReagida.emoji,
+    }));
+    setMensagens(prev => prev.map(m =>
+      m.message_id === lastMensagemReagida.messageId
+        ? { ...m, reaction_emoji: lastMensagemReagida.emoji }
+        : m
+    ));
+  }, [lastMensagemReagida]);
+
   // Join/Leave conversation rooms
   useEffect(() => {
     const conversaId = selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id;
@@ -798,28 +811,10 @@ export default function Conversas() {
     socket.on('nova_conversa', handleNovaConversa);
     socket.on('conversa_atualizada', handleConversaAtualizada);
 
-    handleMensagemReagidaRef.current = (data: { messageId: string; emoji: string }) => {
-      if (!data?.messageId) return;
-      setReacoesMap(prev => ({
-        ...prev,
-        [data.messageId]: data.emoji,
-      }));
-      setMensagens(prev => prev.map(m =>
-        m.message_id === data.messageId
-          ? { ...m, reaction_emoji: data.emoji }
-          : m
-      ));
-    };
-    const reacaoHandler = (data: any) => {
-      handleMensagemReagidaRef.current?.(data);
-    };
-    socket.on('mensagem_reagida', reacaoHandler);
-
     return () => {
       socket.off('nova_mensagem', handleNovaMensagem);
       socket.off('nova_conversa', handleNovaConversa);
       socket.off('conversa_atualizada', handleConversaAtualizada);
-      socket.off('mensagem_reagida', reacaoHandler);
     };
   }, [socket, playNotification]);
 
