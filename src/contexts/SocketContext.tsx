@@ -29,12 +29,14 @@ interface SocketContextType {
   socket: Socket | null;
   lastNovaConversa: NovaConversaEvent | null;
   lastConversaAtualizada: ConversaAtualizadaEvent | null;
+  lastMensagemReagida: { messageId: string; emoji: string; sessaoId: string } | null;
 }
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   lastNovaConversa: null,
   lastConversaAtualizada: null,
+  lastMensagemReagida: null,
 });
 
 export const SocketProvider = ({
@@ -49,6 +51,11 @@ export const SocketProvider = ({
     useState<NovaConversaEvent | null>(null);
   const [lastConversaAtualizada, setLastConversaAtualizada] =
     useState<ConversaAtualizadaEvent | null>(null);
+  const [lastMensagemReagida, setLastMensagemReagida] = useState<{
+    messageId: string;
+    emoji: string;
+    sessaoId: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!user?.cliente_id || !user?.empresa_id) return;
@@ -97,6 +104,17 @@ export const SocketProvider = ({
       }
     });
 
+    socketConnection.on('mensagem_reagida', (data: any) => {
+      console.log('[Socket.io Global] mensagem_reagida:', data);
+      if (data?.messageId && data?.emoji) {
+        setLastMensagemReagida({
+          messageId: data.messageId,
+          emoji: data.emoji,
+          sessaoId: data.sessaoId || '',
+        });
+      }
+    });
+
     setSocket(socketConnection);
 
     return () => {
@@ -108,7 +126,7 @@ export const SocketProvider = ({
 
   return (
     <SocketContext.Provider
-      value={{ socket, lastNovaConversa, lastConversaAtualizada }}
+      value={{ socket, lastNovaConversa, lastConversaAtualizada, lastMensagemReagida }}
     >
       {children}
     </SocketContext.Provider>
