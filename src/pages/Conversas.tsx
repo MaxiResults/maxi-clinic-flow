@@ -672,6 +672,20 @@ export default function Conversas() {
     }
   }, [lastConversaAtualizada]);
 
+  // Reage à mensagem reagida (listener global no SocketContext)
+  useEffect(() => {
+    if (!lastMensagemReagida?.messageId) return;
+    setReacoesMap(prev => ({
+      ...prev,
+      [lastMensagemReagida.messageId]: lastMensagemReagida.emoji,
+    }));
+    setMensagens(prev => prev.map(m =>
+      m.message_id === lastMensagemReagida.messageId
+        ? { ...m, reaction_emoji: lastMensagemReagida.emoji }
+        : m
+    ));
+  }, [lastMensagemReagida]);
+
   // Join/Leave conversation rooms
   useEffect(() => {
     const conversaId = selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id;
