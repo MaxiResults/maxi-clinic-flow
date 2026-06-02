@@ -1511,10 +1511,11 @@ export default function Conversas() {
   };
 
   const handleEnviarReacao = async (mensagem: Mensagem, emoji: string) => {
-    if (!mensagem.message_id || !selectedLead?.sessao_ativa?.id) return;
+    const sessaoId = selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id;
+    if (!mensagem.message_id || !sessaoId) return;
     try {
       await api.post('/evolution/send-reaction', {
-        conversaId: selectedLead.sessao_ativa.id,
+        conversaId: sessaoId,
         messageId: mensagem.message_id,
         emoji,
       });
