@@ -29,7 +29,17 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
-      - name: 📤 Enviar build para VPS via rsync
+      - name: 📤 Sincronizar código-fonte para VPS
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr --delete --exclude='.git' --exclude='node_modules' --exclude='dist'
+          path: ./
+          remote_path: /root/maxi-system/frontend/
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 📤 Enviar dist para VPS
         uses: burnett01/rsync-deployments@7.0.1
         with:
           switches: -avzr --delete
