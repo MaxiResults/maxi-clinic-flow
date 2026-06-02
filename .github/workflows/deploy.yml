@@ -1,3 +1,4 @@
+cat > /root/maxi-system/frontend/.github/workflows/deploy.yml << 'EOF'
 name: Deploy Frontend para VPS
 
 on:
@@ -62,3 +63,7 @@ jobs:
       - name: ✅ Deploy bem-sucedido!
         if: success()
         run: echo "🎉 Frontend deployado com sucesso!"
+EOF
+
+echo "✅ deploy.yml atualizado"
+cat /root/maxi-system/frontend/.github/workflows/deploy.yml | head -10
