@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,14 @@ import {
   KeyRound,
   MoreVertical,
   Copy,
+  Users,
+  Shield,
+  UserCheck,
+  UserX,
+  Search,
+  LayoutGrid,
+  List,
+  Table,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,24 +69,42 @@ interface Usuario {
   ultimo_acesso?: string | null;
 }
 
+type ViewMode = 'grid' | 'list' | 'table';
+
+const ROLE_CONFIG = {
+  admin: { label: 'Admin', emoji: '👑', className: 'bg-purple-100 text-purple-800 border-purple-200' },
+  gestor: { label: 'Gestor', emoji: '🎯', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+  atendente: { label: 'Atendente', emoji: '👤', className: 'bg-gray-100 text-gray-800 border-gray-200' },
+};
+
 export default function Usuarios() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
+  // Data
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters & View
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState('todos');
+  const [filterStatus, setFilterStatus] = useState('todos');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+
+  // Modal criar/editar
   const [modalOpen, setModalOpen] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [formData, setFormData] = useState({ nome: '', email: '', senha: '', role: 'atendente' as const });
+
+  // Delete
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Reset senha
   const [resetSenhaOpen, setResetSenhaOpen] = useState(false);
   const [resetSenhaId, setResetSenhaId] = useState<string | null>(null);
   const [novaSenhaTemp, setNovaSenhaTemp] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    senha: '',
-    role: 'atendente' as 'admin' | 'gestor' | 'atendente',
-  });
 
   useEffect(() => {
     fetchUsuarios();
@@ -89,56 +115,60 @@ export default function Usuarios() {
       setLoading(true);
       const response = await api.get('/usuarios');
       setUsuarios(response.data || []);
-    } catch (error) {
-      toast({
-        title: 'Erro ao carregar',
-        description: 'Não foi possível carregar os usuários',
-        variant: 'destructive',
-      });
+    } catch {
+      toast({ title: 'Erro ao carregar usuários', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const generateRandomPassword = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
+  // Stats
+  const stats = useMemo(() => ({
+    total: usuarios.length,
+    admins: usuarios.filter(u => u.role === 'admin').length,
+    gestores: usuarios.filter(u => u.role === 'gestor').length,
+    atendentes: usuarios.filter(u => u.role === 'atendente').length,
+    ativos: usuarios.filter(u => u.ativo).length,
+  }), [usuarios]);
+
+  // Filtered list
+  const usuariosFiltrados = useMemo(() => {
+    return usuarios.filter(u => {
+      const matchSearch = !searchTerm ||
+        u.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchRole = filterRole === 'todos' || u.role === filterRole;
+      const matchStatus = filterStatus === 'todos' ||
+        (filterStatus === 'ativo' && u.ativo) ||
+        (filterStatus === 'inativo' && !u.ativo);
+      return matchSearch && matchRole && matchStatus;
+    });
+  }, [usuarios, searchTerm, filterRole, filterStatus]);
+
+  const handleAbrirCriar = () => {
+    setUsuarioEditando(null);
+    setFormData({ nome: '', email: '', senha: '', role: 'atendente' });
+    setModalOpen(true);
+  };
+
+  const handleAbrirEditar = (u: Usuario) => {
+    setUsuarioEditando(u);
+    setFormData({ nome: u.nome, email: u.email, senha: '', role: u.role });
+    setModalOpen(true);
   };
 
   const handleSalvar = async () => {
-    if (!formData.nome || !formData.email || !formData.role) {
-      toast({
-        title: 'Campos obrigatórios',
-        description: 'Preencha nome, e-mail e perfil de acesso',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!formData.nome.trim() || !formData.role) return;
+    if (!usuarioEditando && (!formData.email.trim() || !formData.senha.trim())) return;
 
-    if (!usuarioEditando && !formData.senha) {
-      toast({
-        title: 'Senha obrigatória',
-        description: 'Digite uma senha para o novo usuário',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+    setSalvando(true);
     try {
-      setSalvando(true);
       if (usuarioEditando) {
         await api.patch(`/usuarios/${usuarioEditando.id}`, {
           nome: formData.nome,
           role: formData.role,
         });
-        toast({
-          title: 'Sucesso',
-          description: 'Usuário atualizado com sucesso',
-        });
+        toast({ title: 'Usuário atualizado com sucesso' });
       } else {
         await api.post('/usuarios', {
           nome: formData.nome,
@@ -146,21 +176,14 @@ export default function Usuarios() {
           senha: formData.senha,
           role: formData.role,
         });
-        toast({
-          title: 'Sucesso',
-          description: 'Usuário criado com sucesso',
-        });
+        toast({ title: 'Usuário criado com sucesso' });
       }
       setModalOpen(false);
-      setUsuarioEditando(null);
-      setFormData({ nome: '', email: '', senha: '', role: 'atendente' });
       fetchUsuarios();
-    } catch (error: any) {
+    } catch (err: any) {
       toast({
-        title: 'Erro',
-        description:
-          error.response?.data?.message ||
-          'Erro ao salvar usuário',
+        title: 'Erro ao salvar',
+        description: err?.response?.data?.error || 'Tente novamente',
         variant: 'destructive',
       });
     } finally {
@@ -171,88 +194,98 @@ export default function Usuarios() {
   const handleToggleStatus = async (id: string, ativo: boolean) => {
     try {
       await api.patch(`/usuarios/${id}/status`, { ativo });
-      setUsuarios(usuarios.map(u => (u.id === id ? { ...u, ativo } : u)));
-      toast({
-        title: 'Sucesso',
-        description: ativo ? 'Usuário ativado' : 'Usuário desativado',
-      });
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao atualizar status do usuário',
-        variant: 'destructive',
-      });
+      setUsuarios(prev => prev.map(u => u.id === id ? { ...u, ativo } : u));
+      toast({ title: ativo ? 'Usuário ativado' : 'Usuário desativado' });
+    } catch {
+      toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
     }
   };
 
   const handleResetSenha = async () => {
     if (!resetSenhaId) return;
-
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    const novaSenha = Array.from({ length: 12 }, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join('');
     try {
-      const novaSenha = generateRandomPassword();
-      await api.post(`/usuarios/${resetSenhaId}/resetar-senha`, {
-        nova_senha: novaSenha,
-      });
+      await api.post(`/usuarios/${resetSenhaId}/resetar-senha`, { nova_senha: novaSenha });
       setNovaSenhaTemp(novaSenha);
+      toast({ title: 'Senha resetada com sucesso' });
+    } catch {
+      toast({ title: 'Erro ao resetar senha', variant: 'destructive' });
+    } finally {
       setResetSenhaOpen(false);
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao resetar senha',
-        variant: 'destructive',
-      });
+      setResetSenhaId(null);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedId) return;
-
     try {
       await api.delete(`/usuarios/${selectedId}`);
-      setUsuarios(usuarios.filter(u => u.id !== selectedId));
+      toast({ title: 'Usuário excluído' });
+      fetchUsuarios();
+    } catch {
+      toast({ title: 'Erro ao excluir', variant: 'destructive' });
+    } finally {
       setDeleteOpen(false);
       setSelectedId(null);
-      toast({
-        title: 'Sucesso',
-        description: 'Usuário excluído com sucesso',
-      });
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Erro ao excluir usuário',
-        variant: 'destructive',
-      });
     }
   };
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return '👑 Admin';
-      case 'gestor':
-        return '🎯 Gestor';
-      case 'atendente':
-        return '👤 Atendente';
-      default:
-        return role;
-    }
+  const renderAvatar = (nome: string, size = 'md') => {
+    const sizes = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-sm' };
+    return (
+      <div className={`${sizes[size as keyof typeof sizes]} rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0`}>
+        <span className="font-semibold text-primary">
+          {nome.charAt(0).toUpperCase()}
+        </span>
+      </div>
+    );
   };
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'default';
-      case 'gestor':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
+  const renderRoleBadge = (role: string) => {
+    const config = ROLE_CONFIG[role as keyof typeof ROLE_CONFIG] || ROLE_CONFIG.atendente;
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${config.className}`}>
+        {config.emoji} {config.label}
+      </span>
+    );
+  };
+
+  const renderMenu = (u: Usuario) => {
+    if (!isAdmin) return null;
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => handleAbrirEditar(u)}>
+            <Edit className="h-4 w-4 mr-2" /> Editar
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => { setResetSenhaId(u.id); setResetSenhaOpen(true); }}>
+            <KeyRound className="h-4 w-4 mr-2" /> Resetar Senha
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            disabled={u.id === user?.id}
+            onClick={() => { setSelectedId(u.id); setDeleteOpen(true); }}
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> Excluir
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   };
 
   if (loading) {
     return (
       <DashboardLayout title="Usuários">
-        <div className="flex items-center justify-center h-96">
+        <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </DashboardLayout>
@@ -261,137 +294,270 @@ export default function Usuarios() {
 
   return (
     <DashboardLayout title="Usuários">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">👥 Usuários</h1>
-            <p className="text-muted-foreground mt-2">
-              Gerencie os usuários com acesso ao sistema
+      <div className="p-8 space-y-6 animate-fade-in">
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total de Usuários</p>
+                  <p className="text-3xl font-bold">{stats.total}</p>
+                </div>
+                <Users className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Admins</p>
+                  <p className="text-3xl font-bold text-purple-600">{stats.admins}</p>
+                </div>
+                <Shield className="h-8 w-8 text-purple-200" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Gestores</p>
+                  <p className="text-3xl font-bold text-blue-600">{stats.gestores}</p>
+                </div>
+                <UserCheck className="h-8 w-8 text-blue-200" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Atendentes</p>
+                  <p className="text-3xl font-bold text-gray-600">{stats.atendentes}</p>
+                </div>
+                <UserX className="h-8 w-8 text-gray-200" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filtros + Toggle + Botão */}
+        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full">
+            {/* Busca */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou email..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {/* Filtro Role */}
+            <Select value={filterRole} onValueChange={setFilterRole}>
+              <SelectTrigger className="w-full sm:w-44">
+                <SelectValue placeholder="Todos os perfis" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os perfis</SelectItem>
+                <SelectItem value="admin">👑 Admin</SelectItem>
+                <SelectItem value="gestor">🎯 Gestor</SelectItem>
+                <SelectItem value="atendente">👤 Atendente</SelectItem>
+              </SelectContent>
+            </Select>
+            {/* Filtro Status */}
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os status</SelectItem>
+                <SelectItem value="ativo">✅ Ativos</SelectItem>
+                <SelectItem value="inativo">❌ Inativos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-2 flex-shrink-0">
+            {/* Toggle visualização */}
+            <div className="flex gap-1 bg-muted p-1 rounded-md">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-8 w-8 p-0"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-8 w-8 p-0"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="h-8 w-8 p-0"
+              >
+                <Table className="h-4 w-4" />
+              </Button>
+            </div>
+            {isAdmin && (
+              <Button onClick={handleAbrirCriar}>
+                <Plus className="h-4 w-4 mr-2" /> Novo Usuário
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Empty state */}
+        {usuariosFiltrados.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Users className="h-12 w-12 text-muted-foreground/30 mb-4" />
+            <h3 className="text-lg font-semibold text-muted-foreground">
+              {usuarios.length === 0 ? 'Nenhum usuário encontrado' : 'Nenhum resultado para os filtros'}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {usuarios.length === 0 ? 'Crie o primeiro usuário clicando em "Novo Usuário"' : 'Tente ajustar os filtros de busca'}
             </p>
           </div>
-          {user?.role === 'admin' && (
-            <Button
-              onClick={() => {
-                setUsuarioEditando(null);
-                setFormData({
-                  nome: '',
-                  email: '',
-                  senha: '',
-                  role: 'atendente',
-                });
-                setModalOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" /> Novo Usuário
-            </Button>
-          )}
-        </div>
+        )}
 
-        {/* Grid de usuários */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {usuarios.map(usuario => (
-            <Card key={usuario.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-semibold text-primary">
-                        {usuario.nome.charAt(0).toUpperCase()}
-                      </span>
+        {/* GRID VIEW */}
+        {viewMode === 'grid' && usuariosFiltrados.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {usuariosFiltrados.map(u => (
+              <Card key={u.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      {renderAvatar(u.nome)}
+                      <div>
+                        <CardTitle className="text-base leading-tight">{u.nome}</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-0.5">{u.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-base">
-                        {usuario.nome}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {usuario.email}
-                      </p>
-                    </div>
+                    {renderMenu(u)}
                   </div>
-                  {user?.role === 'admin' && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setUsuarioEditando(usuario);
-                            setFormData({
-                              nome: usuario.nome,
-                              email: usuario.email,
-                              senha: '',
-                              role: usuario.role,
-                            });
-                            setModalOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4 mr-2" /> Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setResetSenhaId(usuario.id);
-                            setResetSenhaOpen(true);
-                          }}
-                        >
-                          <KeyRound className="h-4 w-4 mr-2" /> Resetar
-                          Senha
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => {
-                            setSelectedId(usuario.id);
-                            setDeleteOpen(true);
-                          }}
-                          disabled={usuario.id === user?.id}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge variant={getRoleBadgeVariant(usuario.role)}>
-                      {getRoleLabel(usuario.role)}
-                    </Badge>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between">
+                    {renderRoleBadge(u.role)}
+                    {isAdmin ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {u.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                        <Switch
+                          checked={u.ativo}
+                          disabled={u.id === user?.id}
+                          onCheckedChange={val => handleToggleStatus(u.id, val)}
+                        />
+                      </div>
+                    ) : (
+                      <Badge variant={u.ativo ? 'default' : 'secondary'}>
+                        {u.ativo ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    )}
                   </div>
-                  {user?.role === 'admin' && (
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs text-muted-foreground">
-                        {usuario.ativo ? 'Ativo' : 'Inativo'}
-                      </Label>
-                      <Switch
-                        checked={usuario.ativo}
-                        disabled={usuario.id === user?.id}
-                        onCheckedChange={val =>
-                          handleToggleStatus(usuario.id, val)
-                        }
-                      />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
-        {usuarios.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              Nenhum usuário criado ainda
-            </p>
+        {/* LIST VIEW */}
+        {viewMode === 'list' && usuariosFiltrados.length > 0 && (
+          <div className="space-y-2">
+            {usuariosFiltrados.map(u => (
+              <div
+                key={u.id}
+                className="flex items-center justify-between p-4 bg-card border rounded-lg hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  {renderAvatar(u.nome, 'sm')}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{u.nome}</p>
+                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  </div>
+                  <div className="hidden sm:block">{renderRoleBadge(u.role)}</div>
+                  <Badge variant={u.ativo ? 'default' : 'secondary'} className="hidden md:flex">
+                    {u.ativo ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                  {isAdmin && (
+                    <Switch
+                      checked={u.ativo}
+                      disabled={u.id === user?.id}
+                      onCheckedChange={val => handleToggleStatus(u.id, val)}
+                    />
+                  )}
+                  {renderMenu(u)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* TABLE VIEW */}
+        {viewMode === 'table' && usuariosFiltrados.length > 0 && (
+          <div className="bg-card rounded-lg border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Usuário</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Perfil</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Criado em</th>
+                    {isAdmin && <th className="px-4 py-3 text-right text-sm font-semibold">Ações</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {usuariosFiltrados.map(u => (
+                    <tr key={u.id} className="hover:bg-muted/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {renderAvatar(u.nome, 'sm')}
+                          <span className="text-sm font-medium">{u.nome}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{u.email}</td>
+                      <td className="px-4 py-3">{renderRoleBadge(u.role)}</td>
+                      <td className="px-4 py-3">
+                        {isAdmin ? (
+                          <Switch
+                            checked={u.ativo}
+                            disabled={u.id === user?.id}
+                            onCheckedChange={val => handleToggleStatus(u.id, val)}
+                          />
+                        ) : (
+                          <Badge variant={u.ativo ? 'default' : 'secondary'}>
+                            {u.ativo ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {new Date(u.created_at).toLocaleDateString('pt-BR')}
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3 text-right">{renderMenu(u)}</td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -400,105 +566,81 @@ export default function Usuarios() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {usuarioEditando ? 'Editar Usuário' : 'Novo Usuário'}
-            </DialogTitle>
+            <DialogTitle>{usuarioEditando ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
             <DialogDescription>
               {usuarioEditando
-                ? 'Atualize os dados do usuário'
+                ? 'Atualize nome e perfil do usuário'
                 : 'Preencha os dados para criar um novo acesso'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
+            <div className="space-y-1.5">
               <Label>Nome *</Label>
               <Input
                 value={formData.nome}
-                onChange={e =>
-                  setFormData(p => ({ ...p, nome: e.target.value }))
-                }
+                onChange={e => setFormData(p => ({ ...p, nome: e.target.value }))}
                 placeholder="Nome completo"
               />
             </div>
             {!usuarioEditando && (
-              <div>
-                <Label>E-mail *</Label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={e =>
-                    setFormData(p => ({ ...p, email: e.target.value }))
-                  }
-                  placeholder="email@exemplo.com"
-                />
-              </div>
+              <>
+                <div className="space-y-1.5">
+                  <Label>E-mail *</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Senha *</Label>
+                  <Input
+                    type="password"
+                    value={formData.senha}
+                    onChange={e => setFormData(p => ({ ...p, senha: e.target.value }))}
+                    placeholder="Mínimo 8 caracteres"
+                  />
+                </div>
+              </>
             )}
-            {!usuarioEditando && (
-              <div>
-                <Label>Senha *</Label>
-                <Input
-                  type="password"
-                  value={formData.senha}
-                  onChange={e =>
-                    setFormData(p => ({ ...p, senha: e.target.value }))
-                  }
-                  placeholder="Mínimo 8 caracteres"
-                />
-              </div>
-            )}
-            <div>
+            <div className="space-y-1.5">
               <Label>Perfil de acesso *</Label>
               <Select
                 value={formData.role}
-                onValueChange={val =>
-                  setFormData(p => ({
-                    ...p,
-                    role: val as 'admin' | 'gestor' | 'atendente',
-                  }))
-                }
+                onValueChange={val => setFormData(p => ({ ...p, role: val as 'admin' | 'gestor' | 'atendente' }))}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">
-                    👑 Admin — acesso total
-                  </SelectItem>
-                  <SelectItem value="gestor">
-                    🎯 Gestor — visualiza tudo, edita parcial
-                  </SelectItem>
-                  <SelectItem value="atendente">
-                    👤 Atendente — atendimento e conversas
-                  </SelectItem>
+                  <SelectItem value="admin">👑 Admin — acesso total</SelectItem>
+                  <SelectItem value="gestor">🎯 Gestor — visualiza tudo, edita parcial</SelectItem>
+                  <SelectItem value="atendente">👤 Atendente — atendimento e conversas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setModalOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleSalvar} disabled={salvando}>
-              {salvando && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              )}
-              {usuarioEditando ? 'Salvar' : 'Criar Usuário'}
+              {salvando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {usuarioEditando ? 'Salvar Alterações' : 'Criar Usuário'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal Resetar Senha */}
+      {/* AlertDialog Resetar Senha */}
       <AlertDialog open={resetSenhaOpen} onOpenChange={setResetSenhaOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Resetar Senha</AlertDialogTitle>
             <AlertDialogDescription>
-              Uma nova senha será gerada automaticamente. Anote-a e
-              compartilhe com o usuário.
+              Uma nova senha segura será gerada automaticamente.
+              Anote e compartilhe com o usuário — ela não será exibida novamente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -510,22 +652,18 @@ export default function Usuarios() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Modal exibir senha gerada */}
+      {/* Dialog exibir senha gerada */}
       {novaSenhaTemp && (
-        <Dialog
-          open={!!novaSenhaTemp}
-          onOpenChange={() => setNovaSenhaTemp(null)}
-        >
+        <Dialog open={!!novaSenhaTemp} onOpenChange={() => setNovaSenhaTemp(null)}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
               <DialogTitle>✅ Senha Resetada</DialogTitle>
               <DialogDescription>
-                Compartilhe esta senha com o usuário. Ela não será
-                exibida novamente.
+                Compartilhe esta senha com o usuário. Ela não será exibida novamente.
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-              <code className="flex-1 text-lg font-mono font-bold">
+              <code className="flex-1 text-lg font-mono font-bold tracking-widest">
                 {novaSenhaTemp}
               </code>
               <Button
@@ -533,16 +671,14 @@ export default function Usuarios() {
                 variant="ghost"
                 onClick={() => {
                   navigator.clipboard.writeText(novaSenhaTemp);
-                  toast({ title: 'Copiado!' });
+                  toast({ title: '✅ Copiado para a área de transferência' });
                 }}
               >
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
             <DialogFooter>
-              <Button onClick={() => setNovaSenhaTemp(null)}>
-                Fechar
-              </Button>
+              <Button onClick={() => setNovaSenhaTemp(null)}>Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -554,13 +690,15 @@ export default function Usuarios() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O usuário perderá o
-              acesso ao sistema.
+              Esta ação não pode ser desfeita. O usuário perderá o acesso ao sistema imediatamente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive" onClick={handleDelete}>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={handleDelete}
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
