@@ -36,6 +36,7 @@ import ConfiguracaoIA from '@/pages/ConfiguracaoIA';
 import AnalyticsIA from '@/pages/AnalyticsIA';
 import KnowledgeBase from '@/pages/KnowledgeBase';
 import FunctionPermissions from '@/pages/FunctionPermissions';
+import ConfiguracaoWhatsApp from '@/pages/ConfiguracaoWhatsApp';
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const AppRoutes = () => (
     <Route path="/pipeline" element={<PrivateRoute><Pipeline /></PrivateRoute>} />
     <Route path="/configuracoes/google-calendar" element={<PrivateRoute><ConfiguracaoGoogleCalendar /></PrivateRoute>} />
     <Route path="/configuracoes/usuarios" element={<PrivateRoute><Usuarios /></PrivateRoute>} />
+    <Route path="/configuracoes/whatsapp" element={<PrivateRoute><ConfiguracaoWhatsApp /></PrivateRoute>} />
     <Route path="/respostas-rapidas" element={<PrivateRoute><RespostasRapidas /></PrivateRoute>} />
     <Route path="/whatsapp/templates" element={<FeatureRoute feature="whatsapp"><WhatsAppTemplates /></FeatureRoute>} />
     <Route path="/configuracoes/tags" element={<PrivateRoute><TagsConfig /></PrivateRoute>} />

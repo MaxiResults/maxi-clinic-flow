@@ -18,6 +18,7 @@ import {
   Bot,
   BarChart3,
   BookOpen,
+  Smartphone,
 } from 'lucide-react';
 
 const configSections = [
@@ -142,6 +143,19 @@ const comunicacaoSections = [
   },
 ];
 
+const integracoesSections = [
+  {
+    id: 'whatsapp-integracao',
+    title: 'WhatsApp Business',
+    description: 'Configure a integração com WhatsApp via Evolution API. Gerencie a conexão e o QR Code.',
+    icon: Smartphone,
+    route: '/configuracoes/whatsapp',
+    color: 'text-green-600',
+    bgColor: 'bg-green-600/10',
+    count: null,
+  },
+];
+
 export default function Settings() {
   const navigate = useNavigate();
 
@@ -211,7 +225,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Seção: Integrações (futuro) */}
+        {/* Seção: Integrações */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Building2 className="h-5 w-5 text-muted-foreground" />
@@ -219,12 +233,7 @@ export default function Settings() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="opacity-50">
-              <CardHeader>
-                <CardTitle className="text-lg">💬 WhatsApp</CardTitle>
-                <CardDescription>Em breve</CardDescription>
-              </CardHeader>
-            </Card>
+            {integracoesSections.map(renderCard)}
 
             <Card className="opacity-50">
               <CardHeader>
