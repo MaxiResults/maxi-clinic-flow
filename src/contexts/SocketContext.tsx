@@ -29,7 +29,7 @@ interface SocketContextType {
   socket: Socket | null;
   lastNovaConversa: NovaConversaEvent | null;
   lastConversaAtualizada: ConversaAtualizadaEvent | null;
-  lastMensagemReagida: { messageId: string; emoji: string; sessaoId: string } | null;
+  lastMensagemReagida: { messageId: string; emoji: string; sessaoId: string; timestamp: number } | null;
 }
 
 const SocketContext = createContext<SocketContextType>({
@@ -55,6 +55,7 @@ export const SocketProvider = ({
     messageId: string;
     emoji: string;
     sessaoId: string;
+    timestamp: number;
   } | null>(null);
 
   useEffect(() => {
@@ -111,6 +112,7 @@ export const SocketProvider = ({
           messageId: data.messageId,
           emoji: data.emoji,
           sessaoId: data.sessaoId || '',
+          timestamp: Date.now(),
         });
       }
     });

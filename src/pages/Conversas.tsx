@@ -674,7 +674,7 @@ export default function Conversas() {
 
   // Reage à mensagem reagida (listener global no SocketContext)
   useEffect(() => {
-    if (!lastMensagemReagida?.messageId) return;
+    if (!lastMensagemReagida?.messageId || !lastMensagemReagida?.timestamp) return;
     setReacoesMap(prev => ({
       ...prev,
       [lastMensagemReagida.messageId]: lastMensagemReagida.emoji,
@@ -684,7 +684,7 @@ export default function Conversas() {
         ? { ...m, reaction_emoji: lastMensagemReagida.emoji }
         : m
     ));
-  }, [lastMensagemReagida]);
+  }, [lastMensagemReagida?.timestamp]);
 
   // Join/Leave conversation rooms
   useEffect(() => {
