@@ -303,6 +303,7 @@ export default function Conversas() {
   const [mensagensSelecionadas, setMensagensSelecionadas] = useState<string[]>([]);
   // chave: message_id da mensagem que recebeu a reação, valor: emoji
   const [reacoesMap, setReacoesMap] = useState<Record<string, string>>({});
+  const [reacaoVersion, setReacaoVersion] = useState(0);
   const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
 
   // Sugestões IA
@@ -684,6 +685,7 @@ export default function Conversas() {
         ? { ...m, reaction_emoji: lastMensagemReagida.emoji }
         : m
     ));
+    setReacaoVersion(v => v + 1);
   }, [lastMensagemReagida?.timestamp]);
 
   // Join/Leave conversation rooms
@@ -2149,7 +2151,7 @@ export default function Conversas() {
                         return (
                           <div
                              id={`msg-${idx}`}
-                            key={mensagem.id ?? idx}
+                            key={`${mensagem.id ?? idx}-${reacoesMap[mensagem.message_id || ''] || ''}`}
                             className={`flex ${isOwn ? 'justify-end animate-slide-in-right' : 'justify-start animate-slide-in-left'}`}
                           >
                             {modoSelecao && mensagem.id && (
