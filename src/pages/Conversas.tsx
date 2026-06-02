@@ -327,6 +327,7 @@ export default function Conversas() {
   // Refs to avoid re-running effects on selectedLead changes
   const selectedLeadRef = useRef<Lead | null>(null);
   const processedEvents = useRef<Set<number>>(new Set());
+  const handleMensagemReagidaRef = useRef<((data: any) => void) | null>(null);
 
   useEffect(() => {
     selectedLeadRef.current = selectedLead;
@@ -797,7 +798,7 @@ export default function Conversas() {
     socket.on('nova_conversa', handleNovaConversa);
     socket.on('conversa_atualizada', handleConversaAtualizada);
 
-    const handleMensagemReagida = (data: { messageId: string; emoji: string }) => {
+    handleMensagemReagidaRef.current = (data: { messageId: string; emoji: string }) => {
       if (!data?.messageId) return;
       setReacoesMap(prev => ({
         ...prev,
@@ -809,13 +810,16 @@ export default function Conversas() {
           : m
       ));
     };
-    socket.on('mensagem_reagida', handleMensagemReagida);
+    const reacaoHandler = (data: any) => {
+      handleMensagemReagidaRef.current?.(data);
+    };
+    socket.on('mensagem_reagida', reacaoHandler);
 
     return () => {
       socket.off('nova_mensagem', handleNovaMensagem);
       socket.off('nova_conversa', handleNovaConversa);
       socket.off('conversa_atualizada', handleConversaAtualizada);
-      socket.off('mensagem_reagida', handleMensagemReagida);
+      socket.off('mensagem_reagida', reacaoHandler);
     };
   }, [socket, playNotification]);
 
