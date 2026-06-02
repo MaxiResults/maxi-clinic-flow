@@ -51,32 +51,40 @@ export default function AnalyticsIA() {
     queryKey: ['ai-analytics-overview', periodo],
     queryFn: async () => {
       const res = await api.get(`/analytics/ia/overview?periodo=${periodo}`);
-      return res.data.data;
+      return res.data;
     },
+    retry: false,
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: timeline, isLoading: loadingTimeline } = useQuery<TimelinePoint[]>({
     queryKey: ['ai-analytics-timeline', periodo],
     queryFn: async () => {
       const res = await api.get(`/analytics/ia/timeline?periodo=${periodo}`);
-      return res.data.data;
+      return res.data;
     },
+    retry: false,
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: intentsData, isLoading: loadingIntents } = useQuery({
     queryKey: ['ai-analytics-intents', periodo],
     queryFn: async () => {
       const res = await api.get(`/analytics/ia/intents?periodo=${periodo}`);
-      return res.data.data;
+      return res.data;
     },
+    retry: false,
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: functionsData, isLoading: loadingFunctions } = useQuery({
     queryKey: ['ai-analytics-functions', periodo],
     queryFn: async () => {
       const res = await api.get(`/analytics/ia/functions?periodo=${periodo}`);
-      return res.data.data;
+      return res.data;
     },
+    retry: false,
+    staleTime: 1000 * 60 * 5,
   });
 
   const INTENT_LABELS: Record<string, string> = {
