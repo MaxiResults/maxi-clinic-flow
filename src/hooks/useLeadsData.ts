@@ -20,6 +20,12 @@ export interface Lead {
   observacoes?: string;
   created_at: string;
   updated_at: string;
+  tags?: Array<{
+    id: string;
+    nome: string;
+    cor: string;
+    icone: string;
+  }>;
 }
 
 export function useLeadsData() {

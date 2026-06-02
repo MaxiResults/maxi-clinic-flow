@@ -14,6 +14,7 @@ import { LeadDialog } from "@/components/leads/LeadDialog";
 import { LeadViewModal } from "@/components/leads/LeadViewModal";
 import { LeadViewToggle } from "@/components/leads/LeadViewToggle";
 import { FormattedDate } from "@/components/ui/FormattedDate";
+import { TagBadge } from "@/components/tags/TagBadge";
 import type { Lead } from "@/hooks/useLeadsData";
 import { ListSkeleton } from "@/components/skeletons/ListSkeleton";
 
@@ -120,6 +121,8 @@ export default function Leads() {
               onStatusChange={filters.setFilterStatus}
               filterOrigin={filters.filterOrigin}
               onOriginChange={filters.setFilterOrigin}
+              filterTag={filters.filterTag}
+              onTagChange={filters.setFilterTag}
             />
           </div>
           <div className="flex gap-2">
@@ -144,7 +147,16 @@ export default function Leads() {
         {viewMode === 'grid' && filters.filteredLeads.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filters.filteredLeads.map(lead => (
-              <LeadCard key={lead.id} lead={lead} onView={handleView} onEdit={handleEdit} onDelete={handleDeleteClick} />
+              <div key={lead.id}>
+                <LeadCard lead={lead} onView={handleView} onEdit={handleEdit} onDelete={handleDeleteClick} />
+                {lead.tags && lead.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {lead.tags.map(tag => (
+                      <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -163,6 +175,18 @@ export default function Leads() {
                     </div>
                     <div className="text-sm text-muted-foreground">{lead.canal_origem}</div>
                     <div className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>{statusConfig.label}</div>
+                    {lead.tags && lead.tags.length > 0 && (
+                      <div className="hidden md:flex flex-wrap gap-1 ml-2">
+                        {lead.tags.slice(0, 2).map(tag => (
+                          <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
+                        ))}
+                        {lead.tags.length > 2 && (
+                          <span className="text-xs text-muted-foreground self-center">
+                            +{lead.tags.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <FormattedDate value={lead.created_at} format="short" className="text-sm text-muted-foreground" />
                   </div>
                   <div className="flex gap-2 ml-4">
@@ -188,6 +212,7 @@ export default function Leads() {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Email</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Canal</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Tags</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Data</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">Ações</th>
                   </tr>
@@ -202,6 +227,18 @@ export default function Leads() {
                         <td className="px-4 py-3 text-sm text-muted-foreground">{lead.email ? `✉️ ${lead.email}` : '-'}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{lead.canal_origem}</td>
                         <td className="px-4 py-3"><span className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>{statusConfig.label}</span></td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {(lead.tags || []).slice(0, 3).map(tag => (
+                              <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
+                            ))}
+                            {(lead.tags?.length || 0) > 3 && (
+                              <span className="text-xs text-muted-foreground self-center">
+                                +{(lead.tags?.length || 0) - 3}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground"><FormattedDate value={lead.created_at} format="short" /></td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">

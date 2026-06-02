@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
+import { useTags } from '@/hooks/useTags';
 
 interface LeadFiltersProps {
   searchTerm: string;
@@ -9,6 +10,8 @@ interface LeadFiltersProps {
   onStatusChange: (status: string) => void;
   filterOrigin: string;
   onOriginChange: (origin: string) => void;
+  filterTag: string;
+  onTagChange: (tag: string) => void;
 }
 
 export function LeadFilters({
@@ -18,7 +21,10 @@ export function LeadFilters({
   onStatusChange,
   filterOrigin,
   onOriginChange,
+  filterTag,
+  onTagChange,
 }: LeadFiltersProps) {
+  const { tags } = useTags();
   return (
     <div className="flex flex-col md:flex-row gap-4">
       <div className="relative flex-1">
@@ -56,6 +62,26 @@ export function LeadFilters({
           <SelectItem value="Google">Google</SelectItem>
           <SelectItem value="Indicação">Indicação</SelectItem>
           <SelectItem value="Outro">Outro</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={filterTag} onValueChange={onTagChange}>
+        <SelectTrigger className="w-full md:w-[180px]">
+          <SelectValue placeholder="Tag" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todas">Todas as tags</SelectItem>
+          {tags.map(tag => (
+            <SelectItem key={tag.id} value={tag.id}>
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: tag.cor }}
+                />
+                {tag.nome}
+              </div>
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
