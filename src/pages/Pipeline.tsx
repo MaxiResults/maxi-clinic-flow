@@ -1,14 +1,22 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { format, parseISO } from 'date-fns';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, ArrowRight, Check, ChevronRight, MessageCircle,
-  Pencil, Phone, Plus, Search, Trash2, TrendingUp, X, Eye,
-  DollarSign, Users, Trophy, Loader2, Clock,
-  Settings2, GripVertical, Palette,
+  DndContext, DragEndEvent, DragOverEvent, DragStartEvent,
+  DragOverlay, PointerSensor, useSensor, useSensors,
+  closestCorners,
+} from '@dnd-kit/core';
+import {
+  SortableContext, useSortable, verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  Check, MessageCircle, Pencil, Phone, Plus, Search,
+  Trash2, TrendingUp, X, Eye, DollarSign, Users, Trophy,
+  Loader2, Clock, Settings2, AlertTriangle, GripVertical,
+  ChevronRight, ArrowRight, ArrowLeft, Palette,
 } from 'lucide-react';
-
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,22 +25,12 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Tooltip, TooltipContent, TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
-} from '@/components/ui/command';
-
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/lib/api';
-
 import * as svc from '@/services/oportunidade.service';
 import type { Oportunidade, WorkflowEtapa, LeadAtividade } from '@/types/oportunidade';
 
@@ -73,6 +71,14 @@ function formatWhatsApp(telefone: string): string {
   return `55${digits}`;
 }
 
+function getDaysStale(updatedAt: string): number {
+  try {
+    return differenceInDays(new Date(), parseISO(updatedAt));
+  } catch {
+    return 0;
+  }
+}
+
 // ─────────────────────────────────────────
 // Sub-componente: Skeleton de card
 // ─────────────────────────────────────────
@@ -110,181 +116,268 @@ function ActionButton({
 }
 
 // ─────────────────────────────────────────
-// Sub-componente: Card de Oportunidade
+// Sub-componente: SortableCard (Kanban)
 // ─────────────────────────────────────────
 
-interface OportunidadeCardProps {
-  oportunidade: Oportunidade;
-  etapas: WorkflowEtapa[];
-  etapaAtual: WorkflowEtapa;
-  loadingId: string | null;
-  onMover: (oportunidade: Oportunidade, direcao: 'anterior' | 'proxima') => void;
-  onGanhar: (oportunidade: Oportunidade) => void;
-  onPerder: (oportunidade: Oportunidade) => void;
-  onDeletar: (oportunidade: Oportunidade) => void;
-  onEditar: (oportunidade: Oportunidade) => void;
-  onVerDetalhes: (oportunidade: Oportunidade) => void;
-}
-
-function OportunidadeCard({
+function SortableCard({
   oportunidade,
-  etapas,
   etapaAtual,
+  etapas,
   loadingId,
-  onMover,
   onGanhar,
   onPerder,
   onDeletar,
   onEditar,
   onVerDetalhes,
-}: OportunidadeCardProps) {
-  const isPrimeira = etapaAtual.ordem === Math.min(...etapas.map((e) => e.ordem));
-  const isUltima = etapaAtual.ordem === Math.max(...etapas.map((e) => e.ordem));
+}: {
+  oportunidade: Oportunidade;
+  etapaAtual: WorkflowEtapa;
+  etapas: WorkflowEtapa[];
+  loadingId: string | null;
+  onGanhar: (o: Oportunidade) => void;
+  onPerder: (o: Oportunidade) => void;
+  onDeletar: (o: Oportunidade) => void;
+  onEditar: (o: Oportunidade) => void;
+  onVerDetalhes: (o: Oportunidade) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: oportunidade.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const daysStale = getDaysStale(oportunidade.updated_at);
+  const isStale = daysStale >= 7;
+  const isOverdue = oportunidade.data_previsao_fechamento
+    ? new Date(oportunidade.data_previsao_fechamento) < new Date()
+    : false;
   const isLoading = loadingId === oportunidade.id;
 
   return (
-    <Card
-      className="rounded-xl border-0 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02] overflow-hidden animate-slide-up"
-    >
-      {/* Borda superior colorida */}
-      <div className="h-1" style={{ backgroundColor: etapaAtual.cor }} />
+    <div ref={setNodeRef} style={style}>
+      <div
+        className={`
+          group relative bg-white rounded-xl border border-gray-100
+          shadow-sm hover:shadow-md hover:-translate-y-0.5
+          transition-all duration-200 overflow-hidden
+          ${isDragging ? 'shadow-xl scale-[1.02] rotate-1' : ''}
+        `}
+      >
+        {/* Borda lateral colorida por etapa */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+          style={{ backgroundColor: etapaAtual.cor }}
+        />
 
-      <CardContent className="p-5">
-        {/* Cabeçalho */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <p className="font-semibold text-sm leading-tight line-clamp-2 text-foreground">
-            {oportunidade.titulo}
-          </p>
-          {isLoading && <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" />}
-        </div>
+        <div className="pl-4 pr-3 py-3">
+          {/* Header do card: título + drag handle */}
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <h4
+              className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 cursor-pointer hover:text-primary transition-colors flex-1"
+              onClick={() => onVerDetalhes(oportunidade)}
+            >
+              {oportunidade.titulo}
+            </h4>
+            <button
+              {...attributes}
+              {...listeners}
+              className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0 mt-0.5 touch-none"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+          </div>
 
-        {/* Dados do paciente */}
-        <div className="space-y-1.5 mb-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5 shrink-0" />
+          {/* Lead name */}
+          <p className="text-xs text-gray-500 mb-2.5 flex items-center gap-1.5">
+            <Users className="h-3 w-3 flex-shrink-0" />
             <span className="truncate">{oportunidade.lead_nome || '—'}</span>
+          </p>
+
+          {/* Valor + data */}
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-bold text-gray-900">
+              {oportunidade.valor_estimado
+                ? formatBRL(oportunidade.valor_estimado)
+                : '—'}
+            </span>
+            {oportunidade.data_previsao_fechamento && (
+              <span className={`text-xs flex items-center gap-1 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                <Clock className="h-3 w-3" />
+                {formatDate(oportunidade.data_previsao_fechamento)}
+              </span>
+            )}
           </div>
-          {oportunidade.lead_telefone && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Phone className="h-3.5 w-3.5 shrink-0" />
-              <span>{oportunidade.lead_telefone}</span>
+
+          {/* Indicadores de deal rotting + overdue */}
+          {(isStale || isOverdue) && (
+            <div className="flex items-center gap-2 mb-2.5">
+              {isStale && (
+                <span className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-100">
+                  <Clock className="h-2.5 w-2.5" />
+                  {daysStale}d parado
+                </span>
+              )}
+              {isOverdue && (
+                <span className="flex items-center gap-1 text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100">
+                  <AlertTriangle className="h-2.5 w-2.5" />
+                  Atrasado
+                </span>
+              )}
             </div>
           )}
-          <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: 'hsl(var(--pipeline-green))' }}>
-            <DollarSign className="h-3.5 w-3.5 shrink-0" />
-            <span>{formatBRL(oportunidade.valor_estimado)}</span>
+
+          {/* Quick actions — aparecem no hover */}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            <button
+              onClick={() => onVerDetalhes(oportunidade)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              title="Ver detalhes"
+            >
+              <Eye className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => onEditar(oportunidade)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              title="Editar"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            {oportunidade.lead_telefone && (
+              <button
+                onClick={() => window.open(`https://wa.me/${formatWhatsApp(oportunidade.lead_telefone!)}`, '_blank')}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                title="WhatsApp"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => onGanhar(oportunidade)}
+              disabled={isLoading}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+              title="Marcar como ganha"
+            >
+              <Check className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => onPerder(oportunidade)}
+              disabled={isLoading}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              title="Marcar como perdida"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => onDeletar(oportunidade)}
+              disabled={isLoading}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-auto"
+              title="Deletar"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
-          {oportunidade.data_previsao_fechamento && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
-              <span>{formatDate(oportunidade.data_previsao_fechamento)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────
+// Sub-componente: KanbanColumn
+// ─────────────────────────────────────────
+
+function KanbanColumn({
+  etapa,
+  oportunidades,
+  loadingId,
+  animationDelay,
+  onGanhar,
+  onPerder,
+  onDeletar,
+  onEditar,
+  onVerDetalhes,
+  etapas,
+}: {
+  etapa: WorkflowEtapa;
+  oportunidades: Oportunidade[];
+  loadingId: string | null;
+  animationDelay: number;
+  etapas: WorkflowEtapa[];
+  onGanhar: (o: Oportunidade) => void;
+  onPerder: (o: Oportunidade) => void;
+  onDeletar: (o: Oportunidade) => void;
+  onEditar: (o: Oportunidade) => void;
+  onVerDetalhes: (o: Oportunidade) => void;
+}) {
+  const valorTotal = oportunidades.reduce((s, o) => s + (o.valor_estimado || 0), 0);
+  const ids = oportunidades.map(o => o.id);
+
+  return (
+    <div
+      className="flex-shrink-0 w-72 flex flex-col"
+      style={{
+        animation: `fadeSlideIn 0.4s ease both`,
+        animationDelay: `${animationDelay}ms`,
+      }}
+    >
+      {/* Header da coluna */}
+      <div
+        className="rounded-xl px-3 py-2.5 mb-3 flex items-center justify-between"
+        style={{ backgroundColor: `${etapa.cor}12`, border: `1px solid ${etapa.cor}25` }}
+      >
+        <div className="flex items-center gap-2">
+          <div
+            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+            style={{ backgroundColor: etapa.cor }}
+          />
+          <span className="text-sm font-semibold text-gray-800 truncate max-w-[120px]">
+            {etapa.nome}
+          </span>
+          <span
+            className="text-xs font-bold px-1.5 py-0.5 rounded-full text-white"
+            style={{ backgroundColor: etapa.cor }}
+          >
+            {oportunidades.length}
+          </span>
+        </div>
+        <span className="text-xs font-semibold text-gray-600">
+          {valorTotal > 0 ? formatBRL(valorTotal) : '—'}
+        </span>
+      </div>
+
+      {/* Drop zone + cards */}
+      <div className="flex-1 min-h-[200px] space-y-2">
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          {oportunidades.length === 0 ? (
+            <div
+              className="h-24 rounded-xl border-2 border-dashed flex items-center justify-center text-xs text-gray-400 transition-colors"
+              style={{ borderColor: `${etapa.cor}30` }}
+            >
+              Arraste cards aqui
             </div>
+          ) : (
+            oportunidades.map(oportunidade => (
+              <SortableCard
+                key={oportunidade.id}
+                oportunidade={oportunidade}
+                etapaAtual={etapa}
+                etapas={etapas}
+                loadingId={loadingId}
+                onGanhar={onGanhar}
+                onPerder={onPerder}
+                onDeletar={onDeletar}
+                onEditar={onEditar}
+                onVerDetalhes={onVerDetalhes}
+              />
+            ))
           )}
-        </div>
-
-        {/* Ações */}
-        <div className="flex flex-wrap gap-1.5 pt-3 border-t border-border/50">
-          {/* Mover */}
-          {!isPrimeira && (
-            <ActionButton
-              tooltip="Voltar etapa"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-lg"
-              disabled={isLoading}
-              onClick={() => onMover(oportunidade, 'anterior')}
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-            </ActionButton>
-          )}
-          {!isUltima && (
-            <ActionButton
-              tooltip="Avançar etapa"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-lg"
-              disabled={isLoading}
-              onClick={() => onMover(oportunidade, 'proxima')}
-            >
-              <ArrowRight className="h-3.5 w-3.5" />
-            </ActionButton>
-          )}
-
-          {/* WhatsApp */}
-          {oportunidade.lead_telefone && (
-            <ActionButton
-              tooltip="Abrir WhatsApp"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-lg text-status-converted hover:text-status-converted hover:bg-status-converted/10"
-              onClick={() =>
-                window.open(`https://wa.me/${formatWhatsApp(oportunidade.lead_telefone!)}`, '_blank')
-              }
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-            </ActionButton>
-          )}
-
-          {/* Detalhes */}
-          <ActionButton
-            tooltip="Ver detalhes"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-lg"
-            onClick={() => onVerDetalhes(oportunidade)}
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </ActionButton>
-
-          {/* Editar */}
-          <ActionButton
-            tooltip="Editar"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-lg"
-            onClick={() => onEditar(oportunidade)}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </ActionButton>
-
-          {/* Ganhar */}
-          <ActionButton
-            tooltip="Marcar como ganha"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-lg text-status-converted hover:text-status-converted hover:bg-status-converted/10 hover:border-status-converted/30"
-            disabled={isLoading}
-            onClick={() => onGanhar(oportunidade)}
-          >
-            <Check className="h-3.5 w-3.5" />
-          </ActionButton>
-
-          {/* Perder */}
-          <ActionButton
-            tooltip="Marcar como perdida"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-lg text-status-qualified hover:text-status-qualified hover:bg-status-qualified/10 hover:border-status-qualified/30"
-            disabled={isLoading}
-            onClick={() => onPerder(oportunidade)}
-          >
-            <X className="h-3.5 w-3.5" />
-          </ActionButton>
-
-          {/* Deletar */}
-          <ActionButton
-            tooltip="Deletar"
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30"
-            disabled={isLoading}
-            onClick={() => onDeletar(oportunidade)}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </ActionButton>
-        </div>
-      </CardContent>
-    </Card>
+        </SortableContext>
+      </div>
+    </div>
   );
 }
 
@@ -311,7 +404,6 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
   const [observacoes, setObservacoes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Buscar leads ao abrir
   useEffect(() => {
     if (!open) return;
     api.get('/leads', { params: { limit: 100 } })
@@ -371,7 +463,6 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Combobox pacientes */}
           <div>
             <label className="text-sm font-medium mb-1.5 block text-foreground">Paciente *</label>
             <Popover open={comboOpen} onOpenChange={setComboOpen}>
@@ -417,7 +508,6 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
             </Popover>
           </div>
 
-          {/* Título */}
           <div>
             <label className="text-sm font-medium mb-1.5 block text-foreground">Título *</label>
             <Input
@@ -428,7 +518,6 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            {/* Valor */}
             <div>
               <label className="text-sm font-medium mb-1.5 block text-foreground">Valor estimado (R$)</label>
               <Input
@@ -441,7 +530,6 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
               />
             </div>
 
-            {/* Etapa */}
             <div>
               <label className="text-sm font-medium mb-1.5 block text-foreground">Etapa inicial</label>
               <select
@@ -457,7 +545,6 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
             </div>
           </div>
 
-          {/* Data previsão */}
           <div>
             <label className="text-sm font-medium mb-1.5 block text-foreground">Previsão de fechamento</label>
             <Input
@@ -467,7 +554,6 @@ function ModalCriar({ open, etapas, onClose, onSalvo }: ModalCriarProps) {
             />
           </div>
 
-          {/* Observações */}
           <div>
             <label className="text-sm font-medium mb-1.5 block text-foreground">Observações</label>
             <Textarea
@@ -603,11 +689,11 @@ function ModalEditar({ oportunidade, onClose, onSalvo }: ModalEditarProps) {
 interface ModalPerderProps {
   oportunidade: Oportunidade | null;
   onClose: () => void;
-  onConfirmado: (motivo: string) => void;
+  onConfirmar: (motivo: string) => void;
   loading: boolean;
 }
 
-function ModalPerder({ oportunidade, onClose, onConfirmado, loading }: ModalPerderProps) {
+function ModalPerder({ oportunidade, onClose, onConfirmar, loading }: ModalPerderProps) {
   const [motivo, setMotivo] = useState('');
 
   useEffect(() => { if (!oportunidade) setMotivo(''); }, [oportunidade]);
@@ -631,11 +717,48 @@ function ModalPerder({ oportunidade, onClose, onConfirmado, loading }: ModalPerd
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
           <Button
             variant="destructive"
-            onClick={() => onConfirmado(motivo)}
+            onClick={() => onConfirmar(motivo)}
             disabled={loading}
           >
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Confirmar Perda
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─────────────────────────────────────────
+// Modal: Marcar como Ganha
+// ─────────────────────────────────────────
+
+interface ModalGanharProps {
+  oportunidade: Oportunidade | null;
+  onClose: () => void;
+  onConfirmar: () => void;
+  loading: boolean;
+}
+
+function ModalGanhar({ oportunidade, onClose, onConfirmar, loading }: ModalGanharProps) {
+  return (
+    <Dialog open={!!oportunidade} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-sm rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="text-lg">🎉 Oportunidade Ganha!</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Tem certeza que deseja marcar <strong>{oportunidade?.titulo}</strong> como ganha?
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button
+            className="bg-emerald-600 hover:bg-emerald-700"
+            onClick={onConfirmar}
+            disabled={loading}
+          >
+            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Confirmar
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -649,6 +772,7 @@ function ModalPerder({ oportunidade, onClose, onConfirmado, loading }: ModalPerd
 
 interface ModalDetalhesProps {
   oportunidade: Oportunidade | null;
+  etapas: WorkflowEtapa[];
   onClose: () => void;
   onEditar: (o: Oportunidade) => void;
 }
@@ -661,7 +785,7 @@ const ACAO_LABELS: Record<string, string> = {
   oportunidade_cancelada: 'Cancelada',
 };
 
-function ModalDetalhes({ oportunidade, onClose, onEditar }: ModalDetalhesProps) {
+function ModalDetalhes({ oportunidade, etapas, onClose, onEditar }: ModalDetalhesProps) {
   const [atividades, setAtividades] = useState<LeadAtividade[]>([]);
   const [loadingAtv, setLoadingAtv] = useState(false);
 
@@ -738,9 +862,7 @@ function ModalDetalhes({ oportunidade, onClose, onEditar }: ModalDetalhesProps) 
               <ol className="relative border-l-2 border-border/60 ml-2 space-y-4">
                 {atividades.map((atv) => (
                   <li key={atv.id} className="pl-5">
-                    <div
-                      className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full border-2 border-background bg-primary"
-                    />
+                    <div className="absolute -left-[7px] mt-1.5 h-3 w-3 rounded-full border-2 border-background bg-primary" />
                     <p className="text-xs font-medium text-foreground">
                       {ACAO_LABELS[atv.tipo_acao] ?? atv.tipo_acao}
                     </p>
@@ -768,7 +890,7 @@ function ModalDetalhes({ oportunidade, onClose, onEditar }: ModalDetalhesProps) 
 }
 
 // ─────────────────────────────────────────
-// Página principal: Pipeline
+// Modal: Gerenciar Etapas
 // ─────────────────────────────────────────
 
 const CORES_ETAPA = [
@@ -776,168 +898,20 @@ const CORES_ETAPA = [
   '#EAB308', '#22C55E', '#14B8A6', '#3B82F6', '#64748B',
 ];
 
-export default function Pipeline() {
-  const { user } = useAuth();
+interface ModalEtapasProps {
+  open: boolean;
+  etapas: WorkflowEtapa[];
+  onClose: () => void;
+  onSalvo: () => void;
+  porEtapa: (id: number) => Oportunidade[];
+}
 
-  // Dados
-  const [etapas, setEtapas] = useState<WorkflowEtapa[]>([]);
-  const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
-  const [loadingEtapas, setLoadingEtapas] = useState(true);
-  const [loadingOportunidades, setLoadingOportunidades] = useState(true);
-
-  // UI
-  const [busca, setBusca] = useState('');
-  const [tabAtiva, setTabAtiva] = useState<string>('');
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-
-  // Modais
-  const [modalCriarOpen, setModalCriarOpen] = useState(false);
-  const [oportunidadeEditar, setOportunidadeEditar] = useState<Oportunidade | null>(null);
-  const [oportunidadeDetalhes, setOportunidadeDetalhes] = useState<Oportunidade | null>(null);
-  const [oportunidadePerder, setOportunidadePerder] = useState<Oportunidade | null>(null);
-  const [loadingPerder, setLoadingPerder] = useState(false);
-
-  // Modal de gerenciamento de etapas
-  const [modalEtapasOpen, setModalEtapasOpen] = useState(false);
+function ModalEtapas({ open, etapas, onClose, onSalvo, porEtapa }: ModalEtapasProps) {
   const [etapaEditando, setEtapaEditando] = useState<WorkflowEtapa | null>(null);
   const [novaEtapaNome, setNovaEtapaNome] = useState('');
   const [novaEtapaCor, setNovaEtapaCor] = useState('#6366F1');
   const [salvandoEtapa, setSalvandoEtapa] = useState(false);
   const [excluindoEtapaId, setExcluindoEtapaId] = useState<number | null>(null);
-
-  // ── Carregamento ──────────────────────
-
-  const carregarEtapas = useCallback(async () => {
-    setLoadingEtapas(true);
-    const data = await svc.buscarEtapasWorkflow();
-    setEtapas(data);
-    if (data.length > 0 && !tabAtiva) {
-      setTabAtiva(String(data[0].id));
-    }
-    setLoadingEtapas(false);
-  }, [tabAtiva]);
-
-  const carregarOportunidades = useCallback(async () => {
-    setLoadingOportunidades(true);
-    const data = await svc.buscarOportunidades({ status: 'aberta' });
-    setOportunidades(data);
-    setLoadingOportunidades(false);
-  }, []);
-
-  useEffect(() => { carregarEtapas(); }, []);
-  useEffect(() => { carregarOportunidades(); }, []);
-
-  // ── Filtro de busca ───────────────────
-
-  const oportunidadesFiltradas = useMemo(() => {
-    if (!busca.trim()) return oportunidades;
-    const q = busca.toLowerCase();
-    return oportunidades.filter(
-      (o) =>
-        o.titulo.toLowerCase().includes(q) ||
-        (o.lead_nome ?? '').toLowerCase().includes(q) ||
-        (o.lead_telefone ?? '').includes(q)
-    );
-  }, [oportunidades, busca]);
-
-  // Oportunidades por etapa
-  const porEtapa = useCallback(
-    (etapaId: number) =>
-      oportunidadesFiltradas.filter((o) => o.etapa_id === etapaId),
-    [oportunidadesFiltradas]
-  );
-
-  // ── Stats globais ─────────────────────
-
-  const stats = useMemo(() => {
-    const abertas = oportunidades.filter((o) => o.status === 'aberta');
-    const ganhas = oportunidades.filter((o) => o.status === 'ganha');
-    const totalAbertas = abertas.length;
-    const valorTotal = abertas.reduce((s, o) => s + (o.valor_estimado || 0), 0);
-    const totalGanhas = ganhas.length;
-    const taxa =
-      oportunidades.length > 0
-        ? Math.round((totalGanhas / oportunidades.length) * 100)
-        : 0;
-    return { totalAbertas, valorTotal, totalGanhas, taxa };
-  }, [oportunidades]);
-
-  // ── Ações de cards ────────────────────
-
-  async function handleMover(oportunidade: Oportunidade, direcao: 'anterior' | 'proxima') {
-    const ordemAtual = etapas.find((e) => e.id === oportunidade.etapa_id)?.ordem ?? 0;
-    const alvo =
-      direcao === 'proxima'
-        ? etapas.find((e) => e.ordem === ordemAtual + 1)
-        : etapas.find((e) => e.ordem === ordemAtual - 1);
-
-    if (!alvo) return;
-
-    setLoadingId(oportunidade.id);
-    const result = await svc.moverEtapa(oportunidade.id, alvo.id, alvo.nome);
-    setLoadingId(null);
-
-    if (result.success) {
-      toast(`Movida para ${alvo.nome}`);
-      setOportunidades((prev) =>
-        prev.map((o) =>
-          o.id === oportunidade.id
-            ? { ...o, etapa_id: alvo.id, etapa_nome: alvo.nome, etapa_cor: alvo.cor }
-            : o
-        )
-      );
-    } else {
-      toast.error(result.error || 'Erro ao mover etapa');
-    }
-  }
-
-  async function handleGanhar(oportunidade: Oportunidade) {
-    if (!window.confirm(`Marcar "${oportunidade.titulo}" como GANHA?`)) return;
-
-    setLoadingId(oportunidade.id);
-    const result = await svc.atualizarStatus(oportunidade.id, 'ganha');
-    setLoadingId(null);
-
-    if (result.success) {
-      toast.success('Oportunidade ganha! 🎉');
-      setOportunidades((prev) => prev.filter((o) => o.id !== oportunidade.id));
-    } else {
-      toast.error(result.error || 'Erro ao atualizar status');
-    }
-  }
-
-  async function handleConfirmarPerda(motivo: string) {
-    if (!oportunidadePerder) return;
-
-    setLoadingPerder(true);
-    const result = await svc.atualizarStatus(oportunidadePerder.id, 'perdida', motivo);
-    setLoadingPerder(false);
-
-    if (result.success) {
-      toast('Oportunidade marcada como perdida');
-      setOportunidades((prev) => prev.filter((o) => o.id !== oportunidadePerder.id));
-      setOportunidadePerder(null);
-    } else {
-      toast.error(result.error || 'Erro ao atualizar status');
-    }
-  }
-
-  async function handleDeletar(oportunidade: Oportunidade) {
-    if (!window.confirm(`Deletar "${oportunidade.titulo}"? Esta ação não pode ser desfeita.`)) return;
-
-    setLoadingId(oportunidade.id);
-    const result = await svc.deletarOportunidade(oportunidade.id);
-    setLoadingId(null);
-
-    if (result.success) {
-      toast.success('Oportunidade deletada');
-      setOportunidades((prev) => prev.filter((o) => o.id !== oportunidade.id));
-    } else {
-      toast.error(result.error || 'Erro ao deletar');
-    }
-  }
-
-  // ── Gerenciamento de etapas ───────────
 
   async function handleCriarEtapa() {
     if (!novaEtapaNome.trim()) {
@@ -953,7 +927,7 @@ export default function Pipeline() {
       toast.success('Etapa criada!');
       setNovaEtapaNome('');
       setNovaEtapaCor('#6366F1');
-      carregarEtapas();
+      onSalvo();
     } catch (err: any) {
       toast.error(err.message || 'Erro ao criar etapa');
     } finally {
@@ -971,7 +945,7 @@ export default function Pipeline() {
       });
       toast.success('Etapa atualizada!');
       setEtapaEditando(null);
-      carregarEtapas();
+      onSalvo();
     } catch (err: any) {
       toast.error(err.message || 'Erro ao atualizar');
     } finally {
@@ -988,7 +962,7 @@ export default function Pipeline() {
     try {
       await api.delete(`/workflow-etapas/${id}`);
       toast.success('Etapa excluída!');
-      carregarEtapas();
+      onSalvo();
     } catch (err: any) {
       toast.error(
         err.response?.data?.error ||
@@ -1000,17 +974,354 @@ export default function Pipeline() {
     }
   }
 
-  // ── Render ────────────────────────────
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg rounded-xl">
+        <DialogHeader>
+          <DialogTitle className="text-lg">Etapas do Pipeline</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          <div className="space-y-2">
+            {etapas.map((etapa) => (
+              <div
+                key={etapa.id}
+                className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+              >
+                <div
+                  className="w-4 h-4 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: etapa.cor }}
+                />
+                {etapaEditando?.id === etapa.id ? (
+                  <div className="flex-1 flex items-center gap-2">
+                    <input
+                      className="flex-1 text-sm border rounded px-2 py-1 bg-background"
+                      value={etapaEditando.nome}
+                      onChange={(e) => setEtapaEditando({
+                        ...etapaEditando,
+                        nome: e.target.value,
+                      })}
+                      autoFocus
+                    />
+                    <div className="flex gap-1 flex-wrap max-w-[120px]">
+                      {CORES_ETAPA.map((cor) => (
+                        <button
+                          key={cor}
+                          className={`w-4 h-4 rounded-full transition-transform hover:scale-110 ${
+                            etapaEditando.cor === cor
+                              ? 'ring-2 ring-offset-1 ring-primary'
+                              : ''
+                          }`}
+                          style={{ backgroundColor: cor }}
+                          onClick={() => setEtapaEditando({
+                            ...etapaEditando,
+                            cor,
+                          })}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleAtualizarEtapa}
+                      disabled={salvandoEtapa}
+                      className="text-green-600 hover:text-green-700 p-1"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setEtapaEditando(null)}
+                      className="text-muted-foreground hover:text-foreground p-1"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm font-medium">{etapa.nome}</span>
+                    <span className="text-xs text-muted-foreground">
+                      #{porEtapa(etapa.id).length} ops
+                    </span>
+                    <button
+                      onClick={() => setEtapaEditando(etapa)}
+                      className="text-muted-foreground hover:text-foreground p-1 transition-colors"
+                      title="Editar"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleExcluirEtapa(etapa.id)}
+                      disabled={excluindoEtapaId === etapa.id}
+                      className="text-muted-foreground hover:text-destructive p-1 transition-colors"
+                      title="Excluir"
+                    >
+                      {excluindoEtapaId === etapa.id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Trash2 className="h-3.5 w-3.5" />}
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
 
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium mb-3">Nova Etapa</p>
+            <div className="space-y-3">
+              <input
+                className="w-full text-sm border rounded-lg px-3 py-2 bg-background"
+                placeholder="Nome da etapa..."
+                value={novaEtapaNome}
+                onChange={(e) => setNovaEtapaNome(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCriarEtapa();
+                }}
+              />
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Cor</p>
+                <div className="flex gap-2 flex-wrap">
+                  {CORES_ETAPA.map((cor) => (
+                    <button
+                      key={cor}
+                      className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${
+                        novaEtapaCor === cor
+                          ? 'ring-2 ring-offset-2 ring-primary'
+                          : ''
+                      }`}
+                      style={{ backgroundColor: cor }}
+                      onClick={() => setNovaEtapaCor(cor)}
+                    />
+                  ))}
+                </div>
+              </div>
+              <Button
+                onClick={handleCriarEtapa}
+                disabled={salvandoEtapa || !novaEtapaNome.trim()}
+                className="w-full rounded-lg"
+              >
+                {salvandoEtapa
+                  ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  : <Plus className="h-4 w-4 mr-2" />}
+                Adicionar Etapa
+              </Button>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Fechar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─────────────────────────────────────────
+// Página principal: Pipeline
+// ─────────────────────────────────────────
+
+export default function Pipeline() {
+  const { user } = useAuth();
+
+  // State
+  const [etapas, setEtapas] = useState<WorkflowEtapa[]>([]);
+  const [oportunidades, setOportunidades] = useState<Oportunidade[]>([]);
+  const [loadingEtapas, setLoadingEtapas] = useState(true);
+  const [loadingOportunidades, setLoadingOportunidades] = useState(true);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [busca, setBusca] = useState('');
+  const [filtroAtrasados, setFiltroAtrasados] = useState(false);
+
+  // Modais
+  const [modalCriarOpen, setModalCriarOpen] = useState(false);
+  const [oportunidadeEditando, setOportunidadeEditando] = useState<Oportunidade | null>(null);
+  const [oportunidadeDetalhes, setOportunidadeDetalhes] = useState<Oportunidade | null>(null);
+  const [oportunidadeGanhar, setOportunidadeGanhar] = useState<Oportunidade | null>(null);
+  const [oportunidadePerder, setOportunidadePerder] = useState<Oportunidade | null>(null);
+  const [oportunidadeDeletar, setOportunidadeDeletar] = useState<Oportunidade | null>(null);
+  const [modalEtapasOpen, setModalEtapasOpen] = useState(false);
+
+  // DnD state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
+
+  // Data fetching
+  const carregarEtapas = useCallback(async () => {
+    setLoadingEtapas(true);
+    const data = await svc.buscarEtapasWorkflow();
+    setEtapas(data);
+    setLoadingEtapas(false);
+  }, []);
+
+  const carregarOportunidades = useCallback(async () => {
+    setLoadingOportunidades(true);
+    const data = await svc.buscarOportunidades({ status: 'aberta' });
+    setOportunidades(data);
+    setLoadingOportunidades(false);
+  }, []);
+
+  useEffect(() => {
+    carregarEtapas();
+    carregarOportunidades();
+  }, [carregarEtapas, carregarOportunidades]);
+
+  // Computed
+  const oportunidadesFiltradas = useMemo(() => {
+    let result = oportunidades;
+    if (busca.trim()) {
+      const b = busca.toLowerCase();
+      result = result.filter(o =>
+        o.titulo?.toLowerCase().includes(b) ||
+        o.lead_nome?.toLowerCase().includes(b)
+      );
+    }
+    if (filtroAtrasados) {
+      result = result.filter(o =>
+        o.data_previsao_fechamento &&
+        new Date(o.data_previsao_fechamento) < new Date()
+      );
+    }
+    return result;
+  }, [oportunidades, busca, filtroAtrasados]);
+
+  const porEtapa = useCallback((etapaId: number) =>
+    oportunidadesFiltradas.filter(o => o.etapa_id === etapaId),
+    [oportunidadesFiltradas]
+  );
+
+  const stats = useMemo(() => {
+    const abertas = oportunidades.filter(o => o.status === 'aberta');
+    const ganhas = oportunidades.filter(o => o.status === 'ganha');
+    const todas = oportunidades.filter(o => o.status !== 'aberta');
+    const valorTotal = abertas.reduce((s, o) => s + (o.valor_estimado || 0), 0);
+    const totalFechadas = ganhas.length + oportunidades.filter(o => o.status === 'perdida').length;
+    const taxa = totalFechadas > 0 ? Math.round((ganhas.length / totalFechadas) * 100) : 0;
+    return {
+      totalAbertas: abertas.length,
+      valorTotal,
+      totalGanhas: ganhas.length,
+      taxa,
+    };
+  }, [oportunidades]);
+
+  // Oportunidade ativa no drag
+  const oportunidadeAtiva = useMemo(() =>
+    activeId ? oportunidades.find(o => o.id === activeId) ?? null : null,
+    [activeId, oportunidades]
+  );
+
+  const etapaAtiva = useMemo(() => {
+    if (!oportunidadeAtiva) return null;
+    return etapas.find(e => e.id === oportunidadeAtiva.etapa_id) ?? null;
+  }, [oportunidadeAtiva, etapas]);
+
+  // DnD handlers
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+  }
+
+  function handleDragOver(event: DragOverEvent) {
+    const { over } = event;
+    setOverId(over ? String(over.id) : null);
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    setActiveId(null);
+    setOverId(null);
+
+    if (!over || active.id === over.id) return;
+
+    const overId = String(over.id);
+    let novaEtapaId: number | null = null;
+
+    const etapaDestino = etapas.find(e => String(e.id) === overId);
+    if (etapaDestino) {
+      novaEtapaId = etapaDestino.id;
+    } else {
+      const oportunidadeDestino = oportunidades.find(o => o.id === overId);
+      if (oportunidadeDestino) novaEtapaId = oportunidadeDestino.etapa_id;
+    }
+
+    if (!novaEtapaId) return;
+
+    const oportunidade = oportunidades.find(o => o.id === active.id);
+    if (!oportunidade || oportunidade.etapa_id === novaEtapaId) return;
+
+    setOportunidades(prev =>
+      prev.map(o =>
+        o.id === active.id ? { ...o, etapa_id: novaEtapaId! } : o
+      )
+    );
+
+    const result = await svc.moverEtapa(String(active.id), novaEtapaId);
+    if (!result.success) {
+      toast.error('Erro ao mover oportunidade');
+      setOportunidades(prev =>
+        prev.map(o =>
+          o.id === active.id ? { ...o, etapa_id: oportunidade.etapa_id } : o
+        )
+      );
+    }
+  }
+
+  // Ações nos cards
+  async function handleGanhar(oportunidade: Oportunidade) {
+    setOportunidadeGanhar(oportunidade);
+  }
+
+  async function handlePerder(oportunidade: Oportunidade) {
+    setOportunidadePerder(oportunidade);
+  }
+
+  async function handleDeletar(oportunidade: Oportunidade) {
+    setOportunidadeDeletar(oportunidade);
+  }
+
+  function handleEditar(oportunidade: Oportunidade) {
+    setOportunidadeEditando(oportunidade);
+  }
+
+  function handleVerDetalhes(oportunidade: Oportunidade) {
+    setOportunidadeDetalhes(oportunidade);
+  }
+
+  async function confirmarDeletar() {
+    if (!oportunidadeDeletar) return;
+    setLoadingId(oportunidadeDeletar.id);
+    const result = await svc.deletarOportunidade(oportunidadeDeletar.id);
+    setLoadingId(null);
+    if (result.success) {
+      toast.success('Oportunidade deletada');
+      setOportunidades(prev => prev.filter(o => o.id !== oportunidadeDeletar.id));
+    } else {
+      toast.error(result.error || 'Erro ao deletar');
+    }
+    setOportunidadeDeletar(null);
+  }
+
+  // Render
   return (
     <DashboardLayout title="Pipeline CRM">
-      <div className="space-y-6 animate-fade-in">
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-        {/* ── Cabeçalho ── */}
-        <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col h-full space-y-5">
+
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 flex-shrink-0">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Pipeline CRM</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Pipeline CRM</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
               Gerencie o funil de vendas da clínica
             </p>
           </div>
@@ -1021,366 +1332,282 @@ export default function Pipeline() {
               className="rounded-lg"
             >
               <Settings2 className="h-4 w-4 mr-2" />
-              Configurar Etapas
+              Etapas
             </Button>
-            <Button onClick={() => setModalCriarOpen(true)} className="rounded-lg shadow-sm">
+            <Button
+              onClick={() => setModalCriarOpen(true)}
+              className="rounded-lg shadow-sm"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Nova Oportunidade
             </Button>
           </div>
         </div>
 
-        {/* ── Stats globais ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card className="rounded-xl border-0 shadow-sm overflow-hidden">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="rounded-xl p-2.5" style={{ backgroundColor: 'hsl(var(--pipeline-blue) / 0.12)' }}>
-                <Users className="h-5 w-5" style={{ color: 'hsl(var(--pipeline-blue))' }} />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Em aberto</p>
-                <p className="text-2xl font-bold tabular-nums text-foreground">{stats.totalAbertas}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border-0 shadow-sm overflow-hidden">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="rounded-xl p-2.5" style={{ backgroundColor: 'hsl(var(--pipeline-green) / 0.12)' }}>
-                <DollarSign className="h-5 w-5" style={{ color: 'hsl(var(--pipeline-green))' }} />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Valor total</p>
-                <p className="text-lg font-bold leading-tight tabular-nums text-foreground">{formatBRL(stats.valorTotal)}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border-0 shadow-sm overflow-hidden">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="rounded-xl p-2.5" style={{ backgroundColor: 'hsl(var(--pipeline-yellow) / 0.12)' }}>
-                <Trophy className="h-5 w-5" style={{ color: 'hsl(var(--pipeline-yellow))' }} />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Ganhas</p>
-                <p className="text-2xl font-bold tabular-nums text-foreground">{stats.totalGanhas}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-xl border-0 shadow-sm overflow-hidden">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="rounded-xl p-2.5" style={{ backgroundColor: 'hsl(var(--pipeline-purple) / 0.12)' }}>
-                <TrendingUp className="h-5 w-5" style={{ color: 'hsl(var(--pipeline-purple))' }} />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Conversão</p>
-                <p className="text-2xl font-bold tabular-nums text-foreground">{stats.taxa}%</p>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0">
+          {[
+            { label: 'Em aberto', value: stats.totalAbertas, icon: Users, color: '#3B82F6', suffix: '' },
+            { label: 'Valor total', value: formatBRL(stats.valorTotal), icon: DollarSign, color: '#10B981', isStr: true },
+            { label: 'Ganhas', value: stats.totalGanhas, icon: Trophy, color: '#F59E0B', suffix: '' },
+            { label: 'Conversão', value: stats.taxa, icon: TrendingUp, color: '#8B5CF6', suffix: '%' },
+          ].map(({ label, value, icon: Icon, color, isStr, suffix }) => (
+            <Card key={label} className="rounded-xl border-0 shadow-sm overflow-hidden">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div
+                  className="rounded-xl p-2.5 flex-shrink-0"
+                  style={{ backgroundColor: `${color}18` }}
+                >
+                  <Icon className="h-4 w-4" style={{ color }} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-gray-500 font-medium truncate">{label}</p>
+                  <p className="text-xl font-bold text-gray-900 tabular-nums leading-tight">
+                    {isStr ? value : `${value}${suffix ?? ''}`}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* ── Busca ── */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-9 rounded-lg"
-            placeholder="Buscar por título ou paciente..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-          />
-        </div>
-
-        {/* ── Kanban por abas ── */}
-        {loadingEtapas ? (
-          <div className="space-y-4">
-            <Skeleton className="h-10 w-full rounded-lg" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => <CardSkeleton key={i} />)}
+        {/* Barra de progresso do funil */}
+        {!loadingEtapas && etapas.length > 0 && (
+          <div className="flex-shrink-0">
+            <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 gap-px">
+              {etapas.map(etapa => {
+                const count = porEtapa(etapa.id).length;
+                const total = oportunidadesFiltradas.length;
+                const pct = total > 0 ? (count / total) * 100 : 0;
+                return pct > 0 ? (
+                  <div
+                    key={etapa.id}
+                    className="h-full transition-all duration-500"
+                    style={{ width: `${pct}%`, backgroundColor: etapa.cor }}
+                    title={`${etapa.nome}: ${count}`}
+                  />
+                ) : null;
+              })}
             </div>
+            <div className="flex items-center gap-4 mt-1.5 flex-wrap">
+              {etapas.map(etapa => {
+                const count = porEtapa(etapa.id).length;
+                return count > 0 ? (
+                  <span key={etapa.id} className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: etapa.cor }} />
+                    {etapa.nome} ({count})
+                  </span>
+                ) : null;
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Filtros */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              className="pl-9 rounded-lg bg-white border-gray-200"
+              placeholder="Buscar oportunidade..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setFiltroAtrasados(v => !v)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors ${
+              filtroAtrasados
+                ? 'bg-red-50 border-red-200 text-red-700 font-medium'
+                : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+            }`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Atrasados
+          </button>
+        </div>
+
+        {/* Kanban Board */}
+        {loadingEtapas ? (
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="flex-shrink-0 w-72 space-y-3">
+                <Skeleton className="h-10 rounded-xl" />
+                {[1, 2].map(j => <Skeleton key={j} className="h-28 rounded-xl" />)}
+              </div>
+            ))}
           </div>
         ) : etapas.length === 0 ? (
           <Card className="rounded-xl border-0 shadow-sm">
-            <CardContent className="p-10 text-center text-muted-foreground">
-              <p className="font-medium text-foreground">Nenhuma etapa de workflow configurada.</p>
-              <p className="text-sm mt-1">
-                Execute o seed de workflow-etapas ou configure as etapas pelo painel.
-              </p>
+            <CardContent className="p-10 text-center text-gray-500">
+              <p className="font-medium text-gray-800">Nenhuma etapa configurada.</p>
+              <p className="text-sm mt-1">Configure as etapas do pipeline clicando em "Etapas".</p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => setModalEtapasOpen(true)}
+              >
+                <Settings2 className="h-4 w-4 mr-2" />
+                Configurar Etapas
+              </Button>
             </CardContent>
           </Card>
         ) : (
-          <Tabs value={tabAtiva} onValueChange={setTabAtiva}>
-            {/* Tab triggers estilo pill */}
-            <TabsList className="h-auto flex-wrap justify-start gap-2 bg-transparent p-0 mb-5">
-              {etapas.map((etapa) => {
-                const count = porEtapa(etapa.id).length;
-                const isActive = tabAtiva === String(etapa.id);
-                return (
-                  <TabsTrigger
-                    key={etapa.id}
-                    value={String(etapa.id)}
-                    className="rounded-full px-4 py-2 text-sm font-medium border transition-all duration-200 data-[state=active]:shadow-md"
-                    style={
-                      isActive
-                        ? { backgroundColor: etapa.cor, borderColor: etapa.cor, color: '#fff' }
-                        : { borderColor: `${etapa.cor}60`, color: etapa.cor, backgroundColor: `${etapa.cor}08` }
-                    }
-                  >
-                    {etapa.nome}
-                    {count > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-2 h-5 min-w-5 px-1.5 text-xs rounded-full"
-                        style={isActive ? { backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' } : {}}
-                      >
-                        {count}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-
-            {/* Conteúdo de cada aba */}
-            {etapas.map((etapa) => {
-              const cards = porEtapa(etapa.id);
-              const valorEtapa = cards.reduce((s, o) => s + (o.valor_estimado || 0), 0);
-
-              return (
-                <TabsContent key={etapa.id} value={String(etapa.id)}>
-                  {/* Stats da etapa */}
-                  <div
-                    className="flex items-center gap-4 text-sm mb-5 pb-3 border-b-2"
-                    style={{ borderColor: `${etapa.cor}30` }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: etapa.cor }} />
-                      <span className="font-semibold text-foreground">
-                        {etapa.nome}
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground">
-                      {cards.length} {cards.length === 1 ? 'oportunidade' : 'oportunidades'}
-                    </span>
-                    <span className="font-semibold" style={{ color: 'hsl(var(--pipeline-green))' }}>
-                      {formatBRL(valorEtapa)}
-                    </span>
-                  </div>
-
-                  {/* Cards */}
-                  {loadingOportunidades ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {[1, 2, 3].map((i) => <CardSkeleton key={i} />)}
-                    </div>
-                  ) : cards.length === 0 ? (
-                    <div className="text-center py-16 text-muted-foreground">
-                      <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                        <Users className="h-5 w-5" />
-                      </div>
-                      <p className="font-medium text-foreground">Nenhuma oportunidade nesta etapa</p>
-                      {busca && (
-                        <p className="text-sm mt-1">
-                          Tente limpar a busca ou{' '}
-                          <button
-                            className="underline text-primary"
-                            onClick={() => setBusca('')}
-                          >
-                            ver todas
-                          </button>
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {cards.map((oportunidade) => (
-                        <OportunidadeCard
-                          key={oportunidade.id}
-                          oportunidade={oportunidade}
-                          etapas={etapas}
-                          etapaAtual={etapa}
-                          loadingId={loadingId}
-                          onMover={handleMover}
-                          onGanhar={handleGanhar}
-                          onPerder={setOportunidadePerder}
-                          onDeletar={handleDeletar}
-                          onEditar={setOportunidadeEditar}
-                          onVerDetalhes={setOportunidadeDetalhes}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              );
-            })}
-          </Tabs>
-        )}
-      </div>
-
-      {/* ── Modais ── */}
-
-      <ModalCriar
-        open={modalCriarOpen}
-        etapas={etapas}
-        onClose={() => setModalCriarOpen(false)}
-        onSalvo={() => { setModalCriarOpen(false); carregarOportunidades(); }}
-      />
-
-      <ModalEditar
-        oportunidade={oportunidadeEditar}
-        onClose={() => setOportunidadeEditar(null)}
-        onSalvo={() => { setOportunidadeEditar(null); carregarOportunidades(); }}
-      />
-
-      <ModalDetalhes
-        oportunidade={oportunidadeDetalhes}
-        onClose={() => setOportunidadeDetalhes(null)}
-        onEditar={(o) => { setOportunidadeDetalhes(null); setOportunidadeEditar(o); }}
-      />
-
-      <ModalPerder
-        oportunidade={oportunidadePerder}
-        onClose={() => setOportunidadePerder(null)}
-        onConfirmado={handleConfirmarPerda}
-        loading={loadingPerder}
-      />
-
-      <Dialog open={modalEtapasOpen} onOpenChange={setModalEtapasOpen}>
-        <DialogContent className="max-w-lg rounded-xl">
-          <DialogHeader>
-            <DialogTitle className="text-lg">Etapas do Pipeline</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-            <div className="space-y-2">
-              {etapas.map((etapa) => (
-                <div
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-4 overflow-x-auto pb-6 flex-1">
+              {etapas.map((etapa, idx) => (
+                <KanbanColumn
                   key={etapa.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-                >
-                  <div
-                    className="w-4 h-4 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: etapa.cor }}
-                  />
-                  {etapaEditando?.id === etapa.id ? (
-                    <div className="flex-1 flex items-center gap-2">
-                      <input
-                        className="flex-1 text-sm border rounded px-2 py-1 bg-background"
-                        value={etapaEditando.nome}
-                        onChange={(e) => setEtapaEditando({
-                          ...etapaEditando,
-                          nome: e.target.value,
-                        })}
-                        autoFocus
-                      />
-                      <div className="flex gap-1 flex-wrap max-w-[120px]">
-                        {CORES_ETAPA.map((cor) => (
-                          <button
-                            key={cor}
-                            className={`w-4 h-4 rounded-full transition-transform hover:scale-110 ${
-                              etapaEditando.cor === cor
-                                ? 'ring-2 ring-offset-1 ring-primary'
-                                : ''
-                            }`}
-                            style={{ backgroundColor: cor }}
-                            onClick={() => setEtapaEditando({
-                              ...etapaEditando,
-                              cor,
-                            })}
-                          />
-                        ))}
-                      </div>
-                      <button
-                        onClick={handleAtualizarEtapa}
-                        disabled={salvandoEtapa}
-                        className="text-green-600 hover:text-green-700 p-1"
-                      >
-                        <Check className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => setEtapaEditando(null)}
-                        className="text-muted-foreground hover:text-foreground p-1"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm font-medium">{etapa.nome}</span>
-                      <span className="text-xs text-muted-foreground">
-                        #{porEtapa(etapa.id).length} ops
-                      </span>
-                      <button
-                        onClick={() => setEtapaEditando(etapa)}
-                        className="text-muted-foreground hover:text-foreground p-1 transition-colors"
-                        title="Editar"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleExcluirEtapa(etapa.id)}
-                        disabled={excluindoEtapaId === etapa.id}
-                        className="text-muted-foreground hover:text-destructive p-1 transition-colors"
-                        title="Excluir"
-                      >
-                        {excluindoEtapaId === etapa.id
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          : <Trash2 className="h-3.5 w-3.5" />}
-                      </button>
-                    </>
-                  )}
-                </div>
+                  etapa={etapa}
+                  oportunidades={porEtapa(etapa.id)}
+                  etapas={etapas}
+                  loadingId={loadingId}
+                  animationDelay={idx * 80}
+                  onGanhar={handleGanhar}
+                  onPerder={handlePerder}
+                  onDeletar={handleDeletar}
+                  onEditar={handleEditar}
+                  onVerDetalhes={handleVerDetalhes}
+                />
               ))}
             </div>
 
-            <div className="border-t pt-4">
-              <p className="text-sm font-medium mb-3">Nova Etapa</p>
-              <div className="space-y-3">
-                <input
-                  className="w-full text-sm border rounded-lg px-3 py-2 bg-background"
-                  placeholder="Nome da etapa..."
-                  value={novaEtapaNome}
-                  onChange={(e) => setNovaEtapaNome(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCriarEtapa();
-                  }}
-                />
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">Cor</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {CORES_ETAPA.map((cor) => (
-                      <button
-                        key={cor}
-                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${
-                          novaEtapaCor === cor
-                            ? 'ring-2 ring-offset-2 ring-primary'
-                            : ''
-                        }`}
-                        style={{ backgroundColor: cor }}
-                        onClick={() => setNovaEtapaCor(cor)}
-                      />
-                    ))}
-                  </div>
+            {/* DragOverlay — card fantasma durante drag */}
+            <DragOverlay>
+              {oportunidadeAtiva && etapaAtiva ? (
+                <div className="bg-white rounded-xl border border-gray-200 shadow-2xl p-3 w-72 rotate-2 opacity-95">
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                    style={{ backgroundColor: etapaAtiva.cor }}
+                  />
+                  <p className="text-sm font-semibold text-gray-900 pl-2 truncate">
+                    {oportunidadeAtiva.titulo}
+                  </p>
+                  <p className="text-xs text-gray-500 pl-2 mt-1">
+                    {oportunidadeAtiva.lead_nome}
+                  </p>
+                  {oportunidadeAtiva.valor_estimado && (
+                    <p className="text-sm font-bold text-gray-900 pl-2 mt-1">
+                      {formatBRL(oportunidadeAtiva.valor_estimado)}
+                    </p>
+                  )}
                 </div>
-                <Button
-                  onClick={handleCriarEtapa}
-                  disabled={salvandoEtapa || !novaEtapaNome.trim()}
-                  className="w-full rounded-lg"
-                >
-                  {salvandoEtapa
-                    ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    : <Plus className="h-4 w-4 mr-2" />}
-                  Adicionar Etapa
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
+
+        {/* Modais */}
+        <ModalCriar
+          open={modalCriarOpen}
+          etapas={etapas}
+          onClose={() => setModalCriarOpen(false)}
+          onSalvo={() => { setModalCriarOpen(false); carregarOportunidades(); }}
+        />
+
+        {oportunidadeEditando && (
+          <ModalEditar
+            oportunidade={oportunidadeEditando}
+            onClose={() => setOportunidadeEditando(null)}
+            onSalvo={() => { setOportunidadeEditando(null); carregarOportunidades(); }}
+          />
+        )}
+
+        {oportunidadeDetalhes && (
+          <ModalDetalhes
+            oportunidade={oportunidadeDetalhes}
+            etapas={etapas}
+            onClose={() => setOportunidadeDetalhes(null)}
+            onEditar={o => { setOportunidadeDetalhes(null); setOportunidadeEditando(o); }}
+          />
+        )}
+
+        {oportunidadeGanhar && (
+          <ModalGanhar
+            oportunidade={oportunidadeGanhar}
+            loading={loadingId === oportunidadeGanhar.id}
+            onClose={() => setOportunidadeGanhar(null)}
+            onConfirmar={async () => {
+              setLoadingId(oportunidadeGanhar.id);
+              const result = await svc.atualizarStatus(oportunidadeGanhar.id, 'ganha');
+              setLoadingId(null);
+              if (result.success) {
+                toast.success('🎉 Oportunidade ganha!');
+                setOportunidades(prev => prev.filter(o => o.id !== oportunidadeGanhar.id));
+              } else {
+                toast.error(result.error || 'Erro');
+              }
+              setOportunidadeGanhar(null);
+            }}
+          />
+        )}
+
+        {oportunidadePerder && (
+          <ModalPerder
+            oportunidade={oportunidadePerder}
+            loading={loadingId === oportunidadePerder.id}
+            onClose={() => setOportunidadePerder(null)}
+            onConfirmar={async (motivo?: string) => {
+              setLoadingId(oportunidadePerder.id);
+              const result = await svc.atualizarStatus(oportunidadePerder.id, 'perdida', motivo);
+              setLoadingId(null);
+              if (result.success) {
+                toast.success('Oportunidade marcada como perdida');
+                setOportunidades(prev => prev.filter(o => o.id !== oportunidadePerder.id));
+              } else {
+                toast.error(result.error || 'Erro');
+              }
+              setOportunidadePerder(null);
+            }}
+          />
+        )}
+
+        {oportunidadeDeletar && (
+          <Dialog
+            open={!!oportunidadeDeletar}
+            onOpenChange={v => { if (!v) setOportunidadeDeletar(null); }}
+          >
+            <DialogContent className="max-w-sm rounded-xl">
+              <DialogHeader>
+                <DialogTitle>Deletar oportunidade?</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-gray-500">
+                Tem certeza? Esta ação não pode ser desfeita.
+              </p>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOportunidadeDeletar(null)}>
+                  Cancelar
                 </Button>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalEtapasOpen(false)}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                <Button
+                  variant="destructive"
+                  onClick={confirmarDeletar}
+                  disabled={loadingId === oportunidadeDeletar.id}
+                >
+                  {loadingId === oportunidadeDeletar.id && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  Deletar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        <ModalEtapas
+          open={modalEtapasOpen}
+          etapas={etapas}
+          onClose={() => setModalEtapasOpen(false)}
+          onSalvo={() => { setModalEtapasOpen(false); carregarEtapas(); }}
+          porEtapa={porEtapa}
+        />
+
+      </div>
     </DashboardLayout>
   );
 }
