@@ -304,6 +304,7 @@ export default function Conversas() {
   // chave: message_id da mensagem que recebeu a reação, valor: emoji
   const [reacoesMap, setReacoesMap] = useState<Record<string, string>>({});
   const [reacaoVersion, setReacaoVersion] = useState(0);
+  const [reacaoPickerMsgId, setReacaoPickerMsgId] = useState<string | null>(null);
   const [encaminharDialogOpen, setEncaminharDialogOpen] = useState(false);
 
   // Sugestões IA
