@@ -479,7 +479,6 @@ export default function Leads() {
           onTagsChange={() => refreshLeads()}
         />
       )}
-        </div>
       </DashboardLayout>
     </>
   );
