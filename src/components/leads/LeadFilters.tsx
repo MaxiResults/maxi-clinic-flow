@@ -11,6 +11,12 @@ interface CampanhaSimples {
   campanha_status: string;
 }
 
+interface CanalOrigem {
+  id: number;
+  nome: string;
+  icone: string;
+}
+
 interface LeadFiltersProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
@@ -38,6 +44,7 @@ export function LeadFilters({
 }: LeadFiltersProps) {
   const { tags } = useTags();
   const [campanhas, setCampanhas] = useState<CampanhaSimples[]>([]);
+  const [canais, setCanais] = useState<CanalOrigem[]>([]);
 
   useEffect(() => {
     api.get('/campanhas')
@@ -46,6 +53,15 @@ export function LeadFilters({
         setCampanhas(Array.isArray(data) ? data : []);
       })
       .catch(() => setCampanhas([]));
+  }, []);
+
+  useEffect(() => {
+    api.get('/campanhas/canais')
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        setCanais(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setCanais([]));
   }, []);
   return (
     <div className="flex flex-col md:flex-row gap-4">
@@ -77,13 +93,14 @@ export function LeadFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todos">Todos os canais</SelectItem>
-          <SelectItem value="Instagram">Instagram</SelectItem>
-          <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-          <SelectItem value="Site">Site</SelectItem>
-          <SelectItem value="Facebook">Facebook</SelectItem>
-          <SelectItem value="Google">Google</SelectItem>
-          <SelectItem value="Indicação">Indicação</SelectItem>
-          <SelectItem value="Outro">Outro</SelectItem>
+          {canais.map(canal => (
+            <SelectItem key={canal.id} value={canal.nome}>
+              <span className="flex items-center gap-2">
+                <span>{canal.icone}</span>
+                <span>{canal.nome}</span>
+              </span>
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
