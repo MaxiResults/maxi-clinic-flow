@@ -37,6 +37,7 @@ import AnalyticsIA from '@/pages/AnalyticsIA';
 import KnowledgeBase from '@/pages/KnowledgeBase';
 import FunctionPermissions from '@/pages/FunctionPermissions';
 import ConfiguracaoWhatsApp from '@/pages/ConfiguracaoWhatsApp';
+import ConfiguracaoPipelineEtapas from '@/pages/ConfiguracaoPipelineEtapas';
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const AppRoutes = () => (
     <Route path="/profissionais/:id/editar" element={<PrivateRoute><ProfissionalForm /></PrivateRoute>} />
     <Route path="/produtos" element={<PrivateRoute><Produtos /></PrivateRoute>} />
     <Route path="/configuracoes" element={<PrivateRoute><Settings /></PrivateRoute>} />
+    <Route path="/configuracoes/pipeline/etapas" element={<PrivateRoute><ConfiguracaoPipelineEtapas /></PrivateRoute>} />
     <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
     <Route path="/especialidades" element={<PrivateRoute><Especialidades /></PrivateRoute>} />
     <Route path="/perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />

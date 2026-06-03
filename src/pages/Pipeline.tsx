@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import {
   DndContext, DragEndEvent, DragOverEvent, DragStartEvent,
   DragOverlay, PointerSensor, useSensor, useSensors,
@@ -1158,6 +1159,7 @@ function ModalEtapas({ open, etapas, onClose, onSalvo, porEtapa }: ModalEtapasPr
 
 export default function Pipeline() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // State
   const [etapas, setEtapas] = useState<WorkflowEtapa[]>([]);
@@ -1383,14 +1385,6 @@ export default function Pipeline() {
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
-              onClick={() => setModalEtapasOpen(true)}
-              className="rounded-lg"
-            >
-              <Settings2 className="h-4 w-4 mr-2" />
-              Etapas
-            </Button>
-            <Button
               onClick={() => setModalCriarOpen(true)}
               className="rounded-lg shadow-sm"
             >
@@ -1501,7 +1495,7 @@ export default function Pipeline() {
               <Button
                 variant="outline"
                 className="mt-4"
-                onClick={() => setModalEtapasOpen(true)}
+                onClick={() => navigate('/configuracoes/pipeline/etapas')}
               >
                 <Settings2 className="h-4 w-4 mr-2" />
                 Configurar Etapas
@@ -1557,6 +1551,19 @@ export default function Pipeline() {
               ) : null}
             </DragOverlay>
           </DndContext>
+        )}
+
+        {/* Link de configuração para admin/gestor */}
+        {(user?.role === 'admin' || user?.role === 'gestor') && (
+          <div className="flex justify-end flex-shrink-0 pt-2 border-t border-gray-100">
+            <button
+              onClick={() => navigate('/configuracoes/pipeline/etapas')}
+              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              Configurar etapas do pipeline
+            </button>
+          </div>
         )}
 
         {/* Modais */}

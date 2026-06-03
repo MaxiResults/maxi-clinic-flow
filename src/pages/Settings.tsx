@@ -19,6 +19,7 @@ import {
   BarChart3,
   BookOpen,
   Smartphone,
+  TrendingUp,
 } from 'lucide-react';
 
 const configSections = [
@@ -156,6 +157,19 @@ const integracoesSections = [
   },
 ];
 
+const crmSections = [
+  {
+    id: 'pipeline-etapas',
+    title: 'Etapas do Pipeline',
+    description: 'Configure as etapas do funil de vendas. Arraste para reordenar e defina probabilidades de fechamento.',
+    icon: TrendingUp,
+    route: '/configuracoes/pipeline/etapas',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-600/10',
+    count: null,
+  },
+];
+
 export default function Settings() {
   const navigate = useNavigate();
 
@@ -210,6 +224,17 @@ export default function Settings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {configSections.map(renderCard)}
+          </div>
+        </div>
+
+        {/* Seção: CRM */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold">CRM</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {crmSections.map(renderCard)}
           </div>
         </div>
 
