@@ -238,7 +238,12 @@ export default function Leads() {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-gray-900 truncate">{lead.nome}</p>
                     <p className="text-xs text-gray-500 truncate">
-                      {formatPhone(lead.telefone)}
+                      {lead.telefone
+                        ? formatPhone(lead.telefone)
+                        : lead.whatsapp_id && lead.whatsapp_id.length > 13 && !lead.whatsapp_id.startsWith('55')
+                          ? '🔒 Número privado'
+                          : '—'
+                      }
                       {lead.email && ` • ${lead.email}`}
                     </p>
                   </div>
@@ -361,7 +366,14 @@ export default function Leads() {
                         </td>
                         {/* Contato */}
                         <td className="px-4 py-3">
-                          <p className="text-xs text-gray-700">{formatPhone(lead.telefone)}</p>
+                          <p className="text-xs text-gray-700">
+                            {lead.telefone
+                              ? formatPhone(lead.telefone)
+                              : lead.whatsapp_id && lead.whatsapp_id.length > 13 && !lead.whatsapp_id.startsWith('55')
+                                ? '🔒 Número privado'
+                                : '—'
+                            }
+                          </p>
                           {lead.email && <p className="text-xs text-gray-400 truncate max-w-[160px]">{lead.email}</p>}
                         </td>
                         {/* Canal */}

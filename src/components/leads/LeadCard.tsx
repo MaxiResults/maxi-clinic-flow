@@ -87,7 +87,15 @@ export function LeadCard({ lead, onEdit, onDelete, onView, onTag }: LeadCardProp
         <div className="space-y-1 mb-3">
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <Phone className="h-3 w-3 flex-shrink-0" />
-            <span>{formatPhone(lead.telefone)}</span>
+            {lead.telefone ? (
+              <span>{formatPhone(lead.telefone)}</span>
+            ) : lead.whatsapp_id && lead.whatsapp_id.length > 13 && !lead.whatsapp_id.startsWith('55') ? (
+              <span className="flex items-center gap-1 text-gray-400 italic">
+                🔒 Número privado
+              </span>
+            ) : (
+              <span className="text-gray-300">—</span>
+            )}
           </div>
           {lead.email && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
