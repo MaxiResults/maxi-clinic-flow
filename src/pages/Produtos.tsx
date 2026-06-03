@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +125,14 @@ export default function Produtos() {
   const [filtroGrupo, setFiltroGrupo] = useState("all");
   const [filtroTipo, setFiltroTipo] = useState("all");
   const [busca, setBusca] = useState("");
+  const buscaRef = useRef<HTMLInputElement>(null);
+
+  const handleBuscaChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setBusca(e.target.value);
+    },
+    []
+  );
 
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -633,9 +641,10 @@ export default function Produtos() {
           <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
+              ref={buscaRef}
               placeholder="Buscar produtos..."
               value={busca}
-              onChange={(e) => setBusca(e.target.value)}
+              onChange={handleBuscaChange}
               className="pl-9 bg-white border-gray-200"
             />
           </div>
