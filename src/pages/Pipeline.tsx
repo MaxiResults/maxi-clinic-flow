@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import {
   DndContext, DragEndEvent, DragOverEvent, DragStartEvent,
   DragOverlay, PointerSensor, useSensor, useSensors,
-  closestCorners,
+  closestCorners, useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext, useSortable, verticalListSortingStrategy,
@@ -313,6 +313,9 @@ function KanbanColumn({
   onEditar: (o: Oportunidade) => void;
   onVerDetalhes: (o: Oportunidade) => void;
 }) {
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `etapa-${etapa.id}`,
+  });
   const valorTotal = oportunidades.reduce((s, o) => s + (o.valor_estimado || 0), 0);
   const ids = oportunidades.map(o => o.id);
 
@@ -355,7 +358,12 @@ function KanbanColumn({
       </div>
 
       {/* Drop zone + cards */}
-      <div className="flex-1 min-h-[200px] space-y-2">
+      <div
+        ref={setDropRef}
+        className={`flex-1 min-h-[200px] space-y-2 rounded-xl transition-colors duration-150 ${
+          isOver ? 'bg-primary/5 ring-2 ring-primary/20' : ''
+        }`}
+      >
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           {oportunidades.length === 0 ? (
             <div
@@ -1276,33 +1284,45 @@ export default function Pipeline() {
     const overId = String(over.id);
     let novaEtapaId: number | null = null;
 
-    const etapaDestino = etapas.find(e => String(e.id) === overId);
-    if (etapaDestino) {
-      novaEtapaId = etapaDestino.id;
-    } else {
+    // 1. Verificar se o drop foi em uma zona de etapa (useDroppable)
+    if (overId.startsWith('etapa-')) {
+      const etapaId = Number(overId.replace('etapa-', ''));
+      const etapaDestino = etapas.find(e => e.id === etapaId);
+      if (etapaDestino) novaEtapaId = etapaDestino.id;
+    }
+    // 2. Verificar se o drop foi em cima de outro card
+    else {
       const oportunidadeDestino = oportunidades.find(o => o.id === overId);
       if (oportunidadeDestino) novaEtapaId = oportunidadeDestino.etapa_id;
     }
 
     if (!novaEtapaId) return;
 
-    const oportunidade = oportunidades.find(o => o.id === active.id);
+    const oportunidade = oportunidades.find(o => o.id === String(active.id));
     if (!oportunidade || oportunidade.etapa_id === novaEtapaId) return;
 
+    // Optimistic update
     setOportunidades(prev =>
       prev.map(o =>
-        o.id === active.id ? { ...o, etapa_id: novaEtapaId! } : o
+        o.id === String(active.id)
+          ? { ...o, etapa_id: novaEtapaId! }
+          : o
       )
     );
 
     const result = await svc.moverEtapa(String(active.id), novaEtapaId);
     if (!result.success) {
       toast.error('Erro ao mover oportunidade');
+      // Reverter
       setOportunidades(prev =>
         prev.map(o =>
-          o.id === active.id ? { ...o, etapa_id: oportunidade.etapa_id } : o
+          o.id === String(active.id)
+            ? { ...o, etapa_id: oportunidade.etapa_id }
+            : o
         )
       );
+    } else {
+      toast.success('Oportunidade movida!');
     }
   }
 
