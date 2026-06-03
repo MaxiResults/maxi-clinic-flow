@@ -15,9 +15,10 @@ import { useLeadsData } from '@/hooks/useLeadsData';
 const leadSchema = z.object({
   nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   telefone: z.string()
-    .min(1, "Telefone é obrigatório")
-    .transform(val => val.replace(/\D/g, ''))
-    .refine(val => val.length === 10 || val.length === 11, "Telefone deve ter 10 ou 11 dígitos"),
+    .optional()
+    .transform(val => val ? val.replace(/\D/g, '') : '')
+    .refine(val => val === '' || val.length === 10 || val.length === 11,
+      "Telefone deve ter 10 ou 11 dígitos"),
   email: z.string().email("Email inválido").optional().or(z.literal('')),
   cpf: z.string()
     .optional()
@@ -104,8 +105,8 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
           const lead = response.data;
           
           form.reset({
-            nome: lead.nome,
-            telefone: formatPhone(lead.telefone),
+            nome: lead.nome || '',
+            telefone: lead.telefone ? formatPhone(lead.telefone) : '',
             email: lead.email || "",
             cpf: lead.cpf ? formatCPF(lead.cpf) : "",
             canal_origem: lead.canal_origem,
@@ -166,7 +167,9 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
     
     const payload = {
       ...data,
-      telefone: cleanPhone(data.telefone),
+      telefone: data.telefone && data.telefone.trim() !== ''
+        ? cleanPhone(data.telefone)
+        : undefined,
       cpf: data.cpf ? data.cpf.replace(/\D/g, '') : undefined,
       email: data.email || undefined,
     };
@@ -212,7 +215,7 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
             name="telefone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Telefone *</FormLabel>
+                <FormLabel>Telefone {mode === 'create' ? '*' : ''}</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="(00) 00000-0000"
