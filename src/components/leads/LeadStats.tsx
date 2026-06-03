@@ -1,6 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Users, UserPlus, UserCheck, TrendingUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface LeadStatsProps {
   stats: {
@@ -14,67 +13,53 @@ interface LeadStatsProps {
 }
 
 export function LeadStats({ stats, loading }: LeadStatsProps) {
+  const items = [
+    { label: 'Total de Leads', value: stats.total,         icon: Users,      color: '#6366F1', suffix: ''  },
+    { label: 'Novos',          value: stats.novos,         icon: UserPlus,   color: '#3B82F6', suffix: ''  },
+    { label: 'Qualificados',   value: stats.qualificados,  icon: UserCheck,  color: '#F59E0B', suffix: ''  },
+    { label: 'Conversão',      value: stats.taxaConversao, icon: TrendingUp, color: '#10B981', suffix: '%' },
+  ];
+
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-2">
-              <Skeleton className="h-4 w-20" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16" />
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {items.map((_, i) => (
+          <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <Skeleton className="h-3 w-20 mb-3" />
+            <Skeleton className="h-8 w-12" />
+          </div>
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.total}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Novos</CardTitle>
-          <UserPlus className="h-4 w-4 text-blue-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-blue-600">{stats.novos}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Qualificados</CardTitle>
-          <UserCheck className="h-4 w-4 text-yellow-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-yellow-600">{stats.qualificados}</div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
-          <TrendingUp className="h-4 w-4 text-green-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-green-600">{stats.taxaConversao}%</div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {stats.convertidos} convertidos
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      {items.map(({ label, value, icon: Icon, color, suffix }, idx) => (
+        <div
+          key={label}
+          className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow"
+          style={{ animationDelay: `${idx * 60}ms` }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-medium text-gray-500 truncate">{label}</p>
+            <div
+              className="p-2 rounded-lg flex-shrink-0"
+              style={{ backgroundColor: `${color}18` }}
+            >
+              <Icon className="h-3.5 w-3.5" style={{ color }} />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 tabular-nums leading-none">
+            {value}{suffix}
           </p>
-        </CardContent>
-      </Card>
+          {label === 'Conversão' && (
+            <p className="text-[10px] text-gray-400 mt-1">
+              {stats.convertidos} convertidos
+            </p>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

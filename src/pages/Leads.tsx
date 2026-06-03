@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { Plus, Eye, Users, AlertCircle, Pencil, Tag as TagIcon } from "lucide-react";
+import { Plus, Eye, Users, AlertCircle, Pencil, Tag as TagIcon, Trash2 } from "lucide-react";
 import { useLeadsData } from "@/hooks/useLeadsData";
 import { useLeadFilters } from "@/hooks/useLeadFilters";
 import { useLeadStats } from "@/hooks/useLeadStats";
@@ -111,10 +111,36 @@ export default function Leads() {
   }
 
   return (
-    <DashboardLayout title="Leads">
-      <div className="p-8 animate-fade-in">
+    <>
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .lead-card-anim {
+          animation: fadeSlideIn 0.35s ease both;
+        }
+      `}</style>
+      <DashboardLayout title="Leads">
+        <div className="p-8 animate-fade-in">
         <LeadStats stats={stats} loading={loading} />
-        
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Leads
+            </h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Gerencie e qualifique seus contatos e potenciais pacientes
+            </p>
+          </div>
+          <Button onClick={handleCreate} className="rounded-lg shadow-sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Lead
+          </Button>
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div className="flex-1 w-full">
             <LeadFilters
@@ -128,13 +154,7 @@ export default function Leads() {
               onTagChange={filters.setFilterTag}
             />
           </div>
-          <div className="flex gap-2">
-            <LeadViewToggle view={viewMode} onViewChange={setViewMode} />
-            <Button onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Lead
-            </Button>
-          </div>
+          <LeadViewToggle view={viewMode} onViewChange={setViewMode} />
         </div>
         
         {filters.filteredLeads.length === 0 && (
@@ -149,29 +169,29 @@ export default function Leads() {
         {/* Grid View */}
         {viewMode === 'grid' && filters.filteredLeads.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filters.filteredLeads.map(lead => (
-              <div key={lead.id}>
-                <LeadCard lead={lead} onView={handleView} onEdit={handleEdit} onDelete={handleDeleteClick} />
-                <div className="flex items-center justify-between mt-2 gap-2">
-                  {lead.tags && lead.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 flex-1">
-                      {lead.tags.map(tag => (
-                        <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
-                      ))}
-                    </div>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLeadIdParaTags(lead.id);
-                      setTagManagerOpen(true);
-                    }}
-                    className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
-                    title="Gerenciar tags"
-                  >
-                    <TagIcon className="h-4 w-4" />
-                  </button>
-                </div>
+            {filters.filteredLeads.map((lead, idx) => (
+              <div
+                key={lead.id}
+                className="lead-card-anim"
+                style={{ animationDelay: `${idx * 40}ms` }}
+              >
+                <LeadCard
+                  lead={lead}
+                  onView={handleView}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteClick}
+                  onTag={(id) => {
+                    setLeadIdParaTags(id);
+                    setTagManagerOpen(true);
+                  }}
+                />
+                {lead.tags && lead.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2 px-1">
+                    {lead.tags.map(tag => (
+                      <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -180,46 +200,110 @@ export default function Leads() {
         {/* List View */}
         {viewMode === 'list' && filters.filteredLeads.length > 0 && (
           <div className="space-y-2">
-            {filters.filteredLeads.map(lead => {
-              const statusConfig = getStatusBadge(lead.status);
+            {filters.filteredLeads.map((lead, idx) => {
+              const config = {
+                novo:        { label: 'Novo',        cor: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
+                qualificado: { label: 'Qualificado', cor: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
+                convertido:  { label: 'Convertido',  cor: '#10B981', bg: '#ECFDF5', text: '#065F46' },
+              }[lead.status] || { label: 'Novo', cor: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' };
+
+              const initials = (() => {
+                const parts = lead.nome.trim().split(/\s+/);
+                if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+              })();
+
               return (
-                <div key={lead.id} className="flex items-center justify-between p-4 bg-card border rounded-lg hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{lead.nome}</h3>
-                      <p className="text-sm text-muted-foreground">{formatPhone(lead.telefone)} • {lead.email || 'Sem email'}</p>
-                    </div>
-                    <div className="text-sm text-muted-foreground">{lead.canal_origem}</div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>{statusConfig.label}</div>
-                    {lead.tags && lead.tags.length > 0 && (
-                      <div className="hidden md:flex flex-wrap gap-1 ml-2">
-                        {lead.tags.slice(0, 2).map(tag => (
-                          <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
-                        ))}
-                        {lead.tags.length > 2 && (
-                          <span className="text-xs text-muted-foreground self-center">
-                            +{lead.tags.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <FormattedDate value={lead.created_at} format="short" className="text-sm text-muted-foreground" />
+                <div
+                  key={lead.id}
+                  className="lead-card-anim group relative flex items-center gap-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden px-4 py-3 cursor-pointer"
+                  style={{ animationDelay: `${idx * 30}ms` }}
+                  onClick={() => handleView(lead.id)}
+                >
+                  {/* Borda lateral */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                    style={{ backgroundColor: config.cor }}
+                  />
+
+                  {/* Avatar */}
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ml-1"
+                    style={{ backgroundColor: config.bg, color: config.cor }}
+                  >
+                    {initials}
                   </div>
-                  <div className="flex gap-2 ml-4">
-                    <Button variant="ghost" size="icon" onClick={() => handleView(lead.id)} title="Exibir" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+
+                  {/* Nome + contato */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-gray-900 truncate">{lead.nome}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {formatPhone(lead.telefone)}
+                      {lead.email && ` • ${lead.email}`}
+                    </p>
+                  </div>
+
+                  {/* Canal */}
+                  <span className="hidden sm:block text-xs text-gray-400 flex-shrink-0">
+                    {lead.canal_origem}
+                  </span>
+
+                  {/* Status badge */}
+                  <span
+                    className="hidden md:inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0"
+                    style={{ backgroundColor: config.bg, color: config.text }}
+                  >
+                    {config.label}
+                  </span>
+
+                  {/* Tags */}
+                  {lead.tags && lead.tags.length > 0 && (
+                    <div className="hidden lg:flex flex-wrap gap-1 flex-shrink-0">
+                      {lead.tags.slice(0, 2).map(tag => (
+                        <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
+                      ))}
+                      {lead.tags.length > 2 && (
+                        <span className="text-[10px] text-gray-400 self-center">
+                          +{lead.tags.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Data */}
+                  <FormattedDate
+                    value={lead.created_at}
+                    format="short"
+                    className="hidden md:block text-[10px] text-gray-400 flex-shrink-0"
+                  />
+
+                  {/* Quick actions */}
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                     <button
-                      onClick={(e) => {
+                      onClick={e => { e.stopPropagation(); handleEdit(lead.id); }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                      title="Editar"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={e => {
                         e.stopPropagation();
                         setLeadIdParaTags(lead.id);
                         setTagManagerOpen(true);
                       }}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
-                      title="Gerenciar tags"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors"
+                      title="Tags"
                     >
-                      <TagIcon className="h-4 w-4" />
+                      <TagIcon className="h-3.5 w-3.5" />
                     </button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(lead.id)} className="h-8 w-8 text-destructive"><Plus className="h-4 w-4 rotate-45" /></Button>
+                    <button
+                      onClick={e => { e.stopPropagation(); handleDeleteClick(lead.id); }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
               );
@@ -229,59 +313,116 @@ export default function Leads() {
         
         {/* Table View */}
         {viewMode === 'table' && filters.filteredLeads.length > 0 && (
-          <div className="bg-card rounded-lg border overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Nome</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Telefone</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Email</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Canal</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Tags</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Data</th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">Ações</th>
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contato</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Canal</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tags</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Data</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody>
                   {filters.filteredLeads.map((lead) => {
-                    const statusConfig = getStatusBadge(lead.status);
+                    const config = {
+                      novo:        { label: 'Novo',        cor: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' },
+                      qualificado: { label: 'Qualificado', cor: '#F59E0B', bg: '#FFFBEB', text: '#B45309' },
+                      convertido:  { label: 'Convertido',  cor: '#10B981', bg: '#ECFDF5', text: '#065F46' },
+                    }[lead.status] || { label: 'Novo', cor: '#3B82F6', bg: '#EFF6FF', text: '#1D4ED8' };
+
+                    const initials = (() => {
+                      const parts = lead.nome.trim().split(/\s+/);
+                      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+                      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                    })();
+
                     return (
-                      <tr key={lead.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium text-foreground">{lead.nome}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">📱 {formatPhone(lead.telefone)}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{lead.email ? `✉️ ${lead.email}` : '-'}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{lead.canal_origem}</td>
-                        <td className="px-4 py-3"><span className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig.className}`}>{statusConfig.label}</span></td>
+                      <tr
+                        key={lead.id}
+                        className="group hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0"
+                        onClick={() => handleView(lead.id)}
+                      >
+                        {/* Lead: avatar + nome */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                              style={{ backgroundColor: config.bg, color: config.cor }}
+                            >
+                              {initials}
+                            </div>
+                            <span className="text-sm font-semibold text-gray-900">{lead.nome}</span>
+                          </div>
+                        </td>
+                        {/* Contato */}
+                        <td className="px-4 py-3">
+                          <p className="text-xs text-gray-700">{formatPhone(lead.telefone)}</p>
+                          {lead.email && <p className="text-xs text-gray-400 truncate max-w-[160px]">{lead.email}</p>}
+                        </td>
+                        {/* Canal */}
+                        <td className="px-4 py-3 text-xs text-gray-500">{lead.canal_origem || '—'}</td>
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          <span
+                            className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                            style={{ backgroundColor: config.bg, color: config.text }}
+                          >
+                            {config.label}
+                          </span>
+                        </td>
+                        {/* Tags */}
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {(lead.tags || []).slice(0, 3).map(tag => (
                               <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
                             ))}
                             {(lead.tags?.length || 0) > 3 && (
-                              <span className="text-xs text-muted-foreground self-center">
+                              <span className="text-[10px] text-gray-400 self-center">
                                 +{(lead.tags?.length || 0) - 3}
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground"><FormattedDate value={lead.created_at} format="short" /></td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleView(lead.id)} title="Exibir" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(lead.id)} title="Editar" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+                        {/* Data */}
+                        <td className="px-4 py-3">
+                          <FormattedDate value={lead.created_at} format="short" className="text-xs text-gray-400" />
+                        </td>
+                        {/* Ações */}
+                        <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                          <div className="flex justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
-                              onClick={() => {
-                                setLeadIdParaTags(lead.id);
-                                setTagManagerOpen(true);
-                              }}
-                              className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
-                              title="Gerenciar tags"
+                              onClick={() => handleView(lead.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                              title="Ver"
                             >
-                              <TagIcon className="h-4 w-4" />
+                              <Eye className="h-3.5 w-3.5" />
                             </button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(lead.id)} title="Excluir" className="h-8 w-8 text-destructive"><Plus className="h-4 w-4 rotate-45" /></Button>
+                            <button
+                              onClick={() => handleEdit(lead.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => { setLeadIdParaTags(lead.id); setTagManagerOpen(true); }}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors"
+                              title="Tags"
+                            >
+                              <TagIcon className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(lead.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -338,6 +479,8 @@ export default function Leads() {
           onTagsChange={() => refreshLeads()}
         />
       )}
-    </DashboardLayout>
+        </div>
+      </DashboardLayout>
+    </>
   );
 }
