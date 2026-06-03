@@ -12,6 +12,11 @@ import { Loader2 } from 'lucide-react';
 import api from '@/lib/api';
 import { useLeadsData } from '@/hooks/useLeadsData';
 
+interface CampanhaOpcao {
+  id: number;
+  nome_campanha: string;
+}
+
 const leadSchema = z.object({
   nome: z.string().min(3, "Nome deve ter no mínimo 3 caracteres"),
   telefone: z.string()
@@ -28,6 +33,7 @@ const leadSchema = z.object({
   interesse: z.string().optional(),
   observacoes: z.string().optional(),
   campanha: z.string().optional(),
+  campanha_id: z.number().optional().nullable(),
   utm_source: z.string().optional(),
   utm_medium: z.string().optional(),
   utm_campaign: z.string().optional(),
@@ -74,6 +80,7 @@ const cleanPhone = (phone: string): string => {
 
 export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
   const [loading, setLoading] = useState(false);
+  const [campanhas, setCampanhas] = useState<CampanhaOpcao[]>([]);
   const { createLead, updateLead } = useLeadsData();
 
   const form = useForm<LeadFormData>({
@@ -88,6 +95,7 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
       interesse: "",
       observacoes: "",
       campanha: "",
+      campanha_id: undefined,
       utm_source: "",
       utm_medium: "",
       utm_campaign: "",
@@ -114,6 +122,7 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
             interesse: lead.interesse || "",
             observacoes: lead.observacoes || "",
             campanha: lead.campanha || "",
+            campanha_id: lead.campanha_id || undefined,
             utm_source: lead.utm_source || "",
             utm_medium: lead.utm_medium || "",
             utm_campaign: lead.utm_campaign || "",
@@ -129,6 +138,15 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
       loadLead();
     }
   }, [mode, leadId, form]);
+
+  useEffect(() => {
+    api.get('/campanhas')
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        setCampanhas(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setCampanhas([]));
+  }, []);
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, '');
@@ -172,6 +190,7 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
         : undefined,
       cpf: data.cpf ? data.cpf.replace(/\D/g, '') : undefined,
       email: data.email || undefined,
+      campanha_id: data.campanha_id || undefined,
     };
 
     if (mode === 'create') {
@@ -352,13 +371,29 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                 <FormField
                   control={form.control}
-                  name="campanha"
+                  name="campanha_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Campanha</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Nome da campanha" {...field} />
-                      </FormControl>
+                      <Select
+                        onValueChange={val => field.onChange(val ? Number(val) : undefined)}
+                        value={field.value ? String(field.value) : ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma campanha (opcional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Nenhuma campanha</SelectItem>
+                          {campanhas.map(c => (
+                            <SelectItem key={c.id} value={String(c.id)}>
+                              {c.nome_campanha}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

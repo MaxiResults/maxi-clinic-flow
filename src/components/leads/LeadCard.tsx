@@ -1,4 +1,4 @@
-import { Eye, Pencil, Trash2, Phone, Mail, MessageCircle, Tag as TagIcon } from 'lucide-react';
+import { Eye, Pencil, Trash2, Phone, Mail, MessageCircle, Tag as TagIcon, Megaphone } from 'lucide-react';
 import { FormattedDate } from '@/components/ui/FormattedDate';
 import type { Lead } from '@/hooks/useLeadsData';
 
@@ -101,6 +101,12 @@ export function LeadCard({ lead, onEdit, onDelete, onView, onTag }: LeadCardProp
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <Mail className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{lead.email}</span>
+            </div>
+          )}
+          {lead.campanha && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <Megaphone className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{lead.campanha}</span>
             </div>
           )}
         </div>

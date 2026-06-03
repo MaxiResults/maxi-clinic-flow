@@ -10,6 +10,7 @@ export interface Lead {
   cpf?: string;
   canal_origem: string;
   campanha?: string;
+  campanha_id?: number;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;

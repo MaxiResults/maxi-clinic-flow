@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
-import { Plus, Eye, Users, AlertCircle, Pencil, Tag as TagIcon, Trash2 } from "lucide-react";
+import { Plus, Eye, Users, AlertCircle, Pencil, Tag as TagIcon, Trash2, Megaphone, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import api from "@/lib/api";
 import { useLeadsData } from "@/hooks/useLeadsData";
 import { useLeadFilters } from "@/hooks/useLeadFilters";
 import { useLeadStats } from "@/hooks/useLeadStats";
@@ -33,6 +39,11 @@ export default function Leads() {
   const [viewingLead, setViewingLead] = useState<Lead | null>(null);
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
   const [leadIdParaTags, setLeadIdParaTags] = useState<string | null>(null);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [vinculandoCampanha, setVinculandoCampanha] = useState(false);
+  const [modalVincularOpen, setModalVincularOpen] = useState(false);
+  const [campanhaParaVincular, setCampanhaParaVincular] = useState<string>('');
+  const [campanhasDisponiveis, setCampanhasDisponiveis] = useState<Array<{ id: number; nome_campanha: string }>>([]);
 
   const handleCreate = () => {
     setDialogMode('create');
@@ -64,6 +75,48 @@ export default function Leads() {
       await deleteLead(leadToDelete.id);
       setIsDeleteOpen(false);
       setLeadToDelete(null);
+    }
+  };
+
+  useEffect(() => {
+    api.get('/campanhas')
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        setCampanhasDisponiveis(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleLeadSelection = (id: string) => {
+    setSelectedLeadIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedLeadIds.length === filters.filteredLeads.length) {
+      setSelectedLeadIds([]);
+    } else {
+      setSelectedLeadIds(filters.filteredLeads.map(l => l.id));
+    }
+  };
+
+  const handleVincularCampanha = async () => {
+    if (!campanhaParaVincular || selectedLeadIds.length === 0) return;
+    setVinculandoCampanha(true);
+    try {
+      await api.post(`/campanhas/${campanhaParaVincular}/leads`, {
+        lead_ids: selectedLeadIds,
+      });
+      toast({ title: `${selectedLeadIds.length} lead(s) vinculados à campanha!` });
+      setSelectedLeadIds([]);
+      setModalVincularOpen(false);
+      setCampanhaParaVincular('');
+      refreshLeads();
+    } catch {
+      toast({ title: 'Erro ao vincular leads', description: 'Tente novamente', variant: 'destructive' });
+    } finally {
+      setVinculandoCampanha(false);
     }
   };
 
@@ -123,6 +176,32 @@ export default function Leads() {
       `}</style>
       <DashboardLayout title="Leads">
         <div className="p-8 animate-fade-in">
+        {selectedLeadIds.length > 0 && (
+          <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-xl mb-4">
+            <span className="text-sm font-medium text-primary">
+              {selectedLeadIds.length} lead(s) selecionado(s)
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedLeadIds([])}
+                className="h-8"
+              >
+                Limpar seleção
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setModalVincularOpen(true)}
+                className="h-8"
+              >
+                <Megaphone className="h-3.5 w-3.5 mr-1.5" />
+                Atribuir à campanha
+              </Button>
+            </div>
+          </div>
+        )}
+
         <LeadStats stats={stats} loading={loading} />
 
         {/* Header */}
@@ -152,9 +231,22 @@ export default function Leads() {
               onOriginChange={filters.setFilterOrigin}
               filterTag={filters.filterTag}
               onTagChange={filters.setFilterTag}
+              filterCampanha={filters.filterCampanha}
+              onCampanhaChange={filters.setFilterCampanha}
             />
           </div>
-          <LeadViewToggle view={viewMode} onViewChange={setViewMode} />
+          <div className="flex items-center gap-4">
+            {filters.filteredLeads.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedLeadIds.length === filters.filteredLeads.length && filters.filteredLeads.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span className="text-xs text-gray-500">Todos</span>
+              </div>
+            )}
+            <LeadViewToggle view={viewMode} onViewChange={setViewMode} />
+          </div>
         </div>
         
         {filters.filteredLeads.length === 0 && (
@@ -172,26 +264,37 @@ export default function Leads() {
             {filters.filteredLeads.map((lead, idx) => (
               <div
                 key={lead.id}
-                className="lead-card-anim"
+                className="lead-card-anim relative"
                 style={{ animationDelay: `${idx * 40}ms` }}
               >
-                <LeadCard
-                  lead={lead}
-                  onView={handleView}
-                  onEdit={handleEdit}
-                  onDelete={handleDeleteClick}
-                  onTag={(id) => {
-                    setLeadIdParaTags(id);
-                    setTagManagerOpen(true);
-                  }}
-                />
-                {lead.tags && lead.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2 px-1">
-                    {lead.tags.map(tag => (
-                      <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
-                    ))}
-                  </div>
-                )}
+                {/* Checkbox de seleção */}
+                <div className="absolute top-2 left-2 z-10">
+                  <Checkbox
+                    checked={selectedLeadIds.includes(lead.id)}
+                    onCheckedChange={() => toggleLeadSelection(lead.id)}
+                    onClick={e => e.stopPropagation()}
+                    className="bg-white shadow-sm"
+                  />
+                </div>
+                <div className={selectedLeadIds.includes(lead.id) ? 'ring-2 ring-primary/30 rounded-xl' : ''}>
+                  <LeadCard
+                    lead={lead}
+                    onView={handleView}
+                    onEdit={handleEdit}
+                    onDelete={handleDeleteClick}
+                    onTag={(id) => {
+                      setLeadIdParaTags(id);
+                      setTagManagerOpen(true);
+                    }}
+                  />
+                  {lead.tags && lead.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2 px-1">
+                      {lead.tags.map(tag => (
+                        <TagBadge key={tag.id} nome={tag.nome} cor={tag.cor} size="sm" />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -446,6 +549,47 @@ export default function Leads() {
           </div>
         )}
       </div>
+
+      <Dialog open={modalVincularOpen} onOpenChange={setModalVincularOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Atribuir à Campanha</DialogTitle>
+            <DialogDescription>
+              {selectedLeadIds.length} lead(s) serão vinculados à campanha selecionada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label>Selecione a campanha</Label>
+            <Select
+              value={campanhaParaVincular}
+              onValueChange={setCampanhaParaVincular}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha uma campanha..." />
+              </SelectTrigger>
+              <SelectContent>
+                {campanhasDisponiveis.map(c => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.nome_campanha}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalVincularOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleVincularCampanha}
+              disabled={!campanhaParaVincular || vinculandoCampanha}
+            >
+              {vinculandoCampanha && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Vincular
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <LeadDialog open={dialogOpen} onOpenChange={setDialogOpen} mode={dialogMode} leadId={selectedLeadId} onSuccess={() => { setDialogOpen(false); refreshLeads(); }} />
 

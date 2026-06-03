@@ -1,7 +1,15 @@
+import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
 import { useTags } from '@/hooks/useTags';
+import api from '@/lib/api';
+
+interface CampanhaSimples {
+  id: number;
+  nome_campanha: string;
+  campanha_status: string;
+}
 
 interface LeadFiltersProps {
   searchTerm: string;
@@ -12,6 +20,8 @@ interface LeadFiltersProps {
   onOriginChange: (origin: string) => void;
   filterTag: string;
   onTagChange: (tag: string) => void;
+  filterCampanha: string;
+  onCampanhaChange: (campanha: string) => void;
 }
 
 export function LeadFilters({
@@ -23,8 +33,20 @@ export function LeadFilters({
   onOriginChange,
   filterTag,
   onTagChange,
+  filterCampanha,
+  onCampanhaChange,
 }: LeadFiltersProps) {
   const { tags } = useTags();
+  const [campanhas, setCampanhas] = useState<CampanhaSimples[]>([]);
+
+  useEffect(() => {
+    api.get('/campanhas')
+      .then(res => {
+        const data = res.data?.data ?? res.data;
+        setCampanhas(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setCampanhas([]));
+  }, []);
   return (
     <div className="flex flex-col md:flex-row gap-4">
       <div className="relative flex-1">
@@ -80,6 +102,20 @@ export function LeadFilters({
                 />
                 {tag.nome}
               </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={filterCampanha} onValueChange={onCampanhaChange}>
+        <SelectTrigger className="w-full md:w-[180px]">
+          <SelectValue placeholder="Campanha" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="todas">Todas as campanhas</SelectItem>
+          {campanhas.map(c => (
+            <SelectItem key={c.id} value={String(c.id)}>
+              {c.nome_campanha}
             </SelectItem>
           ))}
         </SelectContent>

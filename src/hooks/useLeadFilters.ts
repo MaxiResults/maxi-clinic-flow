@@ -6,6 +6,7 @@ export function useLeadFilters(leads: Lead[]) {
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterOrigin, setFilterOrigin] = useState('todos');
   const [filterTag, setFilterTag] = useState('todas');
+  const [filterCampanha, setFilterCampanha] = useState('todas');
   const [sortBy, setSortBy] = useState<'created_at' | 'nome'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -39,6 +40,13 @@ export function useLeadFilters(leads: Lead[]) {
       );
     }
 
+    // Filtro por campanha
+    if (filterCampanha !== 'todas') {
+      result = result.filter(lead =>
+        String(lead.campanha_id) === filterCampanha
+      );
+    }
+
     // Ordenação
     result.sort((a, b) => {
       let comparison = 0;
@@ -53,7 +61,7 @@ export function useLeadFilters(leads: Lead[]) {
     });
 
     return result;
-  }, [leads, searchTerm, filterStatus, filterOrigin, filterTag, sortBy, sortOrder]);
+  }, [leads, searchTerm, filterStatus, filterOrigin, filterTag, filterCampanha, sortBy, sortOrder]);
 
   return {
     filteredLeads,
@@ -65,6 +73,8 @@ export function useLeadFilters(leads: Lead[]) {
     setFilterOrigin,
     filterTag,
     setFilterTag,
+    filterCampanha,
+    setFilterCampanha,
     sortBy,
     setSortBy,
     sortOrder,
