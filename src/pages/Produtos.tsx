@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Loader2, Package, Eye, Edit, Trash2, Search, X } from "lucide-react";
+import { Plus, Loader2, Package, Package2, Eye, Edit, Trash2, Search, X, Layers, Star } from "lucide-react";
 import * as Icons from "lucide-react";
 import {
   Carousel,
@@ -507,26 +507,91 @@ export default function Produtos() {
 
   return (
     <DashboardLayout title="Produtos">
-      <div className="space-y-6">
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .prod-card-anim { animation: fadeSlideIn 0.35s ease both; }
+      `}</style>
+
+      <div className="p-6 space-y-6">
+
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">
-              Total: {produtos.length} {produtos.length === 1 ? "produto" : "produtos"}
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Produtos e Serviços
+            </h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Gerencie o catálogo de produtos, serviços e combos da clínica
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={openNovo}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Produto
-            </Button>
-          </div>
+          <Button onClick={openNovo} className="rounded-lg shadow-sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Produto
+          </Button>
         </div>
+
+        {/* Stats cards */}
+        {!loading && produtos.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              {
+                label: 'Total',
+                value: produtos.length,
+                icon: Package,
+                color: '#6366F1',
+                suffix: '',
+              },
+              {
+                label: 'Serviços',
+                value: produtos.filter(p => p.tipo_estoque === 'servico').length,
+                icon: Star,
+                color: '#10B981',
+                suffix: '',
+              },
+              {
+                label: 'Produtos',
+                value: produtos.filter(p => p.tipo_estoque === 'produto').length,
+                icon: Package2,
+                color: '#3B82F6',
+                suffix: '',
+              },
+              {
+                label: 'Combos',
+                value: produtos.filter(p => p.tipo_estoque === 'combo').length,
+                icon: Layers,
+                color: '#F59E0B',
+                suffix: '',
+              },
+            ].map(({ label, value, icon: Icon, color, suffix }, idx) => (
+              <div
+                key={label}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow"
+                style={{
+                  animation: 'fadeSlideIn 0.35s ease both',
+                  animationDelay: `${idx * 60}ms`,
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-gray-500 truncate">{label}</p>
+                  <div className="p-1.5 rounded-lg flex-shrink-0" style={{ backgroundColor: `${color}18` }}>
+                    <Icon className="h-3.5 w-3.5" style={{ color }} />
+                  </div>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 tabular-nums">
+                  {value}{suffix}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-3">
           <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[180px] bg-white border-gray-200">
               <SelectValue placeholder="Todas categorias" />
             </SelectTrigger>
             <SelectContent>
@@ -540,7 +605,7 @@ export default function Produtos() {
           </Select>
 
           <Select value={filtroGrupo} onValueChange={setFiltroGrupo}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[180px] bg-white border-gray-200">
               <SelectValue placeholder="Todos grupos" />
             </SelectTrigger>
             <SelectContent>
@@ -554,172 +619,226 @@ export default function Produtos() {
           </Select>
 
           <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[160px] bg-white border-gray-200">
               <SelectValue placeholder="Todos tipos" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos tipos</SelectItem>
-              <SelectItem value="servico">Serviço</SelectItem>
-              <SelectItem value="produto">Produto</SelectItem>
-              <SelectItem value="combo">Combo</SelectItem>
+              <SelectItem value="servico">✨ Serviço</SelectItem>
+              <SelectItem value="produto">📦 Produto</SelectItem>
+              <SelectItem value="combo">🎁 Combo</SelectItem>
             </SelectContent>
           </Select>
 
           <div className="flex-1 min-w-[200px] relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Buscar produtos..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-white border-gray-200"
             />
           </div>
         </div>
 
-        {/* Cards de Produtos */}
-        {produtos.length === 0 ? (
-          <div className="text-center py-12 bg-muted/50 rounded-lg">
-            <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-lg font-medium">Nenhum produto encontrado</p>
-            <p className="text-sm text-muted-foreground mt-2">
+        {/* Loading */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="h-72 bg-gray-100 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && produtos.length === 0 && (
+          <div className="text-center py-16">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Package className="h-7 w-7 text-primary" />
+            </div>
+            <h3 className="font-semibold text-gray-800 text-lg">
+              Nenhum produto cadastrado
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
               Crie seu primeiro produto ou ajuste os filtros
             </p>
-            <Button className="mt-4" onClick={openNovo}>
+            <Button className="mt-4 rounded-lg" onClick={openNovo}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Produto
             </Button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {produtos.map((produto) => {
-              const categoria = categorias.find((c) => c.id === produto.categoria_id);
-              const IconComponent = categoria ? (Icons as any)[categoria.icone] || Icons.Package : Icons.Package;
+        )}
 
-              return (
-          <Card key={produto.id} className="hover:shadow-lg transition-shadow overflow-hidden">
-            {/* Carousel de imagens ou imagem única */}
-            {(() => {
-              // Combinar imagem principal + galeria
+        {/* Grid de cards */}
+        {!loading && produtos.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {produtos.map((produto, idx) => {
+              const categoria = categorias.find((c) => c.id === produto.categoria_id);
+              const IconComponent = categoria
+                ? (Icons as any)[categoria.icone] || Icons.Package
+                : Icons.Package;
+
+              // Tipo config
+              const tipoConfig = {
+                servico:  { cor: '#10B981', bg: '#ECFDF5', label: '✨ Serviço'  },
+                produto:  { cor: '#3B82F6', bg: '#EFF6FF', label: '📦 Produto'  },
+                combo:    { cor: '#F59E0B', bg: '#FFFBEB', label: '🎁 Combo'    },
+              }[produto.tipo_estoque as string] || { cor: '#6366F1', bg: '#EEF2FF', label: produto.tipo_estoque };
+
+              // Todas as imagens
               const todasImagens: string[] = [];
-              if (produto.imagem_principal) {
-                todasImagens.push(produto.imagem_principal);
-              }
+              if (produto.imagem_principal) todasImagens.push(produto.imagem_principal);
               if ((produto as any).imagem_galeria?.galeria) {
                 todasImagens.push(...(produto as any).imagem_galeria.galeria);
               }
-              
-              // Se tem mais de uma imagem, mostrar carousel
-              if (todasImagens.length > 1) {
-                return (
-                  <div className="relative aspect-square bg-muted">
-                    <Carousel className="w-full h-full">
-                      <CarouselContent>
-                        {todasImagens.map((url: string, index: number) => (
-                          <CarouselItem key={index}>
-                            <img 
-                              src={url} 
-                              alt={`${produto.nome} - ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                      <CarouselPrevious className="left-2" />
-                      <CarouselNext className="right-2" />
-                    </Carousel>
-                    
-                    <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                      {todasImagens.length} fotos
-                    </div>
-                  </div>
-                );
-              }
-              
-              // Se tem apenas uma imagem
-              if (todasImagens.length === 1) {
-                return (
-                  <div className="aspect-square bg-muted overflow-hidden">
-                    <img 
-                      src={todasImagens[0]} 
-                      alt={produto.nome}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                );
-              }
-              
-              // Se não tem imagem
+
               return (
-                <div className="aspect-square bg-muted flex items-center justify-center">
-                  <Package className="h-16 w-16 text-muted-foreground/30" />
-                </div>
-              );
-            })()}
+                <div
+                  key={produto.id}
+                  className="prod-card-anim group relative bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                  style={{ animationDelay: `${idx * 30}ms` }}
+                >
+                  {/* Borda lateral colorida por tipo */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 z-10"
+                    style={{ backgroundColor: produto.ativo ? tipoConfig.cor : '#D1D5DB' }}
+                  />
 
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base line-clamp-2 min-h-[3rem]">{produto.nome}</CardTitle>
-
-                    {categoria && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <IconComponent className="h-4 w-4" style={{ color: categoria.cor }} />
-                        {categoria.nome}
-                      </div>
-                    )}
-                  </CardHeader>
-
-                  <CardContent className="space-y-3">
-                    {/* Preço ou Variações */}
-                    {produto.tem_variacoes ? (
-                      <div>
-                        <Badge variant="secondary">{produto.variacoes?.length || 0} variações</Badge>
-                        {produto.variacoes && produto.variacoes.length > 0 && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            A partir de R${" "}
-                            {Math.min(...produto.variacoes.map((v: any) => v.preco_venda)).toFixed(2)}
-                          </p>
-                        )}
-                      </div>
+                  {/* Imagem / Carousel */}
+                  <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden">
+                    {todasImagens.length > 1 ? (
+                      <Carousel className="w-full h-full">
+                        <CarouselContent>
+                          {todasImagens.map((url: string, index: number) => (
+                            <CarouselItem key={index}>
+                              <img
+                                src={url}
+                                alt={`${produto.nome} - ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="left-2 h-6 w-6" />
+                        <CarouselNext className="right-2 h-6 w-6" />
+                        <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                          {todasImagens.length} fotos
+                        </div>
+                      </Carousel>
+                    ) : todasImagens.length === 1 ? (
+                      <img
+                        src={todasImagens[0]}
+                        alt={produto.nome}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <div>
-                        <p className="text-2xl font-bold">R$ {Number(produto.preco_padrao || 0).toFixed(2)}</p>
-                        {produto.preco_promocional && (
-                          <p className="text-sm text-muted-foreground line-through">
-                            R$ {Number(produto.preco_promocional).toFixed(2)}
-                          </p>
-                        )}
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-12 w-12 text-gray-200" />
                       </div>
                     )}
 
-                    {/* Badges */}
-                    <div className="flex flex-wrap gap-2">
-                      {produto.destaque && (
-                        <Badge variant="default" className="bg-amber-500">
-                          ⭐ Destaque
-                        </Badge>
+                    {/* Badge destaque */}
+                    {produto.destaque && (
+                      <div className="absolute top-2 left-3 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        ⭐ Destaque
+                      </div>
+                    )}
+
+                    {/* Badge inativo */}
+                    {!produto.ativo && (
+                      <div className="absolute top-2 right-2 bg-gray-800/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        Inativo
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Conteúdo */}
+                  <div className="pl-4 pr-3 pt-3 pb-3">
+                    {/* Tipo badge */}
+                    <span
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mb-2"
+                      style={{ backgroundColor: tipoConfig.bg, color: tipoConfig.cor }}
+                    >
+                      {tipoConfig.label}
+                    </span>
+
+                    {/* Nome */}
+                    <h3 className="font-semibold text-sm text-gray-900 line-clamp-2 leading-tight mb-1">
+                      {produto.nome}
+                    </h3>
+
+                    {/* Categoria */}
+                    {categoria && (
+                      <div className="flex items-center gap-1 text-[10px] text-gray-400 mb-2">
+                        <IconComponent className="h-3 w-3" style={{ color: categoria.cor }} />
+                        <span>{categoria.nome}</span>
+                      </div>
+                    )}
+
+                    {/* Preço */}
+                    <div className="mb-3">
+                      {produto.tem_variacoes ? (
+                        <div>
+                          <p className="text-xs text-gray-400">A partir de</p>
+                          {produto.variacoes && produto.variacoes.length > 0 ? (
+                            <p className="text-lg font-bold text-gray-900">
+                              R$ {Math.min(...produto.variacoes.map((v: any) => v.preco_venda)).toFixed(2)}
+                            </p>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-gray-100 text-gray-600">
+                              {produto.variacoes?.length || 0} variações
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">
+                            R$ {Number(produto.preco_padrao || 0).toFixed(2)}
+                          </p>
+                          {produto.preco_promocional && (
+                            <p className="text-xs text-gray-400 line-through">
+                              R$ {Number(produto.preco_promocional).toFixed(2)}
+                            </p>
+                          )}
+                        </div>
                       )}
-                      {produto.controla_estoque === "sim" && (
-                        <Badge variant="outline">📦 {produto.quantidade_estoque} un.</Badge>
-                      )}
-                      {!produto.ativo && <Badge variant="destructive">Inativo</Badge>}
                     </div>
 
-                    {/* Ações */}
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => openDetalhes(produto)}>
-                        <Eye className="h-4 w-4 mr-1" />
+                    {/* Estoque */}
+                    {produto.controla_estoque === 'sim' && (
+                      <p className="text-[10px] text-gray-400 mb-2">
+                        📦 {produto.quantidade_estoque} em estoque
+                      </p>
+                    )}
+
+                    {/* Quick actions no hover */}
+                    <div className="flex gap-2 pt-2 border-t border-gray-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => openDetalhes(produto)}
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
                         Ver
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => openEditar(produto)}>
-                        <Edit className="h-4 w-4 mr-1" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => openEditar(produto)}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
                         Editar
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
         )}
+
       </div>
 
       {/* Modal Novo Produto */}
