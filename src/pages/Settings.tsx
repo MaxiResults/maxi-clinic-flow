@@ -20,6 +20,7 @@ import {
   BookOpen,
   Smartphone,
   TrendingUp,
+  Megaphone,
 } from 'lucide-react';
 
 const configSections = [
@@ -166,6 +167,16 @@ const crmSections = [
     route: '/configuracoes/pipeline/etapas',
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-600/10',
+    count: null,
+  },
+  {
+    id: 'campanhas',
+    title: 'Campanhas',
+    description: 'Crie e gerencie campanhas internas e digitais. Rastreie leads e métricas de conversão.',
+    icon: Megaphone,
+    route: '/configuracoes/campanhas',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-600/10',
     count: null,
   },
 ];

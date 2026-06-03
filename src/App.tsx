@@ -38,6 +38,7 @@ import KnowledgeBase from '@/pages/KnowledgeBase';
 import FunctionPermissions from '@/pages/FunctionPermissions';
 import ConfiguracaoWhatsApp from '@/pages/ConfiguracaoWhatsApp';
 import ConfiguracaoPipelineEtapas from '@/pages/ConfiguracaoPipelineEtapas';
+import Campanhas from '@/pages/Campanhas';
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const AppRoutes = () => (
     <Route path="/produtos" element={<PrivateRoute><Produtos /></PrivateRoute>} />
     <Route path="/configuracoes" element={<PrivateRoute><Settings /></PrivateRoute>} />
     <Route path="/configuracoes/pipeline/etapas" element={<PrivateRoute><ConfiguracaoPipelineEtapas /></PrivateRoute>} />
+    <Route path="/configuracoes/campanhas" element={<PrivateRoute><Campanhas /></PrivateRoute>} />
     <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
     <Route path="/especialidades" element={<PrivateRoute><Especialidades /></PrivateRoute>} />
     <Route path="/perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
