@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,9 +11,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { 
-  Plus, Edit, Trash2, Loader2, Phone, Mail, UserCog, MoreVertical,
-  KeyRound, ShieldOff, ShieldCheck, Copy
+import {
+  Plus, Edit, Trash2, Phone, Mail, UserCog, MoreVertical,
+  KeyRound, ShieldOff, ShieldCheck, Copy, Search, Users, UserCheck, MessageSquare
 } from "lucide-react";
 import * as Icons from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -175,223 +173,346 @@ export default function Profissionais() {
     }
   };
 
-  if (loading) {
-    return (
-      <DashboardLayout title="Profissionais">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   const profissionaisVisiveis = profissionais.filter(
     (p) => !p.is_default && !p.is_ai_agent,
   );
 
+  const [busca, setBusca] = useState('');
+
+  const profissionaisFiltrados = useMemo(() => {
+    if (!busca.trim()) return profissionaisVisiveis;
+    const b = busca.toLowerCase();
+    return profissionaisVisiveis.filter(p =>
+      p.nome.toLowerCase().includes(b) ||
+      p.email?.toLowerCase().includes(b) ||
+      p.registro_profissional?.toLowerCase().includes(b)
+    );
+  }, [profissionaisVisiveis, busca]);
+
   return (
     <DashboardLayout title="Profissionais">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .prof-card-anim { animation: fadeSlideIn 0.35s ease both; }
+      `}</style>
+
+      <div className="p-6 space-y-6">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">👨‍⚕️ Profissionais</h1>
-            <p className="text-muted-foreground mt-2">
-              Gerencie sua equipe de profissionais
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Profissionais
+            </h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Gerencie sua equipe de profissionais e especialidades
             </p>
           </div>
-          <Button onClick={() => navigate("/profissionais/novo")}>
+          <Button onClick={() => navigate("/profissionais/novo")} className="rounded-lg shadow-sm">
             <Plus className="mr-2 h-4 w-4" />
             Novo Profissional
           </Button>
         </div>
 
-        {profissionaisVisiveis.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <UserCog className="h-16 w-16 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-2">Nenhum profissional cadastrado</p>
-              <p className="text-muted-foreground mb-4">
-                Comece adicionando o primeiro profissional da sua equipe
-              </p>
-              <Button onClick={() => navigate("/profissionais/novo")}>
-                <Plus className="mr-2 h-4 w-4" />
-                Cadastrar primeiro profissional
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {profissionaisVisiveis.map((prof) => (
-              <Card key={prof.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="relative">
-                      {prof.foto_url ? (
-                        <img
-                          src={prof.foto_url}
-                          alt={prof.nome}
-                          className="w-16 h-16 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                          <UserCog className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div
-                        className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${
-                          prof.status === "ativo" ? "bg-green-500" : "bg-gray-400"
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{prof.nome}</CardTitle>
-                      {prof.registro_profissional && (
-                        <p className="text-sm text-muted-foreground">
-                          {prof.registro_profissional}
-                        </p>
-                      )}
-                    </div>
-
-                    {prof.usuario_id && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => setResetSenhaProfissional(prof)}
-                          >
-                            <KeyRound className="h-4 w-4 mr-2" />
-                            Resetar senha
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => setRevogarProfissional(prof)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <ShieldOff className="h-4 w-4 mr-2" />
-                            Revogar acesso
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+        {/* Stats cards */}
+        {!loading && profissionaisVisiveis.length > 0 && (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              {
+                label: 'Total',
+                value: profissionaisVisiveis.length,
+                icon: Users,
+                color: '#6366F1',
+              },
+              {
+                label: 'Ativos',
+                value: profissionaisVisiveis.filter(p => p.status === 'ativo').length,
+                icon: UserCheck,
+                color: '#10B981',
+              },
+              {
+                label: 'Atendem WhatsApp',
+                value: profissionaisVisiveis.filter(p => p.pode_receber_conversas).length,
+                icon: MessageSquare,
+                color: '#3B82F6',
+              },
+            ].map(({ label, value, icon: Icon, color }, idx) => (
+              <div
+                key={label}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow"
+                style={{ animation: 'fadeSlideIn 0.35s ease both', animationDelay: `${idx * 60}ms` }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-gray-500">{label}</p>
+                  <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${color}18` }}>
+                    <Icon className="h-3.5 w-3.5" style={{ color }} />
                   </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {prof.especialidades && prof.especialidades.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {prof.especialidades.map((esp) => {
-                        const Icon = (Icons as any)[esp.especialidade.icone] || Icons.Star;
-                        return (
-                          <Badge
-                            key={esp.id}
-                            variant={esp.principal ? "default" : "secondary"}
-                            className="flex items-center gap-1"
-                            style={
-                              esp.principal
-                                ? {
-                                    backgroundColor: `${esp.especialidade.cor}20`,
-                                    color: esp.especialidade.cor,
-                                    borderColor: esp.especialidade.cor,
-                                  }
-                                : {}
-                            }
-                          >
-                            <Icon className="h-3 w-3" />
-                            {esp.especialidade.nome}
-                            {esp.principal && " ⭐"}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className="space-y-2 text-sm">
-                    {prof.email && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Mail className="h-4 w-4" />
-                        <span className="truncate">{prof.email}</span>
-                      </div>
-                    )}
-                    {prof.telefone && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        {prof.telefone}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <Label
-                      htmlFor={`whatsapp-${prof.id}`}
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      Atende WhatsApp
-                    </Label>
-                    <Switch
-                      id={`whatsapp-${prof.id}`}
-                      checked={!!prof.pode_receber_conversas}
-                      disabled={updatingId === prof.id}
-                      onCheckedChange={(checked) =>
-                        handleToggleWhatsApp(prof.id, checked)
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <span className="text-sm text-muted-foreground">
-                      Acesso ao sistema
-                    </span>
-                    {prof.usuario_id ? (
-                      <Badge
-                        variant="outline"
-                        className="bg-green-50 text-green-700 border-green-200 gap-1"
-                      >
-                        <ShieldCheck className="h-3 w-3" />
-                        Com acesso
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setDarAcessoProfissional(prof)}
-                      >
-                        Dar acesso
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => navigate(`/profissionais/${prof.id}/editar`)}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedId(prof.id);
-                        setDeleteOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 tabular-nums">{value}</p>
+              </div>
             ))}
           </div>
         )}
+
+        {/* Busca */}
+        {!loading && profissionaisVisiveis.length > 0 && (
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Buscar profissional..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              className="pl-9 bg-white border-gray-200 rounded-lg"
+            />
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1,2,3].map(i => (
+              <div key={i} className="h-64 bg-gray-100 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && profissionaisVisiveis.length === 0 && (
+          <div className="text-center py-16">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <UserCog className="h-7 w-7 text-primary" />
+            </div>
+            <h3 className="font-semibold text-gray-800 text-lg">
+              Nenhum profissional cadastrado
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Comece adicionando o primeiro profissional da sua equipe
+            </p>
+            <Button
+              onClick={() => navigate("/profissionais/novo")}
+              className="mt-4 rounded-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Cadastrar primeiro profissional
+            </Button>
+          </div>
+        )}
+
+        {/* Grid de cards */}
+        {!loading && profissionaisFiltrados.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {profissionaisFiltrados.map((prof, idx) => {
+              const initials = prof.nome.trim().split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map(n => n[0])
+                .join('')
+                .toUpperCase();
+
+              return (
+                <div
+                  key={prof.id}
+                  className="prof-card-anim group relative bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                  style={{ animationDelay: `${idx * 40}ms` }}
+                >
+                  {/* Borda lateral: verde=ativo, cinza=inativo */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                    style={{ backgroundColor: prof.status === 'ativo' ? '#10B981' : '#D1D5DB' }}
+                  />
+
+                  <div className="pl-5 pr-4 pt-4 pb-3">
+
+                    {/* Header do card: avatar + nome + menu */}
+                    <div className="flex items-start gap-3 mb-3">
+                      {/* Avatar */}
+                      <div className="relative flex-shrink-0">
+                        {prof.foto_url ? (
+                          <img
+                            src={prof.foto_url}
+                            alt={prof.nome}
+                            className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-sm"
+                          />
+                        ) : (
+                          <div
+                            className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold ring-2 ring-white shadow-sm"
+                            style={{
+                              backgroundColor: prof.status === 'ativo' ? '#ECFDF5' : '#F3F4F6',
+                              color: prof.status === 'ativo' ? '#059669' : '#6B7280',
+                            }}
+                          >
+                            {initials || <UserCog className="h-5 w-5" />}
+                          </div>
+                        )}
+                        {/* Indicador de status */}
+                        <div
+                          className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white"
+                          style={{ backgroundColor: prof.status === 'ativo' ? '#10B981' : '#9CA3AF' }}
+                        />
+                      </div>
+
+                      {/* Nome + registro */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm text-gray-900 truncate leading-tight">
+                          {prof.nome}
+                        </h3>
+                        {prof.registro_profissional && (
+                          <p className="text-xs text-gray-400 mt-0.5 truncate">
+                            {prof.registro_profissional}
+                          </p>
+                        )}
+                        <span
+                          className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            prof.status === 'ativo'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {prof.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </div>
+
+                      {/* Menu dropdown */}
+                      {prof.usuario_id && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0">
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setResetSenhaProfissional(prof)}>
+                              <KeyRound className="h-4 w-4 mr-2" />
+                              Resetar senha
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => setRevogarProfissional(prof)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <ShieldOff className="h-4 w-4 mr-2" />
+                              Revogar acesso
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+
+                    {/* Especialidades */}
+                    {prof.especialidades && prof.especialidades.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {prof.especialidades.map(esp => {
+                          const Icon = (Icons as any)[esp.especialidade.icone] || Icons.Star;
+                          return (
+                            <span
+                              key={esp.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border"
+                              style={{
+                                backgroundColor: `${esp.especialidade.cor}15`,
+                                color: esp.especialidade.cor,
+                                borderColor: `${esp.especialidade.cor}30`,
+                              }}
+                            >
+                              <Icon className="h-2.5 w-2.5" />
+                              {esp.especialidade.nome}
+                              {esp.principal && ' ⭐'}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Contato */}
+                    <div className="space-y-1 mb-3">
+                      {prof.email && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Mail className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{prof.email}</span>
+                        </div>
+                      )}
+                      {prof.telefone && (
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Phone className="h-3 w-3 flex-shrink-0" />
+                          <span>{prof.telefone}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* WhatsApp toggle */}
+                    <div className="flex items-center justify-between py-2 border-t border-gray-50">
+                      <span className="text-xs text-gray-500">Atende WhatsApp</span>
+                      <Switch
+                        checked={!!prof.pode_receber_conversas}
+                        disabled={updatingId === prof.id}
+                        onCheckedChange={v => handleToggleWhatsApp(prof.id, v)}
+                      />
+                    </div>
+
+                    {/* Acesso ao sistema */}
+                    <div className="flex items-center justify-between py-2 border-t border-gray-50">
+                      <span className="text-xs text-gray-500">Acesso ao sistema</span>
+                      {prof.usuario_id ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                          <ShieldCheck className="h-2.5 w-2.5" />
+                          Com acesso
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-xs px-2"
+                          onClick={() => setDarAcessoProfissional(prof)}
+                        >
+                          Dar acesso
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Quick actions no hover */}
+                    <div className="flex gap-2 pt-2 border-t border-gray-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-7 text-xs"
+                        onClick={() => navigate(`/profissionais/${prof.id}/editar`)}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-red-50"
+                        onClick={() => {
+                          setSelectedId(prof.id);
+                          setDeleteOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Empty state filtro */}
+        {!loading && profissionaisVisiveis.length > 0 && profissionaisFiltrados.length === 0 && (
+          <div className="text-center py-10">
+            <p className="text-gray-500 text-sm">
+              Nenhum profissional encontrado para "<strong>{busca}</strong>"
+            </p>
+          </div>
+        )}
+
       </div>
+
+      {/* MODAIS EXISTENTES */}
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
@@ -403,9 +524,7 @@ export default function Profissionais() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Excluir
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -417,61 +536,45 @@ export default function Profissionais() {
         onSuccess={fetchProfissionais}
       />
 
-      <AlertDialog
-        open={!!revogarProfissional}
-        onOpenChange={(o) => !o && setRevogarProfissional(null)}
-      >
+      <AlertDialog open={!!revogarProfissional} onOpenChange={(o) => !o && setRevogarProfissional(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Revogar acesso</AlertDialogTitle>
             <AlertDialogDescription>
               {revogarProfissional?.nome} não poderá mais acessar o sistema.
-              Esta ação pode ser revertida posteriormente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRevogarAcesso}>
-              Revogar
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleRevogarAcesso}>Revogar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={!!resetSenhaProfissional}
-        onOpenChange={(o) => !o && setResetSenhaProfissional(null)}
-      >
+      <AlertDialog open={!!resetSenhaProfissional} onOpenChange={(o) => !o && setResetSenhaProfissional(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Resetar senha</AlertDialogTitle>
             <AlertDialogDescription>
-              Uma nova senha temporária será gerada para{" "}
-              {resetSenhaProfissional?.nome}.
+              Uma nova senha temporária será gerada para {resetSenhaProfissional?.nome}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetSenha}>
-              Resetar
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleResetSenha}>Resetar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog
-        open={!!novaSenhaTemp}
-        onOpenChange={(o) => !o && setNovaSenhaTemp(null)}
-      >
+      <Dialog open={!!novaSenhaTemp} onOpenChange={(o) => !o && setNovaSenhaTemp(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Senha temporária gerada</DialogTitle>
             <DialogDescription>
-              Compartilhe esta senha com o profissional. Ele deverá alterá-la no
-              primeiro acesso.
+              Compartilhe esta senha com o profissional. Ele deverá alterá-la no primeiro acesso.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted font-mono text-sm">
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-muted font-mono text-sm">
             <span className="flex-1 break-all">{novaSenhaTemp}</span>
             <Button
               variant="ghost"
@@ -491,6 +594,7 @@ export default function Profissionais() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </DashboardLayout>
   );
 }
