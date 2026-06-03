@@ -337,6 +337,11 @@ function KanbanColumn({
           <span className="text-sm font-semibold text-gray-800 truncate max-w-[120px]">
             {etapa.nome}
           </span>
+          {etapa.probabilidade !== undefined && (
+            <span className="text-[10px] text-gray-400 font-medium">
+              {etapa.probabilidade}%
+            </span>
+          )}
           <span
             className="text-xs font-bold px-1.5 py-0.5 rounded-full text-white"
             style={{ backgroundColor: etapa.cor }}
@@ -910,6 +915,7 @@ function ModalEtapas({ open, etapas, onClose, onSalvo, porEtapa }: ModalEtapasPr
   const [etapaEditando, setEtapaEditando] = useState<WorkflowEtapa | null>(null);
   const [novaEtapaNome, setNovaEtapaNome] = useState('');
   const [novaEtapaCor, setNovaEtapaCor] = useState('#6366F1');
+  const [formProbabilidade, setFormProbabilidade] = useState(50);
   const [salvandoEtapa, setSalvandoEtapa] = useState(false);
   const [excluindoEtapaId, setExcluindoEtapaId] = useState<number | null>(null);
 
@@ -923,10 +929,12 @@ function ModalEtapas({ open, etapas, onClose, onSalvo, porEtapa }: ModalEtapasPr
         nome: novaEtapaNome.trim(),
         cor: novaEtapaCor,
         ordem: etapas.length + 1,
+        probabilidade: formProbabilidade,
       });
       toast.success('Etapa criada!');
       setNovaEtapaNome('');
       setNovaEtapaCor('#6366F1');
+      setFormProbabilidade(50);
       onSalvo();
     } catch (err: any) {
       toast.error(err.message || 'Erro ao criar etapa');
@@ -942,6 +950,7 @@ function ModalEtapas({ open, etapas, onClose, onSalvo, porEtapa }: ModalEtapasPr
       await api.patch(`/workflow-etapas/${etapaEditando.id}`, {
         nome: etapaEditando.nome,
         cor: etapaEditando.cor,
+        probabilidade: formProbabilidade,
       });
       toast.success('Etapa atualizada!');
       setEtapaEditando(null);
@@ -1040,7 +1049,10 @@ function ModalEtapas({ open, etapas, onClose, onSalvo, porEtapa }: ModalEtapasPr
                       #{porEtapa(etapa.id).length} ops
                     </span>
                     <button
-                      onClick={() => setEtapaEditando(etapa)}
+                      onClick={() => {
+                        setEtapaEditando(etapa);
+                        setFormProbabilidade(etapa.probabilidade ?? 50);
+                      }}
                       className="text-muted-foreground hover:text-foreground p-1 transition-colors"
                       title="Editar"
                     >
@@ -1090,6 +1102,24 @@ function ModalEtapas({ open, etapas, onClose, onSalvo, porEtapa }: ModalEtapasPr
                     />
                   ))}
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Probabilidade de fechamento (%)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={formProbabilidade}
+                    onChange={e => setFormProbabilidade(Number(e.target.value))}
+                    className="flex-1 accent-primary"
+                  />
+                  <span className="text-sm font-bold w-10 text-right">{formProbabilidade}%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Chance média de fechar deals nesta etapa
+                </p>
               </div>
               <Button
                 onClick={handleCriarEtapa}
@@ -1199,15 +1229,21 @@ export default function Pipeline() {
     const ganhas = oportunidades.filter(o => o.status === 'ganha');
     const todas = oportunidades.filter(o => o.status !== 'aberta');
     const valorTotal = abertas.reduce((s, o) => s + (o.valor_estimado || 0), 0);
+    const valorPonderado = abertas.reduce((s, o) => {
+      const etapa = etapas.find(e => e.id === o.etapa_id);
+      const prob = etapa?.probabilidade ?? 50;
+      return s + (o.valor_estimado || 0) * (prob / 100);
+    }, 0);
     const totalFechadas = ganhas.length + oportunidades.filter(o => o.status === 'perdida').length;
     const taxa = totalFechadas > 0 ? Math.round((ganhas.length / totalFechadas) * 100) : 0;
     return {
       totalAbertas: abertas.length,
       valorTotal,
+      valorPonderado,
       totalGanhas: ganhas.length,
       taxa,
     };
-  }, [oportunidades]);
+  }, [oportunidades, etapas]);
 
   // Oportunidade ativa no drag
   const oportunidadeAtiva = useMemo(() =>
@@ -1349,8 +1385,8 @@ export default function Pipeline() {
           {[
             { label: 'Em aberto', value: stats.totalAbertas, icon: Users, color: '#3B82F6', suffix: '' },
             { label: 'Valor total', value: formatBRL(stats.valorTotal), icon: DollarSign, color: '#10B981', isStr: true },
+            { label: 'Forecast', value: formatBRL(stats.valorPonderado), icon: TrendingUp, color: '#6366F1', isStr: true },
             { label: 'Ganhas', value: stats.totalGanhas, icon: Trophy, color: '#F59E0B', suffix: '' },
-            { label: 'Conversão', value: stats.taxa, icon: TrendingUp, color: '#8B5CF6', suffix: '%' },
           ].map(({ label, value, icon: Icon, color, isStr, suffix }) => (
             <Card key={label} className="rounded-xl border-0 shadow-sm overflow-hidden">
               <CardContent className="p-4 flex items-center gap-3">

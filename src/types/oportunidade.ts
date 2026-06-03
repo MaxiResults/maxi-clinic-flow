@@ -39,6 +39,7 @@ export interface WorkflowEtapa {
   cor: string;
   descricao: string | null;
   ativo: boolean;
+  probabilidade?: number;
   created_at: string;
   updated_at: string;
 }
