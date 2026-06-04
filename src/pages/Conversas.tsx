@@ -794,7 +794,9 @@ export default function Conversas() {
     };
 
     const handleNovaConversa = (_data: any) => {
-      fetchLeads(true);
+      // Gerenciado pelo SocketContext global (lastNovaConversa)
+      // fetchLeads(true) removido pois sobrescrevia o lead
+      // adicionado otimisticamente pelo SocketContext
     };
 
     const handleConversaAtualizada = (data: any) => {
