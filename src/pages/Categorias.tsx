@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -49,7 +49,6 @@ import {
   Edit,
   Trash2,
   Loader2,
-  Eye,
   Folder,
 } from "lucide-react";
 import api from '@/lib/api';
@@ -424,219 +423,284 @@ export default function Categorias() {
   }, {} as Record<string, Grupo[]>);
 
   return (
-    <DashboardLayout title="Configurações">
-      <Tabs defaultValue="categorias" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="categorias">
-            <Package className="h-4 w-4 mr-2" />
-            Categorias
-          </TabsTrigger>
-          <TabsTrigger value="grupos">
-            <Folder className="h-4 w-4 mr-2" />
-            Grupos
-          </TabsTrigger>
-        </TabsList>
+    <DashboardLayout title="Categorias">
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .cat-card-anim { animation: fadeSlideIn 0.35s ease both; }
+      `}</style>
 
-        {/* ABA CATEGORIAS */}
-        <TabsContent value="categorias" className="space-y-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-2xl font-bold">📦 Categorias de Produtos</h2>
-              <p className="text-muted-foreground">
-                Organize seus produtos em categorias personalizadas
-              </p>
-            </div>
-            <Button onClick={() => setIsNewCategoriaOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Categoria
-            </Button>
+      <div className="p-6 space-y-6">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Categorias de Produtos
+            </h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Organize seus produtos em categorias e grupos personalizados
+            </p>
           </div>
+        </div>
 
-          {loadingCategorias ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : categorias.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg text-muted-foreground">
-                Nenhuma categoria cadastrada
+        <Tabs defaultValue="categorias" className="space-y-6">
+          <TabsList className="bg-white border border-gray-100 shadow-sm rounded-xl p-1 h-auto">
+            <TabsTrigger
+              value="categorias"
+              className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white transition-all"
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Categorias
+              {categorias.length > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                  {categorias.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="grupos"
+              className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white transition-all"
+            >
+              <Folder className="h-4 w-4 mr-2" />
+              Grupos
+              {grupos.length > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                  {grupos.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ABA CATEGORIAS */}
+          <TabsContent value="categorias" className="space-y-4 mt-0">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                {categorias.length} {categorias.length === 1 ? 'categoria' : 'categorias'} cadastradas
               </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Crie sua primeira categoria para organizar seus produtos
-              </p>
-              <Button onClick={() => setIsNewCategoriaOpen(true)} className="mt-4">
+              <Button onClick={() => setIsNewCategoriaOpen(true)} className="rounded-lg shadow-sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Categoria
               </Button>
             </div>
-          ) : (
-            <div className="grid gap-4">
-              {categorias.map((categoria) => {
-                const IconComponent = (Icons as any)[categoria.icone || "Package"] || Icons.Package;
-                return (
-                  <Card key={categoria.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="p-2 rounded-lg"
-                            style={{ backgroundColor: `${categoria.cor}20` }}
-                          >
-                            <IconComponent
-                              className="h-6 w-6"
-                              style={{ color: categoria.cor }}
-                            />
+
+            {loadingCategorias ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1,2,3].map(i => (
+                  <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : categorias.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Package className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-semibold text-gray-800 text-lg">Nenhuma categoria cadastrada</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Crie sua primeira categoria para organizar seus produtos
+                </p>
+                <Button onClick={() => setIsNewCategoriaOpen(true)} className="mt-4 rounded-lg">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Categoria
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categorias.map((categoria, idx) => {
+                  const IconComponent = (Icons as any)[categoria.icone || 'Package'] || Icons.Package;
+                  const gruposDaCategoria = grupos.filter(g => g.categoria_id === categoria.id);
+                  return (
+                    <div
+                      key={categoria.id}
+                      className="cat-card-anim group relative bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                      style={{ animationDelay: `${idx * 40}ms` }}
+                    >
+                      {/* Borda lateral colorida */}
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                        style={{ backgroundColor: categoria.cor || '#6366F1' }}
+                      />
+
+                      <div className="pl-5 pr-4 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {/* Ícone */}
+                            <div
+                              className="p-2.5 rounded-xl flex-shrink-0"
+                              style={{ backgroundColor: `${categoria.cor || '#6366F1'}18` }}
+                            >
+                              <IconComponent
+                                className="h-5 w-5"
+                                style={{ color: categoria.cor || '#6366F1' }}
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-sm text-gray-900 truncate">
+                                {categoria.nome}
+                              </h3>
+                              {categoria.descricao && (
+                                <p className="text-xs text-gray-400 truncate mt-0.5">
+                                  {categoria.descricao}
+                                </p>
+                              )}
+                              {gruposDaCategoria.length > 0 && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 mt-1">
+                                  <Folder className="h-2.5 w-2.5" />
+                                  {gruposDaCategoria.length} {gruposDaCategoria.length === 1 ? 'grupo' : 'grupos'}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <CardTitle>{categoria.nome}</CardTitle>
-                            <CardDescription>{categoria.descricao}</CardDescription>
+
+                          {/* Quick actions no hover */}
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                            <button
+                              onClick={() => openEditCategoria(categoria)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                              title="Editar"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => { setSelectedCategoria(categoria); setIsDeleteCategoriaOpen(true); }}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditCategoria(categoria)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedCategoria(categoria);
-                              setIsDeleteCategoriaOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
-                    </CardHeader>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
 
-        {/* ABA GRUPOS */}
-        <TabsContent value="grupos" className="space-y-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-2xl font-bold">📁 Grupos de Produtos</h2>
-              <p className="text-muted-foreground">
-                Organize produtos em grupos dentro das categorias
-              </p>
-            </div>
-            <Button onClick={() => setIsNewGrupoOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Grupo
-            </Button>
-          </div>
-
-          <div className="flex gap-4">
-            <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Todas categorias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas categorias</SelectItem>
-                {categorias.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {loadingGrupos ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : grupos.length === 0 ? (
-            <div className="text-center py-12">
-              <Folder className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg text-muted-foreground">
-                Nenhum grupo cadastrado
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Crie seu primeiro grupo para organizar melhor seus produtos
-              </p>
-              <Button onClick={() => setIsNewGrupoOpen(true)} className="mt-4">
+          {/* ABA GRUPOS */}
+          <TabsContent value="grupos" className="space-y-4 mt-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                  <SelectTrigger className="w-[220px] bg-white border-gray-200">
+                    <SelectValue placeholder="Todas categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas categorias</SelectItem>
+                    {categorias.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-gray-500">
+                  {gruposFiltrados.length} {gruposFiltrados.length === 1 ? 'grupo' : 'grupos'}
+                </p>
+              </div>
+              <Button onClick={() => setIsNewGrupoOpen(true)} className="rounded-lg shadow-sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Grupo
               </Button>
             </div>
-          ) : (
-            <div className="space-y-6">
-              {Object.entries(gruposPorCategoria).map(([catId, gruposCategoria]) => {
-                const categoria = categorias.find((c) => c.id === catId);
-                if (!categoria) return null;
 
-                const IconComponent = (Icons as any)[categoria.icone || "Package"] || Icons.Package;
+            {loadingGrupos ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => (
+                  <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : grupos.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Folder className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="font-semibold text-gray-800 text-lg">Nenhum grupo cadastrado</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Crie seu primeiro grupo para organizar melhor seus produtos
+                </p>
+                <Button onClick={() => setIsNewGrupoOpen(true)} className="mt-4 rounded-lg">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Grupo
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(gruposPorCategoria).map(([catId, gruposCategoria]) => {
+                  const categoria = categorias.find(c => c.id === catId);
+                  if (!categoria) return null;
+                  const IconComponent = (Icons as any)[categoria.icone || 'Package'] || Icons.Package;
 
-                return (
-                  <div key={catId} className="space-y-3">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div
-                        className="p-2 rounded-lg"
-                        style={{ backgroundColor: `${categoria.cor}20` }}
-                      >
-                        <IconComponent
-                          className="h-5 w-5"
-                          style={{ color: categoria.cor }}
-                        />
+                  return (
+                    <div key={catId} className="space-y-2">
+                      {/* Header da categoria */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div
+                          className="p-1.5 rounded-lg"
+                          style={{ backgroundColor: `${categoria.cor}18` }}
+                        >
+                          <IconComponent className="h-4 w-4" style={{ color: categoria.cor }} />
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700">{categoria.nome}</span>
+                        <span className="text-xs text-gray-400">
+                          ({gruposCategoria.length} {gruposCategoria.length === 1 ? 'grupo' : 'grupos'})
+                        </span>
                       </div>
-                      <h3 className="text-lg font-semibold">{categoria.nome}</h3>
-                    </div>
 
-                    <div className="grid gap-3 ml-12">
-                      {gruposCategoria.map((grupo) => (
-                        <Card key={grupo.id} className="hover:shadow-md transition-shadow">
-                          <CardHeader className="py-3">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <CardTitle className="text-base">{grupo.nome}</CardTitle>
+                      {/* Grupos da categoria */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 ml-8">
+                        {gruposCategoria.map((grupo, idx) => (
+                          <div
+                            key={grupo.id}
+                            className="cat-card-anim group relative bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                            style={{ animationDelay: `${idx * 30}ms` }}
+                          >
+                            <div
+                              className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                              style={{ backgroundColor: categoria.cor || '#6366F1' }}
+                            />
+                            <div className="pl-4 pr-3 py-3 flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <h4 className="font-medium text-sm text-gray-900 truncate">
+                                  {grupo.nome}
+                                </h4>
                                 {grupo.descricao && (
-                                  <CardDescription className="text-sm">
+                                  <p className="text-xs text-gray-400 truncate mt-0.5">
                                     {grupo.descricao}
-                                  </CardDescription>
+                                  </p>
                                 )}
                               </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                <button
                                   onClick={() => openEditGrupo(grupo)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                                  title="Editar"
                                 >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    setSelectedGrupo(grupo);
-                                    setIsDeleteGrupoOpen(true);
-                                  }}
+                                  <Edit className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => { setSelectedGrupo(grupo); setIsDeleteGrupoOpen(true); }}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                  title="Excluir"
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
                               </div>
                             </div>
-                          </CardHeader>
-                        </Card>
-                      ))}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* MODAL NOVA CATEGORIA */}
       <Dialog open={isNewCategoriaOpen} onOpenChange={setIsNewCategoriaOpen}>

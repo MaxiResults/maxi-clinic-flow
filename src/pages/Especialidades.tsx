@@ -267,112 +267,182 @@ export default function Especialidades() {
 
   return (
     <DashboardLayout title="Especialidades">
-      <div className="space-y-6">
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .esp-card-anim { animation: fadeSlideIn 0.35s ease both; }
+      `}</style>
+
+      <div className="p-6 space-y-6">
+
         {/* Header */}
-        <div className="flex justify-between items-start">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">⭐ Especialidades</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+              Especialidades
+            </h1>
+            <p className="text-sm text-gray-500 mt-0.5">
               Defina as especialidades que seus profissionais podem atender
             </p>
           </div>
-          <Button onClick={() => setIsNewOpen(true)}>
+          <Button onClick={() => setIsNewOpen(true)} className="rounded-lg shadow-sm">
             <Plus className="mr-2 h-4 w-4" />
             Nova Especialidade
           </Button>
         </div>
 
-        {/* Lista de especialidades */}
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : especialidades.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Star className="h-16 w-16 text-muted-foreground/30 mb-4" />
-              <div className="text-center space-y-2">
-                <p className="text-lg font-medium">Nenhuma especialidade cadastrada</p>
-                <p className="text-sm text-muted-foreground">
-                  Comece criando sua primeira especialidade
-                </p>
-                <Button onClick={() => setIsNewOpen(true)} className="mt-4">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Criar primeira especialidade
-                </Button>
+        {/* Stats */}
+        {!loading && especialidades.length > 0 && (
+          <div className="grid grid-cols-2 gap-3 max-w-xs">
+            {[
+              {
+                label: 'Total',
+                value: especialidades.length,
+                icon: Star,
+                color: '#F59E0B',
+              },
+              {
+                label: 'Profissionais',
+                value: Object.values(contadores).reduce((a, b) => a + b, 0),
+                icon: Users,
+                color: '#6366F1',
+              },
+            ].map(({ label, value, icon: Icon, color }, idx) => (
+              <div
+                key={label}
+                className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow"
+                style={{ animation: 'fadeSlideIn 0.35s ease both', animationDelay: `${idx * 60}ms` }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-gray-500">{label}</p>
+                  <div className="p-1.5 rounded-lg" style={{ backgroundColor: `${color}18` }}>
+                    <Icon className="h-3.5 w-3.5" style={{ color }} />
+                  </div>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 tabular-nums">{value}</p>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {especialidades.map((especialidade) => {
-              const Icon = especialidade.icone 
-                ? (Icons as any)[especialidade.icone] 
+            ))}
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1,2,3].map(i => (
+              <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && especialidades.length === 0 && (
+          <div className="text-center py-16">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-4">
+              <Star className="h-7 w-7 text-amber-500" />
+            </div>
+            <h3 className="font-semibold text-gray-800 text-lg">
+              Nenhuma especialidade cadastrada
+            </h3>
+            <p className="text-sm text-gray-500 mt-1">
+              Comece criando sua primeira especialidade
+            </p>
+            <Button onClick={() => setIsNewOpen(true)} className="mt-4 rounded-lg">
+              <Plus className="mr-2 h-4 w-4" />
+              Criar primeira especialidade
+            </Button>
+          </div>
+        )}
+
+        {/* Grid */}
+        {!loading && especialidades.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {especialidades.map((especialidade, idx) => {
+              const Icon = especialidade.icone
+                ? (Icons as any)[especialidade.icone] || Star
                 : Star;
               const count = contadores[especialidade.id] || 0;
 
               return (
-                <Card 
-                  key={especialidade.id} 
-                  className="hover:shadow-lg transition-shadow"
+                <div
+                  key={especialidade.id}
+                  className="esp-card-anim group relative bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+                  style={{ animationDelay: `${idx * 40}ms` }}
                 >
-                  <CardHeader>
-                    <div className="flex items-start justify-between mb-2">
-                      <div 
-                        className="p-3 rounded-lg"
-                        style={{ 
-                          backgroundColor: `${especialidade.cor}20`,
-                        }}
+                  {/* Borda lateral colorida */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
+                    style={{ backgroundColor: especialidade.cor || '#F59E0B' }}
+                  />
+
+                  <div className="pl-5 pr-4 pt-4 pb-3">
+                    {/* Ícone + nome */}
+                    <div className="flex items-start gap-3 mb-3">
+                      <div
+                        className="p-2.5 rounded-xl flex-shrink-0"
+                        style={{ backgroundColor: `${especialidade.cor || '#F59E0B'}18` }}
                       >
-                        <Icon 
-                          className="h-6 w-6" 
-                          style={{ color: especialidade.cor }}
+                        <Icon
+                          className="h-5 w-5"
+                          style={{ color: especialidade.cor || '#F59E0B' }}
                         />
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm text-gray-900 truncate">
+                          {especialidade.nome}
+                        </h3>
+                        {especialidade.descricao && (
+                          <p className="text-xs text-gray-400 line-clamp-2 mt-0.5 leading-relaxed">
+                            {especialidade.descricao}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <CardTitle className="text-lg">{especialidade.nome}</CardTitle>
-                    {especialidade.descricao && (
-                      <CardDescription className="mt-2">
-                        {especialidade.descricao}
-                      </CardDescription>
-                    )}
+
+                    {/* Badge profissionais */}
                     {count > 0 && (
-                      <Badge variant="secondary" className="mt-2 w-fit">
-                        <Users className="h-3 w-3 mr-1" />
-                        {count} {count === 1 ? 'profissional' : 'profissionais'}
-                      </Badge>
+                      <div className="mb-3">
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                          style={{
+                            backgroundColor: `${especialidade.cor || '#F59E0B'}15`,
+                            color: especialidade.cor || '#F59E0B',
+                          }}
+                        >
+                          <Users className="h-2.5 w-2.5" />
+                          {count} {count === 1 ? 'profissional' : 'profissionais'}
+                        </span>
+                      </div>
                     )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
+
+                    {/* Quick actions no hover */}
+                    <div className="flex gap-2 pt-2 border-t border-gray-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
                         onClick={() => openEdit(especialidade)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors border border-gray-100"
                       >
-                        <Edit className="h-4 w-4 mr-1" />
+                        <Edit className="h-3 w-3" />
                         Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelected(especialidade);
-                          setIsDeleteOpen(true);
-                        }}
+                      </button>
+                      <button
+                        onClick={() => { setSelected(especialidade); setIsDeleteOpen(true); }}
+                        className="flex items-center justify-center p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors border border-gray-100"
+                        title="Excluir"
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Excluir
-                      </Button>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               );
             })}
           </div>
         )}
 
-        {/* Modal: Nova Especialidade */}
+      </div>
+
+      {/* Modal: Nova Especialidade */}
         <Dialog open={isNewOpen} onOpenChange={setIsNewOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -699,7 +769,6 @@ export default function Especialidades() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
     </DashboardLayout>
   );
 }
