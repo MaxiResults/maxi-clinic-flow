@@ -142,6 +142,7 @@ const chatBgPattern = `url("data:image/svg+xml,%3Csvg width='60' height='60' vie
 // last message's session when there is no active session.
 const getSessionId = (lead: any): string | null => {
   return lead?.sessao_ativa?.id
+    || lead?.sessao_recente?.id
     || lead?.ultima_mensagem?.sessao_id
     || lead?.ultima_sessao_id
     || lead?.sessoes?.[0]?.id
@@ -317,8 +318,8 @@ export default function Conversas() {
 
   // Status IA / Responsável da conversa
   const { isAIActive } = useAIStatus({
-    sessaoId: selectedLead?.sessao_ativa?.id || '',
-    enabled: !!selectedLead?.sessao_ativa?.id,
+    sessaoId: selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id || '',
+    enabled: !!(selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id),
   });
 
   // Usuário logado (para pré-selecionar no modal de "Assumir conversa")
@@ -388,12 +389,13 @@ export default function Conversas() {
   };
 
   const fetchAISuggestions = async () => {
-    if (!selectedLead?.sessao_ativa?.id) return;
+    const sessaoId = selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id;
+    if (!sessaoId) return;
     setLoadingSuggestions(true);
     setShowAISuggestions(true);
     try {
       const res = await api.post('/ai/suggest-replies', {
-        conversationId: selectedLead.sessao_ativa.id,
+        conversationId: sessaoId,
         count: 3,
       });
       setAiSuggestions(res.data.suggestions || []);
