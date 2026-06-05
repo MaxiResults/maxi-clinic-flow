@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2, Reply, MapPin } from "lucide-react";
+import { Loader2, MessageSquare, Send, Mic, Paperclip, Camera, FileText, X, ChevronLeft, ChevronRight, Download, Maximize2, RotateCcw, CheckCheck, StickyNote, CalendarPlus, Search, ChevronUp, ChevronDown, Pin, Tag as TagIcon, CheckSquare, Forward, UserCheck, Bot, RefreshCw, Sparkles, Trash2, Reply, MapPin, Plus } from "lucide-react";
 import { renderWhatsAppMarkdown } from "@/lib/whatsappMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,7 @@ import { EncaminharDialog } from "@/components/chat/EncaminharDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AIHandoffBadge } from "@/components/ai/AIHandoffBadge";
 import { useAIStatus } from "@/hooks/useAIStatus";
+import { NovaConversaModal } from "@/components/conversas/NovaConversaModal";
 import {
   Select,
   SelectContent,
@@ -324,6 +325,9 @@ export default function Conversas() {
 
   // Usuário logado (para pré-selecionar no modal de "Assumir conversa")
   const { user } = useAuth();
+
+  // Modal Nova Conversa
+  const [novaConversaModalAberto, setNovaConversaModalAberto] = useState(false);
 
   const playNotification = useNotificationSound();
 
@@ -1779,7 +1783,13 @@ export default function Conversas() {
             <div className="border-b p-4 space-y-3">
               <div className="flex items-center justify-between">
                  <h3 className="font-semibold">Conversas ({leadsFiltrados.length})</h3>
-                <Button onClick={() => fetchLeads()} variant="ghost" size="sm">🔄</Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => setNovaConversaModalAberto(true)} variant="default" size="sm" className="gap-1">
+                    <Plus className="w-4 h-4" />
+                    Nova
+                  </Button>
+                  <Button onClick={() => fetchLeads()} variant="ghost" size="sm">🔄</Button>
+                </div>
               </div>
               <ConversationFilters
                 filter={conversationFilter}
@@ -3159,6 +3169,21 @@ export default function Conversas() {
           </div>
         </div>
       )}
+
+      {/* Modal Nova Conversa */}
+      <NovaConversaModal
+        open={novaConversaModalAberto}
+        onClose={() => setNovaConversaModalAberto(false)}
+        onConversaIniciada={(sessaoId) => {
+          fetchLeads(false);
+          setTimeout(() => {
+            const novoLead = leads[0];
+            if (novoLead) {
+              handleSelectLead(novoLead);
+            }
+          }, 500);
+        }}
+      />
     </DashboardLayout>
   );
 }
