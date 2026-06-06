@@ -376,8 +376,8 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
                     <FormItem>
                       <FormLabel>Campanha</FormLabel>
                       <Select
-                        onValueChange={val => field.onChange(val ? Number(val) : undefined)}
-                        value={field.value ? String(field.value) : ''}
+                        onValueChange={val => field.onChange(val && val !== 'none' ? Number(val) : undefined)}
+                        value={field.value ? String(field.value) : 'none'}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -385,7 +385,7 @@ export function LeadForm({ mode, leadId, onSuccess, onCancel }: LeadFormProps) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhuma campanha</SelectItem>
+                          <SelectItem value="none">Nenhuma campanha</SelectItem>
                           {campanhas.map(c => (
                             <SelectItem key={c.id} value={String(c.id)}>
                               {c.nome_campanha}

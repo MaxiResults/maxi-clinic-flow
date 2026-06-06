@@ -40,7 +40,7 @@ export default function Dashboard() {
     const fetchDashboard = async () => {
       try {
         const response = await api.get('/superadmin/dashboard');
-        setData(response.data.data);
+        setData(response.data);
       } catch (error: any) {
         toast({
           title: 'Erro ao carregar dashboard',
