@@ -32,7 +32,7 @@ const LIMIT_PER_PAGE = 20;
 export default function AuditLog() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [recursoFilter, setRecursoFilter] = useState('');
+  const [recursoFilter, setRecursoFilter] = useState('todos');
   const [usuarioFilter, setUsuarioFilter] = useState('');
   const [offset, setOffset] = useState(0);
   const [expandedLog, setExpandedLog] = useState<string | null>(null);
@@ -48,11 +48,11 @@ export default function AuditLog() {
       const params = new URLSearchParams();
       params.append('limit', String(LIMIT_PER_PAGE));
       params.append('offset', String(offset));
-      if (recursoFilter) params.append('recurso', recursoFilter);
+      if (recursoFilter && recursoFilter !== 'todos') params.append('recurso', recursoFilter);
       if (usuarioFilter) params.append('usuario_id', usuarioFilter);
 
       const response = await api.get(`/superadmin/audit-log?${params.toString()}`);
-      setLogs(response.data.data || []);
+      setLogs(response.data || []);
     } catch (error: any) {
       toast({
         title: 'Erro ao carregar logs',
@@ -99,7 +99,7 @@ export default function AuditLog() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="cliente">Cliente</SelectItem>
                   <SelectItem value="empresa">Empresa</SelectItem>
                   <SelectItem value="usuario">Usuário</SelectItem>
@@ -122,7 +122,7 @@ export default function AuditLog() {
             <div className="flex items-end">
               <Button
                 onClick={() => {
-                  setRecursoFilter('');
+                  setRecursoFilter('todos');
                   setUsuarioFilter('');
                   setOffset(0);
                 }}
