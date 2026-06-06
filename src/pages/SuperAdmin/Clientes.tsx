@@ -384,7 +384,7 @@ export default function Clientes() {
       } else {
         // Criar
         const response = await api.post('/superadmin/clientes', formData);
-        clienteId = response.Cliente_ID;
+        clienteId = response.Cliente_ID ?? response.id;
         toast({ title: 'Cliente criado com sucesso' });
       }
 
