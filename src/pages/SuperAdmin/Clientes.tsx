@@ -610,7 +610,7 @@ export default function Clientes() {
   };
 
   const getProdutoNome = (codigo: string) => {
-    const produto = produtos.find(p => p.codigo === codigo);
+    const produto = produtosDisponiveis.find(p => p.codigo === codigo);
     return produto?.nome || codigo;
   };
 
