@@ -9,7 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Search, FileText } from 'lucide-react';
+import { Plus, Search, FileText, RefreshCw, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import api from '@/lib/api';
 import {
   useWhatsAppTemplates,
   WhatsAppTemplate,
@@ -39,11 +41,13 @@ import {
 export default function WhatsAppTemplates() {
   const { templates, loading, error, fetchTemplates, deleteTemplate } =
     useWhatsAppTemplates();
+  const { toast } = useToast();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [previewTemplate, setPreviewTemplate] =
     useState<WhatsAppTemplate | null>(null);
+  const [sincronizando, setSincronizando] = useState(false);
 
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
@@ -66,6 +70,34 @@ export default function WhatsAppTemplates() {
     if (deleteId) {
       await deleteTemplate(deleteId);
       setDeleteId(null);
+    }
+  };
+
+  const handleSync = async () => {
+    setSincronizando(true);
+    try {
+      const response = await api.post('/whatsapp/templates/sync');
+      if (response.data?.success) {
+        toast({
+          title: '✅ Templates sincronizados',
+          description: `${response.data.data} template(s) atualizado(s) com a Meta.`,
+        });
+        await fetchTemplates();
+      } else {
+        toast({
+          title: 'Erro ao sincronizar',
+          description: response.data?.error || 'Tente novamente',
+          variant: 'destructive',
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao sincronizar',
+        description: err?.response?.data?.error || 'Verifique a configuração Meta',
+        variant: 'destructive',
+      });
+    } finally {
+      setSincronizando(false);
     }
   };
 
@@ -123,6 +155,16 @@ export default function WhatsAppTemplates() {
                 <SelectItem value="authentication">Autenticação</SelectItem>
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              onClick={handleSync}
+              disabled={sincronizando}
+            >
+              {sincronizando
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sincronizando...</>
+                : <><RefreshCw className="h-4 w-4 mr-2" />Sincronizar com Meta</>
+              }
+            </Button>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Novo Template
