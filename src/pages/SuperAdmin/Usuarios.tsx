@@ -377,7 +377,11 @@ export default function Usuarios() {
       }
 
       setView('lista');
-      await fetchUsuarios();
+      try {
+        await fetchUsuarios();
+      } catch {
+        // Erro no refetch não impede o sucesso do cadastro/edição
+      }
     } catch (error) {
       console.error('Erro ao salvar usuário:', error);
       toast({
