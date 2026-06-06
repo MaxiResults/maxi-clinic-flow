@@ -67,7 +67,7 @@ export default function Usuarios() {
     try {
       setLoading(true);
       const response = await api.get('/superadmin/usuarios');
-      setUsuarios(response.data.data || []);
+      setUsuarios(response.data || []);
     } catch (error: any) {
       toast({
         title: 'Erro ao carregar usuários',
@@ -179,8 +179,8 @@ export default function Usuarios() {
       setImpersonando(true);
       const response = await api.post(`/superadmin/impersonate/${impersonateDialog.id}`);
 
-      if (response.data?.data?.token) {
-        localStorage.setItem('token', response.data.data.token);
+      if (response.data?.token) {
+        localStorage.setItem('token', response.data.token);
         toast({
           title: `✓ Sessão iniciada como ${impersonateDialog.nome}`,
           description: 'Token expira em 1 hora',
