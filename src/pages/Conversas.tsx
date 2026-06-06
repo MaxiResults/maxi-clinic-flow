@@ -298,6 +298,7 @@ export default function Conversas() {
   const [tagManagerOpen, setTagManagerOpen] = useState(false);
   const [conversaIdParaTags, setConversaIdParaTags] = useState<string | null>(null);
   const [filtroTagId, setFiltroTagId] = useState<string>('todas');
+  const [buscaLead, setBuscaLead] = useState<string>('');
   const { tags: todasTags } = useTags();
 
   // Encaminhamento de mensagens
@@ -559,6 +560,21 @@ export default function Conversas() {
     if (filtroTagId === 'todas') return leadsOrdenados;
     return leadsOrdenados.filter(l => l.tags?.some(t => t.id === filtroTagId));
   }, [leadsOrdenados, filtroTagId]);
+
+  const leadsExibidos = useMemo(() => {
+    if (!buscaLead.trim()) return leadsFiltrados;
+    const termo = buscaLead.trim().toLowerCase();
+    return leadsFiltrados.filter(l => {
+      const nome = (l.nome || '').toLowerCase();
+      const telefone = (l.telefone || '').replace(/\D/g, '');
+      const termoBusca = termo.replace(/\D/g, '');
+      return (
+        nome.includes(termo) ||
+        (termoBusca.length >= 3 && telefone.includes(termoBusca))
+      );
+    });
+  }, [leadsFiltrados, buscaLead]);
+
   const indexPrimeiraNaoFixada = useMemo(
     () => leadsFiltrados.findIndex(l => !l.sessao_ativa?.fixada),
     [leadsFiltrados]
@@ -1782,7 +1798,7 @@ export default function Conversas() {
           <div className="flex h-full flex-col">
             <div className="border-b p-4 space-y-3">
               <div className="flex items-center justify-between">
-                 <h3 className="font-semibold">Conversas ({leadsFiltrados.length})</h3>
+                 <h3 className="font-semibold">Conversas ({leadsExibidos.length})</h3>
                 <div className="flex gap-2">
                   <Button onClick={() => setNovaConversaModalAberto(true)} variant="default" size="sm" className="gap-1">
                     <Plus className="w-4 h-4" />
@@ -1795,6 +1811,7 @@ export default function Conversas() {
                 filter={conversationFilter}
                 onFilterChange={(filter) => {
                   setConversationFilter(filter);
+                  setBuscaLead('');
                 }}
               />
               <Select value={filtroTagId} onValueChange={setFiltroTagId}>
@@ -1816,10 +1833,29 @@ export default function Conversas() {
                   ))}
                 </SelectContent>
               </Select>
+              {/* Campo de busca por nome ou telefone */}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome ou telefone..."
+                  value={buscaLead}
+                  onChange={(e) => setBuscaLead(e.target.value)}
+                  className="pl-8 h-8 text-xs"
+                />
+                {buscaLead && (
+                  <button
+                    onClick={() => setBuscaLead('')}
+                    className="absolute right-2 top-2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             <AtendentesOnlinePanel />
             <div className="flex-1 overflow-y-auto">
-              {leadsFiltrados.length === 0 ? (
+              {leadsExibidos.length === 0 ? (
                 <div className="p-4">
                   <EmptyState
                     icon={MessageSquare}
@@ -1834,7 +1870,7 @@ export default function Conversas() {
                   />
                 </div>
               ) : (
-                leadsFiltrados.map((lead, index) => (
+                leadsExibidos.map((lead, index) => (
                   <React.Fragment key={lead.id}>
                   <div
                     className={`cursor-pointer border-b p-4 transition-colors hover:bg-muted/50 ${
