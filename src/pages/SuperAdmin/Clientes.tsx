@@ -252,8 +252,10 @@ export default function Clientes() {
       if (statusForApi) params.append('status', statusForApi);
       if (produtoForApi) params.append('produto', produtoForApi);
 
-      const data = await api.get(`/superadmin/clientes?${params.toString()}`);
-      setClientes(Array.isArray(data) ? data : []);
+      const response = await api.get(`/superadmin/clientes?${params.toString()}`);
+      console.log('[SuperAdmin] response.data:', response.data);
+      console.log('[SuperAdmin] É array?', Array.isArray(response.data));
+      setClientes(Array.isArray(response.data) ? response.data : []);
     } catch (error: any) {
       setClientes([]);
       toast({
@@ -673,6 +675,7 @@ export default function Clientes() {
         </Card>
 
         {/* Grid de Cards */}
+        {console.log('[SuperAdmin] Renderizando, clientes:', clientes.length, clientes)}
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
