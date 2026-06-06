@@ -65,7 +65,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
 
-type View = 'lista' | 'cadastro' | 'detalhe';
+type View = 'lista' | 'cadastro' | 'detalhe' | 'empresa';
 
 interface Produto {
   id: number;
@@ -197,6 +197,33 @@ export default function Clientes() {
     cliente_id: 0,
     empresa_id: 0,
     role: 'admin',
+  });
+
+  // Novos estados para VIEW 4 (cadastro completo de empresa)
+  const [empresaEditando, setEmpresaEditando] = useState<Empresa | null>(null);
+  const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [empresaFormCompleto, setEmpresaFormCompleto] = useState({
+    cliente_id: 0,
+    tipo_pessoa: 'juridica',
+    razao_social: '',
+    nome_fantasia: '',
+    nome_completo: '',
+    cnpj_cpf: '',
+    inscricao_estadual: '',
+    tipo_empresa: 'matriz',
+    plano: 'essencial',
+    status: 'ativo',
+    email: '',
+    telefone: '',
+    celular: '',
+    cep: '',
+    logradouro: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
   });
 
   // ─── Fetch inicial ───────────────────────────────────────────────────────
@@ -565,6 +592,133 @@ export default function Clientes() {
         title: 'Erro ao fazer impersonate',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleNovaEmpresa = (clienteId: number) => {
+    setEmpresaEditando(null);
+    setEmpresaFormCompleto({
+      cliente_id: clienteId,
+      tipo_pessoa: 'juridica',
+      razao_social: '',
+      nome_fantasia: '',
+      nome_completo: '',
+      cnpj_cpf: '',
+      inscricao_estadual: '',
+      tipo_empresa: 'matriz',
+      plano: 'essencial',
+      status: 'ativo',
+      email: '',
+      telefone: '',
+      celular: '',
+      cep: '',
+      logradouro: '',
+      numero: '',
+      complemento: '',
+      bairro: '',
+      cidade: '',
+      estado: '',
+    });
+    setView('empresa');
+  };
+
+  const handleBuscarCep = async () => {
+    const cep = empresaFormCompleto.cep.replace(/\D/g, '');
+    if (cep.length !== 8) {
+      toast({
+        title: 'CEP inválido',
+        description: 'Digite um CEP com 8 dígitos',
+        variant: 'destructive'
+      });
+      return;
+    }
+    try {
+      setBuscandoCep(true);
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await response.json();
+      if (data.erro) {
+        toast({
+          title: 'CEP não encontrado',
+          variant: 'destructive'
+        });
+        return;
+      }
+      setEmpresaFormCompleto(prev => ({
+        ...prev,
+        logradouro: data.logradouro || '',
+        bairro:     data.bairro || '',
+        cidade:     data.localidade || '',
+        estado:     data.uf || '',
+      }));
+      toast({ title: 'Endereço preenchido automaticamente' });
+    } catch {
+      toast({
+        title: 'Erro ao buscar CEP',
+        variant: 'destructive'
+      });
+    } finally {
+      setBuscandoCep(false);
+    }
+  };
+
+  const handleSalvarEmpresaCompleto = async () => {
+    if (!empresaFormCompleto.cnpj_cpf.trim()) {
+      toast({
+        title: 'CNPJ/CPF é obrigatório',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (!empresaFormCompleto.email.trim()) {
+      toast({
+        title: 'Email é obrigatório',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (empresaFormCompleto.tipo_pessoa === 'juridica' && !empresaFormCompleto.razao_social.trim()) {
+      toast({
+        title: 'Razão Social é obrigatória',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (empresaFormCompleto.tipo_pessoa === 'fisica' && !empresaFormCompleto.nome_completo.trim()) {
+      toast({
+        title: 'Nome Completo é obrigatório',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      setSalvandoEmpresa(true);
+
+      const payload = {
+        ...empresaFormCompleto,
+        tipo_pessoa: empresaFormCompleto.tipo_pessoa,
+      };
+
+      await api.post('/superadmin/empresas', payload);
+      toast({
+        title: 'Empresa criada com sucesso'
+      });
+
+      // Refetch empresas do cliente
+      if (clienteSelecionado) {
+        const res = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
+        setEmpresasDoCliente(Array.isArray(res.data) ? res.data : []);
+      }
+
+      setView('detalhe');
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao criar empresa',
+        description: error?.response?.data?.error || 'Tente novamente',
+        variant: 'destructive',
+      });
+    } finally {
+      setSalvandoEmpresa(false);
     }
   };
 
@@ -1113,20 +1267,7 @@ export default function Clientes() {
             />
 
             <Button
-              onClick={() => {
-                setEmpresaFormData({
-                  cliente_id: clienteSelecionado.Cliente_ID,
-                  razao_social: '',
-                  nome_fantasia: '',
-                  cnpj_cpf: '',
-                  plano: 'essencial',
-                  email: '',
-                  telefone: '',
-                  cidade: '',
-                  estado: '',
-                });
-                setShowEmpresaSheet(true);
-              }}
+              onClick={() => handleNovaEmpresa(clienteSelecionado.Cliente_ID)}
             >
               <Plus className="h-4 w-4 mr-2" />
               Nova Empresa
@@ -1356,6 +1497,306 @@ export default function Clientes() {
             </Card>
           </TabsContent>
         </Tabs>
+      </div>
+    );
+  }
+
+  // VIEW 4: Cadastro Completo de Empresa
+  if (view === 'empresa') {
+    const isPJ = empresaFormCompleto.tipo_pessoa === 'juridica';
+
+    return (
+      <div className="space-y-6">
+
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm"
+            onClick={() => setView('detalhe')} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+          <span className="text-sm text-slate-600">
+            Clientes → {clienteSelecionado?.nome} → Nova Empresa
+          </span>
+        </div>
+
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Nova Empresa</h1>
+          <p className="text-slate-600 mt-1">Cadastro completo da unidade de negócio</p>
+        </div>
+
+        {/* SEÇÃO 1: Tipo e Identificação */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Briefcase className="h-5 w-5 text-blue-600" />
+              </div>
+              <CardTitle>Tipo e Identificação</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+
+            {/* Tipo Pessoa */}
+            <div>
+              <Label className="mb-3 block">Tipo de Pessoa*</Label>
+              <div className="flex gap-3">
+                {[
+                  { value: 'juridica', label: 'Pessoa Jurídica', desc: 'CNPJ' },
+                  { value: 'fisica',   label: 'Pessoa Física',   desc: 'CPF'  },
+                ].map(opt => (
+                  <Card
+                    key={opt.value}
+                    className={`flex-1 cursor-pointer border-2 transition-all ${
+                      empresaFormCompleto.tipo_pessoa === opt.value
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                    onClick={() => setEmpresaFormCompleto(p => ({
+                      ...p, tipo_pessoa: opt.value
+                    }))}
+                  >
+                    <CardContent className="pt-4 pb-4 text-center">
+                      <p className="font-semibold text-sm">{opt.label}</p>
+                      <p className="text-xs text-slate-500">{opt.desc}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Campos dinâmicos por tipo */}
+            {isPJ ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="mb-2">Razão Social*</Label>
+                    <Input value={empresaFormCompleto.razao_social}
+                      onChange={e => setEmpresaFormCompleto(p => ({ ...p, razao_social: e.target.value }))}
+                      placeholder="Razão social completa" />
+                  </div>
+                  <div>
+                    <Label className="mb-2">Nome Fantasia</Label>
+                    <Input value={empresaFormCompleto.nome_fantasia}
+                      onChange={e => setEmpresaFormCompleto(p => ({ ...p, nome_fantasia: e.target.value }))}
+                      placeholder="Nome comercial" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="mb-2">CNPJ*</Label>
+                    <Input value={empresaFormCompleto.cnpj_cpf}
+                      onChange={e => setEmpresaFormCompleto(p => ({ ...p, cnpj_cpf: e.target.value }))}
+                      placeholder="00.000.000/0000-00" />
+                  </div>
+                  <div>
+                    <Label className="mb-2">Inscrição Estadual</Label>
+                    <Input value={empresaFormCompleto.inscricao_estadual}
+                      onChange={e => setEmpresaFormCompleto(p => ({ ...p, inscricao_estadual: e.target.value }))}
+                      placeholder="Opcional" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="mb-2">Tipo de Empresa</Label>
+                  <Select value={empresaFormCompleto.tipo_empresa}
+                    onValueChange={v => setEmpresaFormCompleto(p => ({ ...p, tipo_empresa: v }))}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="matriz">Matriz</SelectItem>
+                      <SelectItem value="filial">Filial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="mb-2">Nome Completo*</Label>
+                  <Input value={empresaFormCompleto.nome_completo}
+                    onChange={e => setEmpresaFormCompleto(p => ({ ...p, nome_completo: e.target.value }))}
+                    placeholder="Nome completo" />
+                </div>
+                <div>
+                  <Label className="mb-2">CPF*</Label>
+                  <Input value={empresaFormCompleto.cnpj_cpf}
+                    onChange={e => setEmpresaFormCompleto(p => ({ ...p, cnpj_cpf: e.target.value }))}
+                    placeholder="000.000.000-00" />
+                </div>
+              </div>
+            )}
+
+            {/* Plano e Status */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="mb-2">Plano*</Label>
+                <Select value={empresaFormCompleto.plano}
+                  onValueChange={v => setEmpresaFormCompleto(p => ({ ...p, plano: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="essencial">Essencial — R$ 229/mês</SelectItem>
+                    <SelectItem value="profissional">Profissional — R$ 399/mês</SelectItem>
+                    <SelectItem value="premium">Premium — R$ 699/mês</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="mb-2">Status</Label>
+                <Select value={empresaFormCompleto.status}
+                  onValueChange={v => setEmpresaFormCompleto(p => ({ ...p, status: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ativo">Ativo</SelectItem>
+                    <SelectItem value="inativo">Inativo</SelectItem>
+                    <SelectItem value="suspenso">Suspenso</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* SEÇÃO 2: Contato */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <Phone className="h-5 w-5 text-green-600" />
+              </div>
+              <CardTitle>Contato</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="mb-2">Email*</Label>
+                <Input type="email" value={empresaFormCompleto.email}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, email: e.target.value }))}
+                  placeholder="email@empresa.com" />
+              </div>
+              <div>
+                <Label className="mb-2">Telefone</Label>
+                <Input value={empresaFormCompleto.telefone}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, telefone: e.target.value }))}
+                  placeholder="(11) 3333-3333" />
+              </div>
+              <div>
+                <Label className="mb-2">Celular</Label>
+                <Input value={empresaFormCompleto.celular}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, celular: e.target.value }))}
+                  placeholder="(11) 99999-9999" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* SEÇÃO 3: Endereço */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-purple-500/10">
+                <MapPin className="h-5 w-5 text-purple-600" />
+              </div>
+              <CardTitle>Endereço</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+
+            {/* CEP com busca */}
+            <div className="flex gap-3 items-end">
+              <div className="flex-1 max-w-xs">
+                <Label className="mb-2">CEP</Label>
+                <Input
+                  value={empresaFormCompleto.cep}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, cep: e.target.value }))}
+                  placeholder="00000-000"
+                  maxLength={9}
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleBuscarCep}
+                disabled={buscandoCep}
+                className="mb-0"
+              >
+                {buscandoCep
+                  ? <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  : <MapPin className="h-4 w-4 mr-2" />
+                }
+                Buscar CEP
+              </Button>
+            </div>
+
+            {/* Logradouro, Número, Complemento */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-1">
+                <Label className="mb-2">Logradouro</Label>
+                <Input value={empresaFormCompleto.logradouro}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, logradouro: e.target.value }))}
+                  placeholder="Rua, Avenida..." />
+              </div>
+              <div>
+                <Label className="mb-2">Número</Label>
+                <Input value={empresaFormCompleto.numero}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, numero: e.target.value }))}
+                  placeholder="123" />
+              </div>
+              <div>
+                <Label className="mb-2">Complemento</Label>
+                <Input value={empresaFormCompleto.complemento}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, complemento: e.target.value }))}
+                  placeholder="Sala, Andar..." />
+              </div>
+            </div>
+
+            {/* Bairro, Cidade, Estado */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label className="mb-2">Bairro</Label>
+                <Input value={empresaFormCompleto.bairro}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, bairro: e.target.value }))}
+                  placeholder="Bairro" />
+              </div>
+              <div>
+                <Label className="mb-2">Cidade</Label>
+                <Input value={empresaFormCompleto.cidade}
+                  onChange={e => setEmpresaFormCompleto(p => ({ ...p, cidade: e.target.value }))}
+                  placeholder="São Paulo" />
+              </div>
+              <div>
+                <Label className="mb-2">Estado</Label>
+                <Select value={empresaFormCompleto.estado}
+                  onValueChange={v => setEmpresaFormCompleto(p => ({ ...p, estado: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="UF" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ESTADOS.map(e => (
+                      <SelectItem key={e} value={e}>{e}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Botões */}
+        <div className="flex gap-3 justify-end pb-6">
+          <Button variant="outline" onClick={() => setView('detalhe')}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSalvarEmpresaCompleto} disabled={salvandoEmpresa}>
+            {salvandoEmpresa && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Criar Empresa
+          </Button>
+        </div>
+
       </div>
     );
   }
