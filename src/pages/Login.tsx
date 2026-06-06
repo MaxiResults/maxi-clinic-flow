@@ -13,22 +13,22 @@ export default function Login() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { login, isLoading, user } = useAuth();
+  const { login, isLoading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     try {
-      await login(email, senha);
+      const loggedUser = await login(email, senha);
 
       // Verificar se há URL salva para redirecionamento
       const redirectTo = sessionStorage.getItem('redirect_after_login');
       sessionStorage.removeItem('redirect_after_login');
 
       // Redirect baseado em URL salva ou role do usuário
-      if (redirectTo && redirectTo.startsWith('/superadmin') && user?.role === 'superadmin') {
+      if (redirectTo && redirectTo.startsWith('/superadmin') && loggedUser?.role === 'superadmin') {
         navigate(redirectTo);
-      } else if (user?.role === 'superadmin') {
+      } else if (loggedUser?.role === 'superadmin') {
         navigate("/superadmin");
       } else {
         navigate("/");

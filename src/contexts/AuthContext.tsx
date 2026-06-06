@@ -26,9 +26,9 @@ export interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, senha: string) => Promise<void>;
+  login: (email: string, senha: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<AuthUser | null>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -49,10 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
+      return data;
     } catch {
       setUser(null);
       localStorage.removeItem('mc_access_token');
       localStorage.removeItem('mc_refresh_token');
+      return null;
     }
   }, []);
 
@@ -70,7 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await api.post('/auth/login', { email, senha });
     localStorage.setItem('mc_access_token', data.access_token);
     localStorage.setItem('mc_refresh_token', data.refresh_token);
-    await refreshUser();
+    const user = await refreshUser();
+    return user as AuthUser;
   }, [refreshUser]);
 
   const logout = useCallback(async () => {
