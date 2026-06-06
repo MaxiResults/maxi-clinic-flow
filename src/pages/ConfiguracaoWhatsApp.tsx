@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   MessageSquare,
   Wifi,
@@ -52,6 +53,18 @@ interface QRCodeData {
   alreadyConnected?: boolean;
 }
 
+interface MetaConfigData {
+  id?: string;
+  nome?: string;
+  telefone?: string;
+  status?: string;
+  meta_phone_number_id?: string;
+  meta_business_account_id?: string;
+  meta_access_token?: string;
+  meta_webhook_verify_token?: string;
+  provider?: string;
+}
+
 export default function ConfiguracaoWhatsApp() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -67,6 +80,22 @@ export default function ConfiguracaoWhatsApp() {
   const [formNome, setFormNome] = useState('');
   const [formInstanceName, setFormInstanceName] = useState('');
   const [editando, setEditando] = useState(false);
+  const [providerAtivo, setProviderAtivo] = useState<'evolution' | 'meta' | null>(null);
+
+  // Meta Cloud API
+  const [metaConfig, setMetaConfig] = useState<MetaConfigData | null>(null);
+  const [loadingMeta, setLoadingMeta] = useState(false);
+  const [salvandoMeta, setSalvandoMeta] = useState(false);
+  const [testandoMeta, setTestandoMeta] = useState(false);
+  const [metaConectado, setMetaConectado] = useState(false);
+  const [formMeta, setFormMeta] = useState({
+    nome: '',
+    meta_phone_number_id: '',
+    meta_business_account_id: '',
+    meta_access_token: '',
+    meta_webhook_verify_token: '',
+    telefone: '',
+  });
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -95,6 +124,9 @@ export default function ConfiguracaoWhatsApp() {
       setLoadingInstancia(true);
       const response = await api.get('/evolution/instancia');
       setInstancia(response.data);
+      if (response.data?.provider === 'evolution' && response.data?.status === 'ativa') {
+        setProviderAtivo('evolution');
+      }
     } catch (err: any) {
       console.error('Erro ao buscar instância:', err);
       setInstancia(null);
@@ -137,6 +169,7 @@ export default function ConfiguracaoWhatsApp() {
       });
       toast({ title: 'Instância salva com sucesso' });
       setEditando(false);
+      setProviderAtivo('evolution');
       await fetchInstancia();
       await fetchStatus();
     } catch (err: any) {
@@ -160,11 +193,90 @@ export default function ConfiguracaoWhatsApp() {
     }
   };
 
+  const fetchMetaConfig = useCallback(async () => {
+    try {
+      setLoadingMeta(true);
+      const response = await api.get('/whatsapp/config');
+      const data = response.data?.data;
+      if (data) {
+        setMetaConfig(data);
+        if (data?.status === 'ativa' && data?.provider === 'meta') {
+          setProviderAtivo('meta');
+        }
+        setFormMeta({
+          nome: data.nome || '',
+          meta_phone_number_id: data.meta_phone_number_id || '',
+          meta_business_account_id: data.meta_business_account_id || '',
+          meta_access_token: '',  // nunca pré-preenche token por segurança
+          meta_webhook_verify_token: data.meta_webhook_verify_token || '',
+          telefone: data.telefone || '',
+        });
+      }
+    } catch {
+      setMetaConfig(null);
+    } finally {
+      setLoadingMeta(false);
+    }
+  }, []);
+
+  const handleSalvarMeta = async () => {
+    if (!formMeta.meta_phone_number_id || !formMeta.meta_business_account_id || !formMeta.meta_access_token || !formMeta.nome) {
+      toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
+      return;
+    }
+    setSalvandoMeta(true);
+    try {
+      await api.post('/whatsapp/config', formMeta);
+      toast({ title: 'Configuração Meta salva com sucesso' });
+      setProviderAtivo('meta');
+      await fetchMetaConfig();
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao salvar',
+        description: err?.response?.data?.error || 'Tente novamente',
+        variant: 'destructive',
+      });
+    } finally {
+      setSalvandoMeta(false);
+    }
+  };
+
+  const handleTestarConexaoMeta = async () => {
+    setTestandoMeta(true);
+    setMetaConectado(false);
+    try {
+      const response = await api.post('/whatsapp/test-connection');
+      if (response.data?.success) {
+        setMetaConectado(true);
+        const info = response.data?.data;
+        toast({
+          title: '✅ Conexão Meta estabelecida!',
+          description: `Número: ${info?.display_phone_number || ''} | ${info?.verified_name || ''}`,
+        });
+      } else {
+        toast({
+          title: 'Falha na conexão',
+          description: response.data?.error || 'Verifique as credenciais',
+          variant: 'destructive',
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao testar conexão',
+        description: err?.response?.data?.error || 'Verifique as credenciais Meta',
+        variant: 'destructive',
+      });
+    } finally {
+      setTestandoMeta(false);
+    }
+  };
+
   useEffect(() => {
     fetchInstancia();
     fetchStatus();
+    fetchMetaConfig();
     return () => stopPolling();
-  }, [fetchInstancia, fetchStatus, stopPolling]);
+  }, [fetchInstancia, fetchStatus, fetchMetaConfig, stopPolling]);
 
   useEffect(() => {
     if (status?.connected && qrModalOpen) {
@@ -191,8 +303,42 @@ export default function ConfiguracaoWhatsApp() {
           </div>
         </div>
 
-        {/* Card: Status da Conexão */}
-        <Card>
+        {/* Tabs */}
+        <Tabs defaultValue="evolution">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="evolution" className="flex items-center gap-2">
+              Evolution API
+              {providerAtivo === 'evolution' && (
+                <span className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded-full">
+                  Ativo
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="meta" className="flex items-center gap-2">
+              Meta Cloud API
+              {providerAtivo === 'meta' && (
+                <span className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded-full">
+                  Ativo
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ABA EVOLUTION */}
+          <TabsContent value="evolution" className="space-y-6 mt-6">
+            {providerAtivo === 'meta' && (
+              <div className="flex items-center gap-3 p-4 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-800 text-sm">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 text-yellow-600" />
+                <div>
+                  <p className="font-medium">Meta Cloud API está ativo</p>
+                  <p className="text-xs mt-0.5">
+                    Ao salvar uma nova configuração Evolution, o provider Meta será desativado automaticamente.
+                  </p>
+                </div>
+              </div>
+            )}
+            {/* Card: Status da Conexão */}
+            <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -391,19 +537,203 @@ export default function ConfiguracaoWhatsApp() {
           </Card>
         )}
 
-        {/* Card: Informações — para todos */}
-        <Card className="border-dashed">
-          <CardContent className="pt-6">
-            <div className="flex gap-3">
-              <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">Como funciona</p>
-                <p>O WhatsApp Business é integrado via Evolution API. Cada clínica tem sua própria instância conectada a um número de telefone.</p>
-                <p>Para conectar: configure o nome da instância → clique em "Conectar via QR Code" → escaneie com o WhatsApp do celular.</p>
+            {/* Card: Informações — para todos */}
+            <Card className="border-dashed">
+              <CardContent className="pt-6">
+                <div className="flex gap-3">
+                  <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p className="font-medium text-foreground">Como funciona</p>
+                    <p>O WhatsApp Business é integrado via Evolution API. Cada clínica tem sua própria instância conectada a um número de telefone.</p>
+                    <p>Para conectar: configure o nome da instância → clique em "Conectar via QR Code" → escaneie com o WhatsApp do celular.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ABA META CLOUD API */}
+          <TabsContent value="meta" className="space-y-6 mt-6">
+            {providerAtivo === 'evolution' && (
+              <div className="flex items-center gap-3 p-4 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-800 text-sm">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 text-yellow-600" />
+                <div>
+                  <p className="font-medium">Evolution API está ativo</p>
+                  <p className="text-xs mt-0.5">
+                    Ao salvar credenciais Meta, o Evolution será desativado automaticamente.
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+            {/* Card: Status da conexão Meta */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Wifi className="h-5 w-5" />
+                    Status da Conexão Meta
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleTestarConexaoMeta}
+                    disabled={testandoMeta || !metaConfig}
+                  >
+                    {testandoMeta
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <RefreshCw className="h-4 w-4" />
+                    }
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!metaConfig ? (
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    Nenhuma configuração Meta encontrada. Preencha o formulário abaixo.
+                  </div>
+                ) : metaConectado ? (
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="font-medium text-green-700">Conectado à Meta Cloud API</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                      <span className="font-medium text-yellow-700">Configurado — não testado</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Clique no botão de atualizar para testar a conexão com a Meta.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Card: Formulário de credenciais — só admin */}
+            {isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings2 className="h-5 w-5" />
+                    Credenciais Meta Cloud API
+                  </CardTitle>
+                  <CardDescription>
+                    Insira as credenciais do seu WhatsApp Business na Meta.
+                    Obtenha em: Meta for Developers → Seu App → WhatsApp → Configuração da API
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+
+                  <div className="space-y-1.5">
+                    <Label>Nome de exibição *</Label>
+                    <Input
+                      value={formMeta.nome}
+                      onChange={e => setFormMeta(p => ({ ...p, nome: e.target.value }))}
+                      placeholder="Ex: Maxi Clínicas WhatsApp"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Phone Number ID *</Label>
+                    <Input
+                      value={formMeta.meta_phone_number_id}
+                      onChange={e => setFormMeta(p => ({ ...p, meta_phone_number_id: e.target.value }))}
+                      placeholder="Ex: 123456789012345"
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Meta for Developers → WhatsApp → Configuração da API → Phone Number ID
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>WhatsApp Business Account ID *</Label>
+                    <Input
+                      value={formMeta.meta_business_account_id}
+                      onChange={e => setFormMeta(p => ({ ...p, meta_business_account_id: e.target.value }))}
+                      placeholder="Ex: 123456789012345"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Access Token *</Label>
+                    <Input
+                      type="password"
+                      value={formMeta.meta_access_token}
+                      onChange={e => setFormMeta(p => ({ ...p, meta_access_token: e.target.value }))}
+                      placeholder="Token de acesso permanente"
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Nunca compartilhe este token. Use um token de sistema permanente.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Webhook Verify Token</Label>
+                    <Input
+                      value={formMeta.meta_webhook_verify_token}
+                      onChange={e => setFormMeta(p => ({ ...p, meta_webhook_verify_token: e.target.value }))}
+                      placeholder="maxiclinicas_webhook_2026"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Telefone</Label>
+                    <Input
+                      value={formMeta.telefone}
+                      onChange={e => setFormMeta(p => ({ ...p, telefone: e.target.value }))}
+                      placeholder="+55 11 99999-9999"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={handleSalvarMeta}
+                      disabled={salvandoMeta}
+                    >
+                      {salvandoMeta && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Salvar Credenciais
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleTestarConexaoMeta}
+                      disabled={testandoMeta || !metaConfig}
+                    >
+                      {testandoMeta
+                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testando...</>
+                        : 'Testar Conexão'
+                      }
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Card: Informações webhook */}
+            <Card className="border-dashed">
+              <CardContent className="pt-6">
+                <div className="flex gap-3">
+                  <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p className="font-medium text-foreground">Configuração do Webhook</p>
+                    <p>Configure no Meta for Developers:</p>
+                    <p className="font-mono text-xs bg-muted px-2 py-1 rounded">
+                      URL: https://api.maxiclinicas.com.br/api/v1/whatsapp/webhook
+                    </p>
+                    <p className="font-mono text-xs bg-muted px-2 py-1 rounded mt-1">
+                      Verify Token: maxiclinicas_webhook_2026
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modal QR Code */}
