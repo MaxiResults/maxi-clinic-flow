@@ -60,6 +60,9 @@ export default function Usuarios() {
   const [salvando, setSalvando] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('todos');
+  const [clienteFilter, setClienteFilter] = useState<number>(0);
+  const [empresaFilter, setEmpresaFilter] = useState<number>(0);
+  const [empresasParaFiltro, setEmpresasParaFiltro] = useState<EmpresaBasica[]>([]);
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null);
 
   // Form
@@ -128,14 +131,20 @@ export default function Usuarios() {
   };
 
   // API calls
-  const fetchUsuarios = async (s = search, role = roleFilter) => {
+  const fetchUsuarios = async (
+    s = search,
+    role = roleFilter,
+    clienteId = clienteFilter,
+    empresaId = empresaFilter
+  ) => {
     try {
       setLoading(true);
-      const params: Record<string, string> = { search: s };
-      if (role !== 'todos') {
-        params.role = role;
-      }
-      const response = await api.get('/superadmin/usuarios', { params });
+      const params = new URLSearchParams();
+      if (s) params.append('search', s);
+      if (role !== 'todos') params.append('role', role);
+      if (clienteId > 0) params.append('cliente_id', String(clienteId));
+      if (empresaId > 0) params.append('empresa_id', String(empresaId));
+      const response = await api.get(`/superadmin/usuarios?${params.toString()}`);
       setUsuarios(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
@@ -193,13 +202,37 @@ export default function Usuarios() {
       clearTimeout(debounceTimer.current);
     }
     debounceTimer.current = setTimeout(() => {
-      fetchUsuarios(value, roleFilter);
+      fetchUsuarios(value, roleFilter, clienteFilter, empresaFilter);
     }, 300);
   };
 
   const handleRoleFilterChange = (value: string) => {
     setRoleFilter(value);
-    fetchUsuarios(search, value);
+    fetchUsuarios(search, value, clienteFilter, empresaFilter);
+  };
+
+  const handleClienteFilterChange = async (value: string) => {
+    const clienteId = value === 'todos' ? 0 : Number(value);
+    setClienteFilter(clienteId);
+    setEmpresaFilter(0);
+    setEmpresasParaFiltro([]);
+
+    if (clienteId > 0) {
+      try {
+        const res = await api.get(`/superadmin/clientes/${clienteId}/empresas`);
+        setEmpresasParaFiltro(Array.isArray(res.data) ? res.data : []);
+      } catch {
+        setEmpresasParaFiltro([]);
+      }
+    }
+
+    fetchUsuarios(search, roleFilter, clienteId, 0);
+  };
+
+  const handleEmpresaFilterChange = (value: string) => {
+    const empresaId = value === 'todos' ? 0 : Number(value);
+    setEmpresaFilter(empresaId);
+    fetchUsuarios(search, roleFilter, clienteFilter, empresaId);
   };
 
   const handleClienteChange = (clienteId: string) => {
@@ -479,6 +512,48 @@ export default function Usuarios() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="w-full md:w-48">
+            <Label htmlFor="cliente-filter" className="mb-2 block">Filtrar por cliente</Label>
+            <Select
+              value={clienteFilter === 0 ? 'todos' : String(clienteFilter)}
+              onValueChange={handleClienteFilterChange}
+            >
+              <SelectTrigger id="cliente-filter" className="h-10">
+                <SelectValue placeholder="Todos os clientes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os clientes</SelectItem>
+                {clientes.map((c) => (
+                  <SelectItem key={c.Cliente_ID} value={String(c.Cliente_ID)}>
+                    {c.nome_fantasia || c.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {clienteFilter > 0 && (
+            <div className="w-full md:w-48">
+              <Label htmlFor="empresa-filter" className="mb-2 block">Filtrar por empresa</Label>
+              <Select
+                value={empresaFilter === 0 ? 'todos' : String(empresaFilter)}
+                onValueChange={handleEmpresaFilterChange}
+              >
+                <SelectTrigger id="empresa-filter" className="h-10">
+                  <SelectValue placeholder="Todas as empresas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas as empresas</SelectItem>
+                  {empresasParaFiltro.map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>
+                      {e.nome_fantasia}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <Button
             onClick={handleNovoUsuario}
