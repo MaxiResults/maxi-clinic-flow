@@ -415,12 +415,12 @@ export default function Clientes() {
       setClienteSelecionado(cliente);
 
       // Buscar empresas
-      const empresas = await api.get(`/superadmin/clientes/${cliente.Cliente_ID}/empresas`);
-      setEmpresasDoCliente(Array.isArray(empresas) ? empresas : []);
+      const empresasRes = await api.get(`/superadmin/clientes/${cliente.Cliente_ID}/empresas`);
+      setEmpresasDoCliente(Array.isArray(empresasRes.data) ? empresasRes.data : []);
 
       // Buscar usuários
-      const usuarios = await api.get(`/superadmin/usuarios?cliente_id=${cliente.Cliente_ID}`);
-      setUsuariosDoCliente(Array.isArray(usuarios) ? usuarios : []);
+      const usuariosRes = await api.get(`/superadmin/usuarios?cliente_id=${cliente.Cliente_ID}`);
+      setUsuariosDoCliente(Array.isArray(usuariosRes.data) ? usuariosRes.data : []);
 
       setView('detalhe');
     } catch (error: any) {
@@ -461,8 +461,8 @@ export default function Clientes() {
 
       // Refetch
       if (clienteSelecionado) {
-        const empresas = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
-        setEmpresasDoCliente(Array.isArray(empresas) ? empresas : []);
+        const empresasRes = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
+        setEmpresasDoCliente(Array.isArray(empresasRes.data) ? empresasRes.data : []);
       }
     } catch (error: any) {
       toast({
@@ -479,8 +479,8 @@ export default function Clientes() {
       toast({ title: 'Plano alterado com sucesso' });
 
       if (clienteSelecionado) {
-        const empresas = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
-        setEmpresasDoCliente(Array.isArray(empresas) ? empresas : []);
+        const empresasRes = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
+        setEmpresasDoCliente(Array.isArray(empresasRes.data) ? empresasRes.data : []);
       }
     } catch (error: any) {
       toast({
@@ -502,8 +502,8 @@ export default function Clientes() {
       toast({ title: 'Feature atualizada com sucesso' });
 
       if (clienteSelecionado) {
-        const empresas = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
-        setEmpresasDoCliente(Array.isArray(empresas) ? empresas : []);
+        const empresasRes = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
+        setEmpresasDoCliente(Array.isArray(empresasRes.data) ? empresasRes.data : []);
       }
     } catch (error: any) {
       toast({
@@ -537,8 +537,8 @@ export default function Clientes() {
       });
 
       if (clienteSelecionado) {
-        const usuarios = await api.get(`/superadmin/usuarios?cliente_id=${clienteSelecionado.Cliente_ID}`);
-        setUsuariosDoCliente(Array.isArray(usuarios) ? usuarios : []);
+        const usuariosRes = await api.get(`/superadmin/usuarios?cliente_id=${clienteSelecionado.Cliente_ID}`);
+        setUsuariosDoCliente(Array.isArray(usuariosRes.data) ? usuariosRes.data : []);
       }
     } catch (error: any) {
       toast({
