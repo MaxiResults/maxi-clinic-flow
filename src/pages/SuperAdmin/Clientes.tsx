@@ -146,8 +146,8 @@ export default function Clientes() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [produtoFilter, setProdutoFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('todos');
+  const [produtoFilter, setProdutoFilter] = useState('todos');
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
@@ -164,7 +164,7 @@ export default function Clientes() {
     cidade: '',
     estado: '',
     status: 'ATIVO',
-    tipo_cliente: '',
+    tipo_cliente: 'Clínica',
     observacoes: '',
   });
 
@@ -220,8 +220,11 @@ export default function Clientes() {
       setLoading(true);
       const params = new URLSearchParams();
       if (s) params.append('search', s);
-      if (st) params.append('status', st);
-      if (p) params.append('produto', p);
+      // Converter "todos" em string vazia para a API
+      const statusForApi = st === 'todos' ? '' : st;
+      const produtoForApi = p === 'todos' ? '' : p;
+      if (statusForApi) params.append('status', statusForApi);
+      if (produtoForApi) params.append('produto', produtoForApi);
 
       const data = await api.get(`/superadmin/clientes?${params.toString()}`);
       setClientes(data || []);
@@ -245,12 +248,14 @@ export default function Clientes() {
 
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
-    fetchClientes(search, value, produtoFilter);
+    const statusForApi = value === 'todos' ? '' : value;
+    fetchClientes(search, statusForApi, produtoFilter);
   };
 
   const handleProdutoFilterChange = (value: string) => {
     setProdutoFilter(value);
-    fetchClientes(search, statusFilter, value);
+    const produtoForApi = value === 'todos' ? '' : value;
+    fetchClientes(search, statusFilter, produtoForApi);
   };
 
   // ─── Handlers VIEW 2 (Cadastro/Edição) ──────────────────────────────────
@@ -294,7 +299,7 @@ export default function Clientes() {
       cidade: '',
       estado: '',
       status: 'ATIVO',
-      tipo_cliente: '',
+      tipo_cliente: 'Clínica',
       observacoes: '',
     });
     setProdutosSelecionados([]);
@@ -603,7 +608,7 @@ export default function Clientes() {
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="ATIVO">Ativo</SelectItem>
                   <SelectItem value="INATIVO">Inativo</SelectItem>
                   <SelectItem value="SUSPENSO">Suspenso</SelectItem>
@@ -614,7 +619,7 @@ export default function Clientes() {
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                   {produtos.map((p) => (
                     <SelectItem key={p.id} value={p.codigo}>
                       {p.nome}
@@ -775,7 +780,7 @@ export default function Clientes() {
                 <Label className="mb-2">Tipo de Cliente*</Label>
                 <Select value={formData.tipo_cliente} onValueChange={(v) => setFormData({ ...formData, tipo_cliente: v })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecionar" />
+                    <SelectValue placeholder="Selecione o tipo de cliente" />
                   </SelectTrigger>
                   <SelectContent>
                     {TIPOS_CLIENTE.map((t) => (
