@@ -143,7 +143,7 @@ export default function Clientes() {
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtosDisponiveis, setProdutosDisponiveis] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
@@ -202,17 +202,42 @@ export default function Clientes() {
   // ─── Fetch inicial ───────────────────────────────────────────────────────
 
   useEffect(() => {
+    console.log('[SuperAdmin] Inicializando... Buscando produtos disponíveis');
     fetchProdutos();
+    console.log('[SuperAdmin] Buscando clientes...');
     fetchClientes();
   }, []);
 
+  // ─── Monitor de mudanças em produtos ────────────────────────────────────
+
+  useEffect(() => {
+    console.log('[SuperAdmin] Estado de produtosDisponiveis atualizado:', {
+      quantidade: produtosDisponiveis.length,
+      dados: produtosDisponiveis,
+    });
+  }, [produtosDisponiveis]);
+
   const fetchProdutos = async () => {
     try {
-      const data = await api.get('/superadmin/produtos');
-      setProdutos(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      console.error('Erro ao buscar produtos:', error);
-      setProdutos([]);
+      console.log('[SuperAdmin] GET /superadmin/produtos iniciado');
+      const response = await api.get('/superadmin/produtos');
+      console.log('[SuperAdmin] Response completo:', response);
+      console.log('[SuperAdmin] response.data:', response.data);
+      console.log('[SuperAdmin] É array?', Array.isArray(response.data));
+      console.log('[SuperAdmin] Tipo de response.data:', typeof response.data);
+
+      const produtos = Array.isArray(response.data) ? response.data : [];
+      console.log('[SuperAdmin] Produtos recebidos:', produtos);
+      setProdutosDisponiveis(produtos);
+      console.log('[SuperAdmin] ✅ Produtos carregados com sucesso:', produtos.length, 'itens');
+    } catch (err: any) {
+      console.error('[SuperAdmin] ❌ Erro ao buscar produtos:', {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+        url: err.config?.url,
+      });
+      setProdutosDisponiveis([]);
     }
   };
 
@@ -255,8 +280,10 @@ export default function Clientes() {
   };
 
   const handleProdutoFilterChange = (value: string) => {
+    console.log('[SuperAdmin] Filtro de produto alterado:', value);
     setProdutoFilter(value);
     const produtoForApi = value === 'todos' ? '' : value;
+    console.log('[SuperAdmin] Produto para API:', produtoForApi);
     fetchClientes(search, statusFilter, produtoForApi);
   };
 
@@ -620,15 +647,21 @@ export default function Clientes() {
               </Select>
               <Select value={produtoFilter} onValueChange={handleProdutoFilterChange}>
                 <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Todos" />
+                  <SelectValue placeholder="Filtrar por produto" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {produtos.map((p) => (
-                    <SelectItem key={p.id} value={p.codigo}>
-                      {p.nome}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="todos">Todos os produtos</SelectItem>
+                  {produtosDisponiveis && produtosDisponiveis.length > 0 ? (
+                    produtosDisponiveis.map((p) => (
+                      <SelectItem key={p.id} value={p.codigo}>
+                        {p.nome}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="p-2 text-sm text-slate-500">
+                      Nenhum produto disponível
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
               <Button onClick={handleNovoCliente}>
@@ -943,7 +976,7 @@ export default function Clientes() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {produtos.map((produto) => (
+              {produtosDisponiveis.map((produto) => (
                 <Card
                   key={produto.id}
                   className={`border-2 cursor-pointer transition-all ${
