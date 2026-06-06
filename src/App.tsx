@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UnreadProvider } from "@/contexts/UnreadContext";
 import { SocketProvider } from "@/contexts/SocketContext";
@@ -40,6 +41,8 @@ import ConfiguracaoWhatsApp from '@/pages/ConfiguracaoWhatsApp';
 import ConfiguracaoPipelineEtapas from '@/pages/ConfiguracaoPipelineEtapas';
 import Campanhas from '@/pages/Campanhas';
 
+const SuperAdminApp = lazy(() => import('@/pages/SuperAdmin'));
+
 const queryClient = new QueryClient();
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
@@ -71,6 +74,16 @@ const FeatureRoute = ({
   return <>{children}</>;
 };
 
+const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'superadmin') return <Navigate to="/" replace />;
+
+  return <>{children}</>;
+};
+
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
@@ -90,6 +103,16 @@ const AppRoutes = () => (
     <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
     <Route path="/especialidades" element={<PrivateRoute><Especialidades /></PrivateRoute>} />
     <Route path="/perfil" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+    <Route
+      path="/superadmin/*"
+      element={
+        <SuperAdminRoute>
+          <Suspense fallback={<LoadingScreen />}>
+            <SuperAdminApp />
+          </Suspense>
+        </SuperAdminRoute>
+      }
+    />
     <Route path="*" element={<NotFound />} />
     <Route path="/anamnese/templates" element={<AnamneseTemplates />} />
     <Route path="/anamnese/templates/:id" element={<AnamneseTemplateBuilder />} />
