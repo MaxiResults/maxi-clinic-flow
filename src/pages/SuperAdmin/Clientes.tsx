@@ -209,9 +209,10 @@ export default function Clientes() {
   const fetchProdutos = async () => {
     try {
       const data = await api.get('/superadmin/produtos');
-      setProdutos(data || []);
+      setProdutos(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Erro ao buscar produtos:', error);
+      setProdutos([]);
     }
   };
 
@@ -227,8 +228,9 @@ export default function Clientes() {
       if (produtoForApi) params.append('produto', produtoForApi);
 
       const data = await api.get(`/superadmin/clientes?${params.toString()}`);
-      setClientes(data || []);
+      setClientes(Array.isArray(data) ? data : []);
     } catch (error: any) {
+      setClientes([]);
       toast({
         title: 'Erro ao carregar clientes',
         variant: 'destructive',
@@ -385,14 +387,16 @@ export default function Clientes() {
 
       // Buscar empresas
       const empresas = await api.get(`/superadmin/clientes/${cliente.Cliente_ID}/empresas`);
-      setEmpresasDoCliente(empresas || []);
+      setEmpresasDoCliente(Array.isArray(empresas) ? empresas : []);
 
       // Buscar usuários
       const usuarios = await api.get(`/superadmin/usuarios?cliente_id=${cliente.Cliente_ID}`);
-      setUsuariosDoCliente(usuarios || []);
+      setUsuariosDoCliente(Array.isArray(usuarios) ? usuarios : []);
 
       setView('detalhe');
     } catch (error: any) {
+      setEmpresasDoCliente([]);
+      setUsuariosDoCliente([]);
       toast({
         title: 'Erro ao carregar detalhes',
         variant: 'destructive',
@@ -429,7 +433,7 @@ export default function Clientes() {
       // Refetch
       if (clienteSelecionado) {
         const empresas = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
-        setEmpresasDoCliente(empresas || []);
+        setEmpresasDoCliente(Array.isArray(empresas) ? empresas : []);
       }
     } catch (error: any) {
       toast({
@@ -447,7 +451,7 @@ export default function Clientes() {
 
       if (clienteSelecionado) {
         const empresas = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
-        setEmpresasDoCliente(empresas || []);
+        setEmpresasDoCliente(Array.isArray(empresas) ? empresas : []);
       }
     } catch (error: any) {
       toast({
@@ -470,7 +474,7 @@ export default function Clientes() {
 
       if (clienteSelecionado) {
         const empresas = await api.get(`/superadmin/clientes/${clienteSelecionado.Cliente_ID}/empresas`);
-        setEmpresasDoCliente(empresas || []);
+        setEmpresasDoCliente(Array.isArray(empresas) ? empresas : []);
       }
     } catch (error: any) {
       toast({
@@ -505,7 +509,7 @@ export default function Clientes() {
 
       if (clienteSelecionado) {
         const usuarios = await api.get(`/superadmin/usuarios?cliente_id=${clienteSelecionado.Cliente_ID}`);
-        setUsuariosDoCliente(usuarios || []);
+        setUsuariosDoCliente(Array.isArray(usuarios) ? usuarios : []);
       }
     } catch (error: any) {
       toast({
@@ -1039,7 +1043,7 @@ export default function Clientes() {
                   <Badge className={getStatusColor(clienteSelecionado.status).text + ' bg-opacity-10'}>
                     {clienteSelecionado.status}
                   </Badge>
-                  {clienteSelecionado.produtos?.map((p) => (
+                  {(clienteSelecionado.produtos ?? []).map((p) => (
                     <Badge key={p.id} className={getProdutoColor(p.codigo)}>
                       {getProdutoNome(p.codigo)}
                     </Badge>
