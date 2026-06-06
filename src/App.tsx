@@ -17,7 +17,6 @@ import AgendamentoForm from "./pages/AgendamentoForm";
 import Conversas from "./pages/Conversas";
 import Profissionais from "./pages/Profissionais";
 import ProfissionalForm from "./pages/ProfissionalForm";
-import Usuarios from "./pages/Usuarios";
 import Produtos from "./pages/Produtos";
 import Settings from "./pages/Settings";
 import Categorias from "./pages/Categorias";
@@ -78,7 +77,13 @@ const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
 
   if (isLoading) return <LoadingScreen />;
-  if (!user) return <Navigate to="/login" replace />;
+
+  if (!user) {
+    // Salvar URL de destino antes de redirecionar para login
+    sessionStorage.setItem('redirect_after_login', '/superadmin');
+    return <Navigate to="/login" replace />;
+  }
+
   if (user.role !== 'superadmin') return <Navigate to="/" replace />;
 
   return <>{children}</>;
@@ -120,7 +125,6 @@ const AppRoutes = () => (
     <Route path="/anamneses" element={<PrivateRoute><AnamneseDashboard /></PrivateRoute>} />
     <Route path="/pipeline" element={<PrivateRoute><Pipeline /></PrivateRoute>} />
     <Route path="/configuracoes/google-calendar" element={<PrivateRoute><ConfiguracaoGoogleCalendar /></PrivateRoute>} />
-    <Route path="/configuracoes/usuarios" element={<PrivateRoute><Usuarios /></PrivateRoute>} />
     <Route path="/configuracoes/whatsapp" element={<PrivateRoute><ConfiguracaoWhatsApp /></PrivateRoute>} />
     <Route path="/respostas-rapidas" element={<PrivateRoute><RespostasRapidas /></PrivateRoute>} />
     <Route path="/whatsapp/templates" element={<FeatureRoute feature="whatsapp"><WhatsAppTemplates /></FeatureRoute>} />
