@@ -65,6 +65,10 @@ export default function Usuarios() {
   const [empresasParaFiltro, setEmpresasParaFiltro] = useState<EmpresaBasica[]>([]);
   const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null);
 
+  // Profissionais
+  const [profissionais, setProfissionais] = useState<any[]>([]);
+  const [loadingProfissionais, setLoadingProfissionais] = useState(false);
+
   // Form
   const [formData, setFormData] = useState({
     nome: '',
@@ -75,6 +79,7 @@ export default function Usuarios() {
     empresa_id: 0,
     role: 'admin',
     ativo: true,
+    profissional_id: '',
   });
 
   // Reset senha dialog
@@ -192,6 +197,23 @@ export default function Usuarios() {
         variant: 'destructive',
       });
       setEmpresasFiltradas([]);
+    }
+  };
+
+  const fetchProfissionais = async (empresaId: number) => {
+    if (!empresaId) return;
+    try {
+      setLoadingProfissionais(true);
+      const response = await api.get(`/superadmin/empresas/${empresaId}/profissionais`);
+      const lista = Array.isArray(response.data) ? response.data : [];
+      // Filtrar apenas profissionais humanos que podem receber conversas
+      setProfissionais(lista.filter((p: any) =>
+        !p.is_ai_agent && !p.is_default && p.pode_receber_conversas
+      ));
+    } catch {
+      setProfissionais([]);
+    } finally {
+      setLoadingProfissionais(false);
     }
   };
 
@@ -341,12 +363,22 @@ export default function Usuarios() {
       }
     }
 
+    // Validação de profissional para atendentes
+    if (formData.role === 'atendente' && !formData.profissional_id) {
+      toast({
+        title: 'Profissional obrigatório',
+        description: 'Selecione o profissional vinculado ao atendente',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setSalvando(true);
 
       if (!usuarioEditando) {
         // Novo usuário
-        const payload = {
+        const payload: any = {
           nome: formData.nome,
           email: formData.email,
           senha: formData.senha,
@@ -354,6 +386,9 @@ export default function Usuarios() {
           empresa_id: formData.empresa_id,
           role: formData.role,
         };
+        if (formData.role === 'atendente' && formData.profissional_id) {
+          payload.profissional_id = formData.profissional_id;
+        }
         await api.post('/superadmin/usuarios', payload);
         toast({
           title: 'Sucesso',
@@ -369,6 +404,9 @@ export default function Usuarios() {
           role: formData.role,
           ativo: formData.ativo,
         };
+        if (formData.role === 'atendente' && formData.profissional_id) {
+          payload.profissional_id = formData.profissional_id;
+        }
         await api.patch(`/superadmin/usuarios/${usuarioEditando.id}`, payload);
         toast({
           title: 'Sucesso',
@@ -478,6 +516,14 @@ export default function Usuarios() {
     fetchUsuarios();
     fetchClientes();
   }, []);
+
+  useEffect(() => {
+    if (formData.role === 'atendente' && formData.empresa_id > 0) {
+      fetchProfissionais(formData.empresa_id);
+    } else {
+      setProfissionais([]);
+    }
+  }, [formData.role, formData.empresa_id]);
 
   // RENDER VIEW LISTA
   if (view === 'lista') {
@@ -1052,6 +1098,56 @@ export default function Usuarios() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Profissional Vinculado (apenas para atendentes) */}
+        {formData.role === 'atendente' && (
+          <Card className="border-slate-200">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-emerald-500/10">
+                  <Users className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <CardTitle>Profissional Vinculado</CardTitle>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Selecione o profissional correspondente a este atendente.
+                    Este vínculo define quais conversas ele poderá acessar.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingProfissionais ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Carregando profissionais...
+                </div>
+              ) : profissionais.length === 0 ? (
+                <div className="text-sm text-amber-600 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Nenhum profissional disponível para esta empresa.
+                  Cadastre um profissional antes de criar o atendente.
+                </div>
+              ) : (
+                <Select
+                  value={formData.profissional_id || ''}
+                  onValueChange={v => setFormData(p => ({ ...p, profissional_id: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar profissional..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profissionais.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome} {p.email ? `(${p.email})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Botões */}

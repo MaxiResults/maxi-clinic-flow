@@ -262,7 +262,8 @@ export default function Conversas() {
   const [buscaAtiva, setBuscaAtiva] = useState(false);
   const [resultadosBusca, setResultadosBusca] = useState<number[]>([]);
   const [resultadoAtual, setResultadoAtual] = useState(0);
-  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'fila' | 'resolvidas'>('todas');
+  const filtroInicial = user?.role === 'atendente' ? 'minhas' : 'todas';
+  const [conversationFilter, setConversationFilter] = useState<'todas' | 'minhas' | 'fila' | 'resolvidas'>(filtroInicial);
   const [modalFecharOpen, setModalFecharOpen] = useState(false);
   const [motivoFechamento, setMotivoFechamento] = useState('');
   const [fechandoConversa, setFechandoConversa] = useState(false);
@@ -1010,12 +1011,19 @@ export default function Conversas() {
         ? '/conversas/minhas'
         : '/conversas/leads';
 
+      const params: any = {
+        t: Date.now(),
+        ...(conversationFilter === 'resolvidas' ? { status: 'encerrada' } : {}),
+        ...(conversationFilter === 'fila' ? { fila: true } : {}),
+      };
+
+      if (user?.role === 'atendente' && user?.profissional_id) {
+        params.profissional_id = user.profissional_id;
+      }
+      params.role = user?.role;
+
       const response = await api.get(endpoint, {
-        params: {
-          t: Date.now(),
-          ...(conversationFilter === 'resolvidas' ? { status: 'encerrada' } : {}),
-          ...(conversationFilter === 'fila' ? { fila: true } : {}),
-        },
+        params,
       });
 
       const leadsArray = response.data || [];
