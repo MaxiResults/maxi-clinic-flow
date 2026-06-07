@@ -1980,7 +1980,7 @@ export default function Conversas() {
           <div className="flex h-full flex-col">
             {selectedLead ? (
               <>
-                <div className={`border-b p-4 ${whatsappStyles.headerBg} text-white`}>
+                <div className={`border-b p-2 md:p-4 ${whatsappStyles.headerBg} text-white`}>
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     {isMobile && (
                       <button
@@ -1999,8 +1999,8 @@ export default function Conversas() {
                       <ContactAvatar
                         nome={selectedLead.nome}
                         avatarUrl={selectedLead.avatar_url}
-                        size="md"
-                        className="md:w-12 md:h-12"
+                        size="sm"
+                        className="md:w-10 md:h-10"
                       />
                       <div>
                         <h3 className="font-semibold">{selectedLead.nome}</h3>
@@ -2500,7 +2500,7 @@ export default function Conversas() {
                   )}
                 </div>
 
-                <div className="border-t px-4 py-2 bg-[#F0F2F5]">
+                <div className="border-t px-2 md:px-4 py-2 bg-[#F0F2F5] overflow-hidden">
                   {/* Indicador "digitando..." do contato (Paciente → Atendente) */}
                   {contatoDigitando && (
                     <div className="flex items-end gap-2 px-4 py-1">
