@@ -18,18 +18,21 @@ export function useEncaminhamento() {
       setLoading(true);
       const response = await api.post('/encaminhamento', dto);
 
-      if (response.data.success) {
-        const { total, enviadas, falhas } = response.data.data || {};
-        toast({
-          title: 'Mensagens encaminhadas',
-          description: `${enviadas ?? dto.mensagemIds.length} de ${total ?? dto.mensagemIds.length} mensagens enviadas com sucesso${
-            falhas > 0 ? `. ${falhas} falharam.` : ''
-          }`,
-        });
-        return { success: true, ...response.data };
-      } else {
-        throw new Error(response.data.error || 'Falha ao encaminhar');
-      }
+      // O interceptor do axios já extrai response.data.data,
+      // então response.data pode ser { total, enviadas, falhas } diretamente
+      // ou ainda { success, data } dependendo da versão da resposta.
+      const payload = response.data;
+      const { total, enviadas, falhas } = payload?.total !== undefined
+        ? payload
+        : (payload?.data || {});
+
+      toast({
+        title: 'Mensagens encaminhadas',
+        description: `${enviadas ?? dto.mensagemIds.length} de ${total ?? dto.mensagemIds.length} mensagens enviadas com sucesso${
+          falhas > 0 ? `. ${falhas} falharam.` : ''
+        }`,
+      });
+      return { success: true };
     } catch (error: any) {
       console.error('Erro ao encaminhar mensagens:', error);
       toast({
