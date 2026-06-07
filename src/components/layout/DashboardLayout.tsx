@@ -16,7 +16,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         <AppSidebar />
         <div className="flex flex-1 flex-col">
           <TopBar title={title} />
-          <main className="flex-1 p-6">{children}</main>
+          <main className="flex-1 p-2 md:p-6">{children}</main>
           <Footer />
         </div>
       </div>

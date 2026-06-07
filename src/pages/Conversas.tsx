@@ -1794,7 +1794,7 @@ export default function Conversas() {
 
   return (
     <DashboardLayout title="Conversas WhatsApp">
-      <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid h-[calc(100vh-130px)] md:h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
         <Card className={`col-span-1 overflow-hidden ${isMobile && selectedLead ? 'hidden' : ''}`}>
           <div className="flex h-full flex-col">
             <div className="border-b p-4 space-y-3">
