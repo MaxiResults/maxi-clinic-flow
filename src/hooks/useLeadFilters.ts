@@ -17,8 +17,8 @@ export function useLeadFilters(leads: Lead[]) {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       result = result.filter(lead =>
-        lead.nome.toLowerCase().includes(search) ||
-        lead.telefone.includes(search) ||
+        lead.nome?.toLowerCase().includes(search) ||
+        lead.telefone?.includes(search) ||
         lead.email?.toLowerCase().includes(search)
       );
     }
