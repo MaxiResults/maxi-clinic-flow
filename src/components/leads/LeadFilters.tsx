@@ -64,7 +64,7 @@ export function LeadFilters({
       .catch(() => setCanais([]));
   }, []);
   return (
-    <div className="flex flex-col md:flex-row gap-4">
+    <div className="flex flex-col md:flex-row gap-2 md:gap-4">
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -74,7 +74,8 @@ export function LeadFilters({
           className="pl-10"
         />
       </div>
-      
+
+      <div className="grid grid-cols-2 md:contents gap-2 md:gap-0">
       <Select value={filterStatus} onValueChange={onStatusChange}>
         <SelectTrigger className="w-full md:w-[180px]">
           <SelectValue placeholder="Status" />
@@ -137,6 +138,7 @@ export function LeadFilters({
           ))}
         </SelectContent>
       </Select>
+      </div>
     </div>
   );
 }

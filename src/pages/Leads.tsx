@@ -205,7 +205,7 @@ export default function Leads() {
         <LeadStats stats={stats} loading={loading} />
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 md:mb-6 gap-2">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
               Leads
@@ -220,7 +220,7 @@ export default function Leads() {
           </Button>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 md:gap-4 mb-4 md:mb-6">
           <div className="flex-1 w-full">
             <LeadFilters
               searchTerm={filters.searchTerm}
