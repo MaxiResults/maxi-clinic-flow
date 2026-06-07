@@ -2852,7 +2852,7 @@ export default function Conversas() {
                         <button
                           type="button"
                           onClick={fetchAISuggestions}
-                          className={`flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-105 ${
+                          className={`flex-shrink-0 h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-105 ${
                             showAISuggestions
                               ? 'bg-[#25D366] text-white shadow-sm'
                               : 'bg-white text-[#54656F] hover:text-[#25D366] border border-[#E9EDEF]'
@@ -2867,10 +2867,10 @@ export default function Conversas() {
                       <button
                         type="button"
                         onClick={() => setShowAudioRecorder(true)}
-                        className="group w-12 h-12 flex items-center justify-center rounded-full bg-[#F0F2F5] hover:bg-[#25D366] transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0"
+                        className="group w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-[#F0F2F5] hover:bg-[#25D366] transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0"
                         title="Gravar áudio"
                       >
-                        <Mic className="w-6 h-6 text-[#54656F] group-hover:text-white transition-colors duration-200" />
+                        <Mic className="w-4 h-4 md:w-6 md:h-6 text-[#54656F] group-hover:text-white transition-colors duration-200" />
                       </button>
 
                       {/* Botão enviar - aparece quando há texto */}
@@ -2878,7 +2878,7 @@ export default function Conversas() {
                         <button
                           type="submit"
                           disabled={enviando || enviandoNota}
-                          className={`w-12 h-12 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0 disabled:opacity-50 animate-scale-in ${
+                          className={`w-9 h-9 md:w-12 md:h-12 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-105 shadow-sm flex-shrink-0 disabled:opacity-50 animate-scale-in ${
                             modoNota
                               ? 'bg-yellow-500 hover:bg-yellow-600'
                               : 'bg-[#25D366] hover:bg-[#1DA851]'
