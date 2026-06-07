@@ -1999,14 +1999,15 @@ export default function Conversas() {
                       <ContactAvatar
                         nome={selectedLead.nome}
                         avatarUrl={selectedLead.avatar_url}
-                        size="lg"
+                        size="md"
+                        className="md:w-12 md:h-12"
                       />
                       <div>
                         <h3 className="font-semibold">{selectedLead.nome}</h3>
-                        <p className="text-xs text-white/80">
+                        <p className="text-xs text-white/80 hidden md:block">
                           {formatPhone(selectedLead.whatsapp_id || selectedLead.telefone)}
                         </p>
-                        <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                        <div className="mt-1.5 flex items-center gap-2 flex-wrap hidden md:flex">
                           <JanelaBadge />
                           {getSessionId(selectedLead) && (
                             <AIHandoffBadge
@@ -2017,7 +2018,7 @@ export default function Conversas() {
                         </div>
                       </div>
                     </button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 md:gap-2 overflow-x-auto flex-wrap md:flex-nowrap">
                       <Button
                         variant="ghost"
                         size="sm"
