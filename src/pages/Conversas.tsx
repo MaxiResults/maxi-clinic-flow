@@ -2579,7 +2579,7 @@ export default function Conversas() {
                         </button>
                       </div>
                     )}
-                    <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1 relative">
+                    <form onSubmit={handleEnviarMensagem} className="flex flex-col gap-1 relative min-w-0 overflow-hidden">
                       {/* Painel Sugestões IA */}
                       {showAISuggestions && (
                         <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl border border-[#E9EDEF] shadow-xl overflow-hidden z-50">
@@ -2672,7 +2672,7 @@ export default function Conversas() {
                           ))}
                         </div>
                       )}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                       {/* Input arredondado estilo WhatsApp */}
                       <div className={`flex-1 flex items-center gap-3 rounded-[24px] border px-4 py-2.5 transition-all shadow-sm ${
                         modoNota
