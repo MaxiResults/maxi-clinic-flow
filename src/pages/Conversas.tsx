@@ -2254,7 +2254,7 @@ export default function Conversas() {
                               />
                             )}
                             <div
-                              className={`max-w-[70%] px-4 py-2 shadow-sm relative group ${
+                              className={`max-w-[85%] sm:max-w-[70%] px-4 py-2 shadow-sm relative group ${
                                 isOwn ? whatsappStyles.sentBubble : whatsappStyles.receivedBubble
                               }`}
                               style={{
