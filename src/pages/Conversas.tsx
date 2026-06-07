@@ -237,6 +237,7 @@ export default function Conversas() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const { totalNaoLidas: statsNaoLidas } = useConversasStats();
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -1794,7 +1795,7 @@ export default function Conversas() {
   return (
     <DashboardLayout title="Conversas WhatsApp">
       <div className="grid h-[calc(100vh-160px)] grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="col-span-1 overflow-hidden">
+        <Card className={`col-span-1 overflow-hidden ${isMobile && selectedLead ? 'hidden' : ''}`}>
           <div className="flex h-full flex-col">
             <div className="border-b p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -1975,12 +1976,21 @@ export default function Conversas() {
           </div>
         </Card>
 
-        <Card className="col-span-1 md:col-span-2 overflow-hidden relative">
+        <Card className={`col-span-1 md:col-span-2 overflow-hidden relative ${isMobile && !selectedLead ? 'hidden' : ''}`}>
           <div className="flex h-full flex-col">
             {selectedLead ? (
               <>
                 <div className={`border-b p-4 ${whatsappStyles.headerBg} text-white`}>
                   <div className="flex items-center justify-between gap-3 flex-wrap">
+                    {isMobile && (
+                      <button
+                        onClick={() => setSelectedLead(null)}
+                        className="md:hidden flex items-center gap-1 text-white/90 hover:text-white transition-colors mr-1"
+                        aria-label="Voltar para lista"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setContactInfoOpen(true)}
