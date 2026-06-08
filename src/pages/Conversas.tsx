@@ -30,7 +30,9 @@ import { TagBadge } from "@/components/tags/TagBadge";
 import { useTags, type Tag } from "@/hooks/useTags";
 import { EncaminharDialog } from "@/components/chat/EncaminharDialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AIHandoffBadge } from "@/components/ai/AIHandoffBadge";
+const AIHandoffBadge = React.lazy(() =>
+  import('@/components/ai/AIHandoffBadge').then(m => ({ default: m.AIHandoffBadge }))
+);
 import { useAIStatus } from "@/hooks/useAIStatus";
 import { NovaConversaModal } from "@/components/conversas/NovaConversaModal";
 import {
@@ -237,9 +239,6 @@ export default function Conversas() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const { totalNaoLidas: statsNaoLidas } = useConversasStats();
 
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' && window.innerWidth < 768
   );
@@ -248,6 +247,9 @@ export default function Conversas() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMensagens, setLoadingMensagens] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -2026,10 +2028,12 @@ export default function Conversas() {
                         <div className="mt-1.5 flex items-center gap-2 flex-wrap hidden md:flex">
                           <JanelaBadge />
                           {getSessionId(selectedLead) && (
-                            <AIHandoffBadge
-                              sessaoId={getSessionId(selectedLead)!}
-                              size="sm"
-                            />
+                            <React.Suspense fallback={null}>
+                              <AIHandoffBadge
+                                sessaoId={getSessionId(selectedLead)!}
+                                size="sm"
+                              />
+                            </React.Suspense>
                           )}
                         </div>
                       </div>
