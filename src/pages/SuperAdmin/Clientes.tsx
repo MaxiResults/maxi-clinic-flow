@@ -61,6 +61,12 @@ import {
   KeyRound,
   LogIn,
   Users,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Activity,
+  Minus,
+  RefreshCw,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
@@ -226,6 +232,11 @@ export default function Clientes() {
     estado: '',
   });
 
+  // Analytics
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [periodoAnalytics, setPeriodoAnalytics] = useState<'7d' | '30d' | '60d' | 'mes'>('30d');
+
   // ─── Fetch inicial ───────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -291,6 +302,24 @@ export default function Clientes() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAnalytics = async (clienteId: number, periodo: string) => {
+    try {
+      setLoadingAnalytics(true);
+      const response = await api.get(
+        `/superadmin/clientes/${clienteId}/analytics?periodo=${periodo}`
+      );
+      setAnalytics(response.data?.data || null);
+    } catch {
+      setAnalytics(null);
+      toast({
+        title: 'Erro ao carregar analytics',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingAnalytics(false);
     }
   };
 
@@ -450,6 +479,9 @@ export default function Clientes() {
       setUsuariosDoCliente(Array.isArray(usuariosRes.data) ? usuariosRes.data : []);
 
       setView('detalhe');
+
+      // Buscar analytics
+      fetchAnalytics(cliente.Cliente_ID, periodoAnalytics);
     } catch (error: any) {
       setEmpresasDoCliente([]);
       setUsuariosDoCliente([]);
@@ -1250,10 +1282,11 @@ export default function Clientes() {
 
         {/* Tabs */}
         <Tabs defaultValue="empresas" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="empresas">Empresas</TabsTrigger>
             <TabsTrigger value="modulos">Módulos</TabsTrigger>
             <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
           {/* ABA 1: EMPRESAS */}
@@ -1495,6 +1528,264 @@ export default function Clientes() {
                 </TableBody>
               </Table>
             </Card>
+          </TabsContent>
+
+          {/* ABA 4: ANALYTICS */}
+          <TabsContent value="analytics" className="space-y-6 mt-4">
+
+            {/* Seletor de período */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <BarChart3 className="h-5 w-5 text-slate-500" />
+              <span className="text-sm font-medium text-slate-700">Período:</span>
+              <div className="flex gap-1 flex-wrap">
+                {[
+                  { value: '7d',  label: 'Últimos 7 dias' },
+                  { value: '30d', label: 'Últimos 30 dias' },
+                  { value: '60d', label: 'Últimos 60 dias' },
+                  { value: 'mes', label: 'Este mês' },
+                ].map(op => (
+                  <Button
+                    key={op.value}
+                    size="sm"
+                    variant={periodoAnalytics === op.value ? 'default' : 'outline'}
+                    onClick={() => {
+                      setPeriodoAnalytics(op.value as any);
+                      if (clienteSelecionado) {
+                        fetchAnalytics(clienteSelecionado.Cliente_ID, op.value);
+                      }
+                    }}
+                    className="text-xs"
+                  >
+                    {op.label}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => clienteSelecionado && fetchAnalytics(clienteSelecionado.Cliente_ID, periodoAnalytics)}
+                disabled={loadingAnalytics}
+              >
+                {loadingAnalytics
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <RefreshCw className="h-4 w-4" />
+                }
+              </Button>
+            </div>
+
+            {loadingAnalytics ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <Card key={i} className="border-slate-200">
+                    <CardContent className="pt-6">
+                      <Skeleton className="h-8 w-16 mb-2" />
+                      <Skeleton className="h-4 w-24" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : !analytics ? (
+              <Card className="border-slate-200">
+                <CardContent className="pt-12 pb-12 flex flex-col items-center justify-center text-center">
+                  <BarChart3 className="h-12 w-12 text-slate-300 mb-4" />
+                  <p className="text-slate-500">Nenhum dado disponível para este período</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Cards de Conversas */}
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                    Conversas
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="p-2 rounded-lg bg-indigo-500/10">
+                            <Activity className="h-4 w-4 text-indigo-600" />
+                          </div>
+                          {analytics.tendencia?.variacao_percentual !== null && (
+                            <div className={`flex items-center gap-1 text-xs font-medium ${
+                              analytics.tendencia.variacao_percentual >= 0
+                                ? 'text-emerald-600'
+                                : 'text-red-500'
+                            }`}>
+                              {analytics.tendencia.variacao_percentual > 0
+                                ? <TrendingUp className="h-3 w-3" />
+                                : analytics.tendencia.variacao_percentual < 0
+                                ? <TrendingDown className="h-3 w-3" />
+                                : <Minus className="h-3 w-3" />
+                              }
+                              {analytics.tendencia.variacao_percentual > 0 ? '+' : ''}
+                              {analytics.tendencia.variacao_percentual}%
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {analytics.conversas.total_periodo}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Total no período</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-6">
+                        <div className="p-2 rounded-lg bg-emerald-500/10 w-fit mb-2">
+                          <Activity className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {analytics.conversas.ativas_agora}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Ativas agora</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-6">
+                        <div className="p-2 rounded-lg bg-slate-500/10 w-fit mb-2">
+                          <Activity className="h-4 w-4 text-slate-500" />
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {analytics.conversas.encerradas}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Encerradas</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-6">
+                        <div className="p-2 rounded-lg bg-amber-500/10 w-fit mb-2">
+                          <Activity className="h-4 w-4 text-amber-600" />
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {analytics.conversas.novas_hoje}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Novas hoje</p>
+                      </CardContent>
+                    </Card>
+
+                  </div>
+                </div>
+
+                {/* Cards de Mensagens */}
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                    Mensagens
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-6">
+                        <div className="p-2 rounded-lg bg-indigo-500/10 w-fit mb-2">
+                          <MessageSquare className="h-4 w-4 text-indigo-600" />
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {analytics.mensagens.total_periodo}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Total no período</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-6">
+                        <div className="p-2 rounded-lg bg-blue-500/10 w-fit mb-2">
+                          <Users className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {analytics.mensagens.enviadas_atendente}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Enviadas por atendente</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-6">
+                        <div className="p-2 rounded-lg bg-violet-500/10 w-fit mb-2">
+                          <Bot className="h-4 w-4 text-violet-600" />
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {analytics.mensagens.enviadas_ia}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Enviadas pela IA</p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-6">
+                        <div className="p-2 rounded-lg bg-emerald-500/10 w-fit mb-2">
+                          <MessageSquare className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">
+                          {analytics.mensagens.recebidas_cliente}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">Recebidas de clientes</p>
+                      </CardContent>
+                    </Card>
+
+                  </div>
+                </div>
+
+                {/* Ranking de Atendentes */}
+                {analytics.atendentes?.por_volume?.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                      Atendentes por Volume
+                    </h3>
+                    <Card className="border-slate-200">
+                      <CardContent className="pt-4 pb-4 space-y-3">
+                        {analytics.atendentes.por_volume.map((a: any, idx: number) => {
+                          const max = analytics.atendentes.por_volume[0]?.conversas || 1;
+                          const pct = Math.round((a.conversas / max) * 100);
+                          return (
+                            <div key={a.id} className="flex items-center gap-3">
+                              <span className="text-xs text-slate-400 w-4">{idx + 1}</span>
+                              <span className="text-sm font-medium text-slate-700 w-32 truncate">
+                                {a.nome}
+                              </span>
+                              <div className="flex-1 bg-slate-100 rounded-full h-2">
+                                <div
+                                  className="bg-indigo-500 h-2 rounded-full transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-semibold text-slate-900 w-8 text-right">
+                                {a.conversas}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* Tendência */}
+                <Card className="border-dashed border-slate-200">
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="h-5 w-5 text-slate-400" />
+                      <div className="text-sm text-slate-600">
+                        <span className="font-medium">Período anterior:</span>{' '}
+                        {analytics.tendencia.periodo_anterior} conversas
+                        {analytics.tendencia.variacao_percentual !== null && (
+                          <span className={`ml-2 font-semibold ${
+                            analytics.tendencia.variacao_percentual >= 0
+                              ? 'text-emerald-600'
+                              : 'text-red-500'
+                          }`}>
+                            ({analytics.tendencia.variacao_percentual > 0 ? '+' : ''}
+                            {analytics.tendencia.variacao_percentual}% vs período anterior)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
           </TabsContent>
         </Tabs>
       </div>
