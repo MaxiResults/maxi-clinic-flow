@@ -237,10 +237,17 @@ export default function Conversas() {
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const { totalNaoLidas: statsNaoLidas } = useConversasStats();
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const [leads, setLeads] = useState<Lead[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth < 768
+  );
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [loadingMensagens, setLoadingMensagens] = useState(false);
   const [enviando, setEnviando] = useState(false);
