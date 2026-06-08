@@ -2385,13 +2385,20 @@ export default function Conversas() {
                                   <Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 </a>
                                ) : mensagem.tipo_mensagem === 'video' && mensagem.midia_url ? (
-                                 <div>
+                                 <div className="relative group">
                                    <video
                                      src={mensagem.midia_url}
                                      controls
                                      className="max-w-[300px] max-h-[250px] rounded-lg w-full"
                                      preload="metadata"
                                    />
+                                   <button
+                                     onClick={() => abrirLightbox(mensagem.midia_url!)}
+                                     className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                     title="Expandir"
+                                   >
+                                     <Maximize2 className="w-4 h-4" />
+                                   </button>
                                    {mensagem.mensagem && mensagem.mensagem !== '[Vídeo]' && (
                                      <p className="text-sm whitespace-pre-wrap break-words mt-1">
                                        {mensagem.mensagem}
