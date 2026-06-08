@@ -1822,6 +1822,7 @@ export default function Conversas() {
                   setConversationFilter(filter);
                   setBuscaLead('');
                 }}
+                hideTodas={user?.role === 'atendente'}
               />
               <Select value={filtroTagId} onValueChange={setFiltroTagId}>
                 <SelectTrigger className="h-8 text-xs">

@@ -8,6 +8,7 @@ interface ConversationFiltersProps {
   minhasCount?: number;
   todasCount?: number;
   filaCount?: number;
+  hideTodas?: boolean;
 }
 
 export function ConversationFilters({
@@ -16,16 +17,19 @@ export function ConversationFilters({
   minhasCount,
   todasCount,
   filaCount,
+  hideTodas = false,
 }: ConversationFiltersProps) {
   return (
     <Tabs
       value={filter}
       onValueChange={(v) => onFilterChange(v as ConversationFilter)}
     >
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="todas">
-          Todas {todasCount !== undefined && `(${todasCount})`}
-        </TabsTrigger>
+      <TabsList className={`grid w-full ${hideTodas ? 'grid-cols-3' : 'grid-cols-4'}`}>
+        {!hideTodas && (
+          <TabsTrigger value="todas">
+            Todas {todasCount !== undefined && `(${todasCount})`}
+          </TabsTrigger>
+        )}
         <TabsTrigger value="minhas">
           Minhas {minhasCount !== undefined && `(${minhasCount})`}
         </TabsTrigger>
