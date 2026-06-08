@@ -22,6 +22,7 @@ import {
   Settings2,
   CheckCircle,
   AlertCircle,
+  Pencil,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -88,6 +89,7 @@ export default function ConfiguracaoWhatsApp() {
   const [salvandoMeta, setSalvandoMeta] = useState(false);
   const [testandoMeta, setTestandoMeta] = useState(false);
   const [metaConectado, setMetaConectado] = useState(false);
+  const [metaEditando, setMetaEditando] = useState(false);
   const [formMeta, setFormMeta] = useState({
     nome: '',
     meta_phone_number_id: '',
@@ -211,9 +213,13 @@ export default function ConfiguracaoWhatsApp() {
           meta_webhook_verify_token: data.meta_webhook_verify_token || '',
           telefone: data.telefone || '',
         });
+        setMetaEditando(false); // config existe → modo visualização
+      } else {
+        setMetaEditando(true); // sem config → modo edição direto
       }
     } catch {
       setMetaConfig(null);
+      setMetaEditando(true); // sem config → modo edição direto
     } finally {
       setLoadingMeta(false);
     }
@@ -229,6 +235,7 @@ export default function ConfiguracaoWhatsApp() {
       await api.post('/whatsapp/config', formMeta);
       toast({ title: 'Configuração Meta salva com sucesso' });
       setProviderAtivo('meta');
+      setMetaEditando(false);
       await fetchMetaConfig();
     } catch (err: any) {
       toast({
@@ -269,6 +276,26 @@ export default function ConfiguracaoWhatsApp() {
     } finally {
       setTestandoMeta(false);
     }
+  };
+
+  const handleEditarMeta = () => {
+    setFormMeta(p => ({ ...p, meta_access_token: '' }));
+    setMetaEditando(true);
+  };
+
+  const handleCancelarEdicaoMeta = () => {
+    // Restaurar dados salvos
+    if (metaConfig) {
+      setFormMeta({
+        nome: metaConfig.nome || '',
+        meta_phone_number_id: metaConfig.meta_phone_number_id || '',
+        meta_business_account_id: metaConfig.meta_business_account_id || '',
+        meta_access_token: '',
+        meta_webhook_verify_token: metaConfig.meta_webhook_verify_token || '',
+        telefone: metaConfig.telefone || '',
+      });
+    }
+    setMetaEditando(false);
   };
 
   useEffect(() => {
@@ -615,14 +642,30 @@ export default function ConfiguracaoWhatsApp() {
             {isAdmin && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings2 className="h-5 w-5" />
-                    Credenciais Meta Cloud API
-                  </CardTitle>
-                  <CardDescription>
-                    Insira as credenciais do seu WhatsApp Business na Meta.
-                    Obtenha em: Meta for Developers → Seu App → WhatsApp → Configuração da API
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings2 className="h-5 w-5" />
+                        Credenciais Meta Cloud API
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        {metaConfig && !metaEditando
+                          ? 'Configuração ativa. Clique em Editar para alterar as credenciais.'
+                          : 'Insira as credenciais do seu WhatsApp Business na Meta.'}
+                      </CardDescription>
+                    </div>
+                    {metaConfig && !metaEditando && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleEditarMeta}
+                        className="gap-2"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Editar
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
 
@@ -632,6 +675,7 @@ export default function ConfiguracaoWhatsApp() {
                       value={formMeta.nome}
                       onChange={e => setFormMeta(p => ({ ...p, nome: e.target.value }))}
                       placeholder="Ex: Maxi Clínicas WhatsApp"
+                      disabled={!!metaConfig && !metaEditando}
                     />
                   </div>
 
@@ -642,6 +686,7 @@ export default function ConfiguracaoWhatsApp() {
                       onChange={e => setFormMeta(p => ({ ...p, meta_phone_number_id: e.target.value }))}
                       placeholder="Ex: 123456789012345"
                       className="font-mono text-sm"
+                      disabled={!!metaConfig && !metaEditando}
                     />
                     <p className="text-xs text-muted-foreground">
                       Meta for Developers → WhatsApp → Configuração da API → Phone Number ID
@@ -655,6 +700,7 @@ export default function ConfiguracaoWhatsApp() {
                       onChange={e => setFormMeta(p => ({ ...p, meta_business_account_id: e.target.value }))}
                       placeholder="Ex: 123456789012345"
                       className="font-mono text-sm"
+                      disabled={!!metaConfig && !metaEditando}
                     />
                   </div>
 
@@ -662,10 +708,11 @@ export default function ConfiguracaoWhatsApp() {
                     <Label>Access Token *</Label>
                     <Input
                       type="password"
-                      value={formMeta.meta_access_token}
+                      value={metaConfig && !metaEditando ? '••••••••••••••••••••' : formMeta.meta_access_token}
                       onChange={e => setFormMeta(p => ({ ...p, meta_access_token: e.target.value }))}
                       placeholder="Token de acesso permanente"
                       className="font-mono text-sm"
+                      disabled={!!metaConfig && !metaEditando}
                     />
                     <p className="text-xs text-muted-foreground">
                       Nunca compartilhe este token. Use um token de sistema permanente.
@@ -679,6 +726,7 @@ export default function ConfiguracaoWhatsApp() {
                       onChange={e => setFormMeta(p => ({ ...p, meta_webhook_verify_token: e.target.value }))}
                       placeholder="maxiclinicas_webhook_2026"
                       className="font-mono text-sm"
+                      disabled={!!metaConfig && !metaEditando}
                     />
                   </div>
 
@@ -688,27 +736,45 @@ export default function ConfiguracaoWhatsApp() {
                       value={formMeta.telefone}
                       onChange={e => setFormMeta(p => ({ ...p, telefone: e.target.value }))}
                       placeholder="+55 11 99999-9999"
+                      disabled={!!metaConfig && !metaEditando}
                     />
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <Button
-                      onClick={handleSalvarMeta}
-                      disabled={salvandoMeta}
-                    >
-                      {salvandoMeta && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      Salvar Credenciais
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleTestarConexaoMeta}
-                      disabled={testandoMeta || !metaConfig}
-                    >
-                      {testandoMeta
-                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testando...</>
-                        : 'Testar Conexão'
-                      }
-                    </Button>
+                    {/* Modo edição ou novo cadastro */}
+                    {(!metaConfig || metaEditando) && (
+                      <>
+                        <Button
+                          onClick={handleSalvarMeta}
+                          disabled={salvandoMeta}
+                        >
+                          {salvandoMeta && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                          Salvar Credenciais
+                        </Button>
+                        {metaEditando && (
+                          <Button
+                            variant="ghost"
+                            onClick={handleCancelarEdicaoMeta}
+                            disabled={salvandoMeta}
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+                      </>
+                    )}
+                    {/* Modo visualização: apenas Testar */}
+                    {metaConfig && !metaEditando && (
+                      <Button
+                        variant="outline"
+                        onClick={handleTestarConexaoMeta}
+                        disabled={testandoMeta}
+                      >
+                        {testandoMeta
+                          ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testando...</>
+                          : 'Testar Conexão'
+                        }
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
