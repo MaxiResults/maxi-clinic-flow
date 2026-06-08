@@ -253,9 +253,11 @@ export default function ConfiguracaoWhatsApp() {
     setMetaConectado(false);
     try {
       const response = await api.post('/whatsapp/test-connection');
-      if (response.data?.success) {
+      const responseData = response.data?.data ?? response.data;
+      const success = response.data?.success ?? (responseData?.phone_number_id != null);
+      if (success) {
         setMetaConectado(true);
-        const info = response.data?.data;
+        const info = responseData;
         toast({
           title: '✅ Conexão Meta estabelecida!',
           description: `Número: ${info?.display_phone_number || ''} | ${info?.verified_name || ''}`,
