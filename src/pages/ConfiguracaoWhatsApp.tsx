@@ -199,8 +199,8 @@ export default function ConfiguracaoWhatsApp() {
     try {
       setLoadingMeta(true);
       const response = await api.get('/whatsapp/config');
-      const data = response.data?.data;
-      if (data) {
+      const data = response.data?.data ?? response.data;
+      if (data && data.id) {
         setMetaConfig(data);
         if (data?.status === 'ativa' && data?.provider === 'meta') {
           setProviderAtivo('meta');
