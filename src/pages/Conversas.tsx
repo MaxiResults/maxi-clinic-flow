@@ -1079,7 +1079,7 @@ export default function Conversas() {
     if (isTypingRef.current) {
       isTypingRef.current = false;
       if (selectedLead?.sessao_ativa?.id) {
-        api.post('/evolution/typing', {
+        api.post('/conversas/typing', {
           conversaId: selectedLead.sessao_ativa.id,
           typing: false,
         }).catch(() => {});
@@ -1133,7 +1133,7 @@ export default function Conversas() {
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
-      api.post('/evolution/typing', {
+      api.post('/conversas/typing', {
         conversaId: selectedLead?.sessao_ativa?.id,
         typing: false,
       }).catch(() => {});
@@ -1280,7 +1280,7 @@ export default function Conversas() {
     if (conversaIdEvo) {
       if (!isTypingRef.current) {
         isTypingRef.current = true;
-        api.post('/evolution/typing', {
+        api.post('/conversas/typing', {
           conversaId: conversaIdEvo,
           typing: true,
         }).catch(() => {});
@@ -1288,7 +1288,7 @@ export default function Conversas() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         isTypingRef.current = false;
-        api.post('/evolution/typing', {
+        api.post('/conversas/typing', {
           conversaId: conversaIdEvo,
           typing: false,
         }).catch(() => {});
@@ -1444,7 +1444,7 @@ export default function Conversas() {
     try {
       const audioBase64 = await blobToBase64(audioBlob);
       const response = await api.post(
-        '/evolution/send-audio',
+        '/conversas/send-audio',
         {
           conversaId: selectedLead.sessao_ativa!.id,
           audioBase64,
@@ -1540,7 +1540,7 @@ export default function Conversas() {
     const sessaoId = selectedLead?.sessao_ativa?.id || selectedLead?.sessao_recente?.id;
     if (!mensagem.message_id || !sessaoId) return;
     try {
-      await api.post('/evolution/send-reaction', {
+      await api.post('/conversas/send-reaction', {
         conversaId: sessaoId,
         messageId: mensagem.message_id,
         emoji,
